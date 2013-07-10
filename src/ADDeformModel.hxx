@@ -3,6 +3,7 @@
 class ADDeformModel{
 public:
   //public interface methods supporting the model. But yet to be decided: should this be an abstract base class or not?
+  enum boundary_condition{NO_SLIP, FREE_SLIP};
 
 protected:
   image *brain;  //longitudinal series of brain image input/observed
