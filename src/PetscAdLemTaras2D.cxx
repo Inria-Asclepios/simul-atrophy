@@ -6,34 +6,29 @@ PetscAdLemTaras2D::PetscAdLemTaras2D(AdLem2D *model):
     PetscErrorCode ierr;
 
     //Linear Solver context:
-    ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);
+    ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);CHKERRXX(ierr);
     ierr = DMDACreate2d(PETSC_COMM_WORLD, DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,
                         DMDA_STENCIL_STAR,model->getXnum(),model->getYnum(),PETSC_DECIDE,PETSC_DECIDE,
                         1,1,0,0,&mDaPara);CHKERRXX(ierr);
     ierr = DMDASetUniformCoordinates(mDaPara,0,1,0,1,0,0);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaPara,0,"Pressure");CHKERRXX(ierr);
 
-//    ierr = DMDAGetLocalInfo(da_sol, &l_info_sol);CHKERRXX(ierr);
-//    ierr = DMDAGetLocalInfo(da_para, &l_info_para);CHKERRXX(ierr);
-
-}
-
-PetscReal PetscAdLemTaras2D::getNu() const{
-    return 2.;
 }
 
 PetscAdLemTaras2D::~PetscAdLemTaras2D(){
     PetscErrorCode ierr;
-    ierr = KSPDestroy(&mKsp);CHKERRXX(ierr);
-//    ierr = MatDestroy(&A);CHKERRXX(ierr);
     ierr = DMDestroy(&mDaPara);CHKERRXX(ierr);
-//    ierr = DMDestroy(&da_sol);CHKERRXX(ierr);
-
+    ierr = KSPDestroy(&mKsp);CHKERRXX(ierr);
 }
 
+
+
+#undef __FUNCT__
+#define __FUNCT__ "solveModel"
 PetscErrorCode PetscAdLemTaras2D::solveModel(){
     PetscErrorCode ierr;
     Vec b,x;
+    PetscFunctionBeginUser;
     ierr = KSPSetComputeRHS(mKsp,computeRHSTaras2D,this);CHKERRXX(ierr);
     ierr = KSPSetComputeOperators(mKsp,computeMatrixTaras2D,this);CHKERRXX(ierr);
     ierr = KSPSetDM(mKsp,mDaPara);CHKERRXX(ierr);
@@ -45,6 +40,11 @@ PetscErrorCode PetscAdLemTaras2D::solveModel(){
 
     PetscFunctionReturn(0);
 
+}
+
+
+PetscReal PetscAdLemTaras2D::getNu() const{
+    return 2.;
 }
 
 #undef __FUNCT__
