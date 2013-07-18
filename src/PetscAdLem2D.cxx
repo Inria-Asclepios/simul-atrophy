@@ -10,12 +10,6 @@ void PetscAdLem2D::setContextName(const std::string & desc){
     mContextDesc = std::string(desc);
 }
 
-PetscErrorCode PetscAdLem2D::ComputeRho(PetscInt i, PetscInt j, PetscInt m,
-                          PetscInt n, PetscReal *rho){
-    *rho = mProblemModel->SetAtrophy();
-    PetscFunctionReturn(0);
-}
-
 AdLem2D* PetscAdLem2D::getProblemModel() const  {
     return mProblemModel;
 }

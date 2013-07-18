@@ -10,8 +10,6 @@ public:
     PetscAdLem2D(AdLem2D*, const std::string&);
     virtual ~PetscAdLem2D();
     void setContextName(const std::string&);
-    PetscErrorCode ComputeRho(PetscInt, PetscInt, PetscInt,
-                              PetscInt, PetscReal*);
 
     AdLem2D* getProblemModel() const;
 protected:
