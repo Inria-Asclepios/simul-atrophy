@@ -23,8 +23,7 @@ public:
     PetscReal aCenter(PetscInt x, PetscInt y);
     PetscReal aNode(PetscInt x, PetscInt y);
     PetscReal getP0Cell();
-    PetscErrorCode writeLinearSystemMatlabFile(const std::string& );
-    PetscErrorCode solveModel();
+    PetscErrorCode solveModel(bool writeToMatlab, const std::string& filename);
 
 protected:
     DM mDa;

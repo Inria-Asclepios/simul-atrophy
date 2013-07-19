@@ -9,8 +9,8 @@ static char help[] = "Solves 2D inhomogeneous Laplacian using multigrid.\n\n";
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
-    int xn = 50;
-    int yn = 50;
+    int xn = 16;
+    int yn = 16;
     AdLem2D model(xn,yn,20,10,1,1);
     AdLem2D *model_ptr;
     model_ptr = &model;
@@ -23,8 +23,9 @@ int main(int argc,char **argv)
         in error because the PetscFinalize() will see pets-objects allocated but not freed!*/
 
         PetscAdLemTaras2D solver1(model_ptr);
-//        solver1.solveModel();
-        solver1.writeLinearSystemMatlabFile("lin_sys");
+        std::string wFileName("/user/bkhanal/home/works/ADDeformationModeling/src/matlab/lin_sys");
+        solver1.solveModel(true,wFileName);
+//        solver1.writeLinearSystemMatlabFile("/user/bkhanal/home/works/ADDeformationModeling/src/matlab/lin_sys");
     }
     PetscErrorCode ierr;
 

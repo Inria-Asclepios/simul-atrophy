@@ -115,13 +115,10 @@ PetscReal PetscAdLemTaras2D::aNode(PetscInt i, PetscInt j)
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "writeLinearSystemMatlabFile"
-PetscErrorCode PetscAdLemTaras2D::writeLinearSystemMatlabFile(const std::string & filename) {
+#define __FUNCT__ "solveModel"
+PetscErrorCode PetscAdLemTaras2D::solveModel(bool writeToMatlab, const std::string& filename){
     PetscErrorCode ierr;
     Vec b,x;
-    Mat mat1, mat2;
-    PetscViewer viewer;
-
     PetscFunctionBeginUser;
     ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras2D,this);CHKERRQ(ierr);
     ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras2D,this);CHKERRQ(ierr);
@@ -130,36 +127,22 @@ PetscErrorCode PetscAdLemTaras2D::writeLinearSystemMatlabFile(const std::string 
     ierr = KSPSetUp(mKsp);CHKERRQ(ierr);
     ierr = KSPSolve(mKsp,NULL,NULL);CHKERRQ(ierr);
     ierr = KSPGetSolution(mKsp,&x);CHKERRQ(ierr);
-    ierr = KSPGetOperators(mKsp,&mat1,&mat2,0);
     ierr = KSPGetRhs(mKsp,&b);CHKERRQ(ierr);
-    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
-    ierr = PetscViewerSetFormat(viewer,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+    if (writeToMatlab) {
+//        Mat mat1, mat2;
+//        ierr = KSPGetOperators(mKsp,&mat1,&mat2,0);
+        PetscViewer viewer;
+        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
+        ierr = PetscViewerSetFormat(viewer,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
 
-//    ierr = MatView(mat1,viewer);CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)x,"sol");CHKERRQ(ierr);
-    ierr = PetscObjectSetName((PetscObject)b,"rhs");CHKERRQ(ierr);
-    ierr = VecView(x,viewer);CHKERRQ(ierr);
-    ierr = VecView(b,viewer);CHKERRQ(ierr);
-    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
-
-    PetscFunctionReturn(0);
-
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "solveModel"
-PetscErrorCode PetscAdLemTaras2D::solveModel(){
-    PetscErrorCode ierr;
-    Vec b,x;
-    PetscFunctionBeginUser;
-    ierr = KSPSetComputeRHS(mKsp,computeRHSTaras2D,this);CHKERRXX(ierr);
-    ierr = KSPSetComputeOperators(mKsp,computeMatrixTaras2D,this);CHKERRXX(ierr);
-    ierr = KSPSetDM(mKsp,mDa);CHKERRXX(ierr);
-    ierr = KSPSetFromOptions(mKsp);CHKERRXX(ierr);
-    ierr = KSPSetUp(mKsp);CHKERRXX(ierr);
-    ierr = KSPSolve(mKsp,NULL,NULL);CHKERRXX(ierr);
-    ierr = KSPGetSolution(mKsp,&x);CHKERRXX(ierr);
-    ierr = KSPGetRhs(mKsp,&b);CHKERRXX(ierr);
+//        ierr = PetscObjectSetName((PetscObject)mat1,"A");
+        ierr = PetscObjectSetName((PetscObject)x,"x");CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)b,"b");CHKERRQ(ierr);
+        ierr = VecView(x,viewer);CHKERRQ(ierr);
+        ierr = VecView(b,viewer);CHKERRQ(ierr);
+//        ierr = MatView(mat1,viewer);CHKERRQ(ierr); //doesn't work, probably not supported?
+        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    }
 
     PetscFunctionReturn(0);
 
