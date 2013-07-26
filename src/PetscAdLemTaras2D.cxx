@@ -2,7 +2,8 @@
 
 
 PetscAdLemTaras2D::PetscAdLemTaras2D(AdLem2D *model):
-    PetscAdLem2D(model,std::string("Taras Method")){
+    PetscAdLem2D(model,std::string("Taras Method"))
+{
     PetscErrorCode ierr;
 
     //Linear Solver context:
@@ -14,10 +15,10 @@ PetscAdLemTaras2D::PetscAdLemTaras2D(AdLem2D *model):
     ierr = DMDASetFieldName(mDa,0,"vx");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,2,"p");CHKERRXX(ierr);
-
 }
 
-PetscAdLemTaras2D::~PetscAdLemTaras2D(){
+PetscAdLemTaras2D::~PetscAdLemTaras2D()
+{
     PetscErrorCode ierr;
     ierr = DMDestroy(&mDa);CHKERRXX(ierr);
     ierr = KSPDestroy(&mKsp);CHKERRXX(ierr);
@@ -62,7 +63,7 @@ PetscReal PetscAdLemTaras2D::dataNodeAt(std::string dType, PetscInt i, PetscInt 
 
     //grid-points on bottom and left edge do not need special condition
     //because, there are ghost cells present outside the grid nodes here.
-    //so, it will be handeled by mu_center call.
+    //so, it will be handeled by dataCenterAt call.
     return 0.25 * ( dataCenterAt(dType,i,j) + dataCenterAt(dType,i,j+1)
                     +dataCenterAt(dType,i+1,j) + dataCenterAt(dType,i+1,j+1));
 
@@ -151,7 +152,8 @@ PetscErrorCode PetscAdLemTaras2D::solveModel(bool writeToMatlab, const std::stri
 
 #undef __FUNCT__
 #define __FUNCT__ "computeMatrixTaras2D"
-PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, void* ctx){
+PetscErrorCode PetscAdLemTaras2D::computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, void* ctx)
+{
     PetscAdLemTaras2D    *user = (PetscAdLemTaras2D*)ctx;
 
     PetscErrorCode ierr;
@@ -162,13 +164,13 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
     DM             da;
 
     PetscFunctionBeginUser;
-    ierr      = KSPGetDM(ksp,&da);CHKERRXX(ierr);
-    ierr      = DMDAGetInfo(da,0,&mx,&my,0,0,0,0,0,0,0,0,0,0);CHKERRXX(ierr);
+    ierr      = KSPGetDM(ksp,&da);CHKERRQ(ierr);
+    ierr      = DMDAGetInfo(da,0,&mx,&my,0,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
     Hx = 1./(mx-1);
     Hy = 1./(my-1);
     HxdHy     = Hx/Hy;
     HydHx     = Hy/Hx;
-    ierr      = DMDAGetCorners(da,&xs,&ys,0,&xm,&ym,0);CHKERRXX(ierr);
+    ierr      = DMDAGetCorners(da,&xs,&ys,0,&xm,&ym,0);CHKERRQ(ierr);
 
     if (user->getProblemModel()->getBcType() != user->getProblemModel()->DIRICHLET) {
         SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition implemented",0);
@@ -192,7 +194,7 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
                         v[0] = 1.0;             col[0].i = i;       col[0].j = j;
                         ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else { //boundary values
-                        //vx-coefficients: 3*vx(i,0) - vy(i,1) = 0; 3*vy(i,my-2) - vy(i,my-3) = 0
+                        //vx-coefficients: 3*vx(i,0) - vx(i,1) = 0; 3*vx(i,my-2) - vx(i,my-3) = 0
                         col[0].c = 0;           col[1].c = 0;
                         v[0] = 3.0;             col[0].i = i;       col[0].j = j;
                         if (j==0) {
@@ -225,7 +227,7 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
 
                 //p-coefficients, two terms.
                 col[9].c = 2;    col[10].c = 2;
-                v[9] = 1.0/Hx;                                   col[9].i = i;       col[9].j = j+1;
+                v[9] = Hy;  //HxHy/Hx = Hy                                 col[9].i = i;       col[9].j = j+1;
                 v[10] = -v[9];                                   col[10].i = i+1;    col[10].j = j+1;
 
                 ierr = MatSetValuesStencil(jac,1,&row,11,col,v,INSERT_VALUES);CHKERRQ(ierr);
@@ -277,7 +279,7 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
 
                 //p-coefficients, two terms.
                 col[9].c = 2;    col[10].c = 2;
-                v[9] = 1.0/Hy;                                   col[9].i = i+1;     col[9].j = j;
+                v[9] = Hx;   //HxHy/Hy = Hx                                col[9].i = i+1;     col[9].j = j;
                 v[10] = -v[9];                                   col[10].i = i+1;    col[10].j = j+1;
 
                 ierr = MatSetValuesStencil(jac,1,&row,11,col,v,INSERT_VALUES);CHKERRQ(ierr);
@@ -327,8 +329,8 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
             }
         }
     }
-    ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRXX(ierr);
-    ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRXX(ierr);
+    ierr = MatAssemblyBegin(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
+    ierr = MatAssemblyEnd(jac,MAT_FINAL_ASSEMBLY);CHKERRQ(ierr);
 
     /*
     if (user->getProblemModel()->getBcType() == user->getProblemModel()->NEUMANN) {
@@ -343,7 +345,8 @@ PetscErrorCode computeMatrixTaras2D(KSP ksp, Mat J, Mat jac, MatStructure* str, 
 
 #undef __FUNCT__
 #define __FUNCT__ "computeRHSTaras2D"
-PetscErrorCode computeRHSTaras2D(KSP ksp, Vec b, void *ctx){
+PetscErrorCode PetscAdLemTaras2D::computeRHSTaras2D(KSP ksp, Vec b, void *ctx)
+{
     PetscAdLemTaras2D    *user = (PetscAdLemTaras2D*)ctx;
     PetscErrorCode ierr;
     PetscInt       i,j,mx,my,xm,ym,xs,ys;
@@ -373,20 +376,20 @@ PetscErrorCode computeRHSTaras2D(KSP ksp, Vec b, void *ctx){
             if (i==0 || i==mx-1 || j==0 || j==my-2 || j==my-1) {
                 rhs[j][i].vx = 0;
             } else {
-                rhs[j][i].vx = (user->muCenter(i+1,j+1) + user->muCenter(i,j+1)
+                rhs[j][i].vx = Hy*(user->muCenter(i+1,j+1) + user->muCenter(i,j+1)
                                + user->lambdaCenter(i+1,j+1) + user->lambdaCenter(i,j+1)
                                 )*(user->aCenter(i+1,j+1) - user->aCenter(i,j+1))
-                        / (2.0 * Hx);
+                        / 2.0;
             }
 
             // ********************* y-momentum equation ************************
             if (i==0 || i==mx-2 || i==mx-1 || j==0 || j==my-1) {
                 rhs[j][i].vy = 0;
             } else {
-                rhs[j][i].vy = (user->muCenter(i+1,j+1) + user->muCenter(i+1,j)
+                rhs[j][i].vy = Hx*(user->muCenter(i+1,j+1) + user->muCenter(i+1,j)
                                + user->lambdaCenter(i+1,j+1) + user->lambdaCenter(i+1,j)
                                 )*(user->aCenter(i+1,j+1) - user->aCenter(i+1,j))
-                        / (2.0 * Hy);
+                        / 2.0;
             }
 
             // ********************** conservation equation *****************
@@ -402,9 +405,9 @@ PetscErrorCode computeRHSTaras2D(KSP ksp, Vec b, void *ctx){
         }
     }
 
-    ierr = DMDAVecRestoreArray(da, b, &rhs);CHKERRXX(ierr);
-    ierr = VecAssemblyBegin(b);CHKERRXX(ierr);
-    ierr = VecAssemblyEnd(b);CHKERRXX(ierr);
+    ierr = DMDAVecRestoreArray(da, b, &rhs);CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(b);CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(b);CHKERRQ(ierr);
 
     /* force right hand side to be consistent for singular matrix */
     /* note this is really a hack, normally the model would provide you with a consistent right handside */

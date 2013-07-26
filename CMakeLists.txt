@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 project(ADDeformationModeling)
 
 #set(PETSC_DIR /home/bkhanal/Documents/softwares/petsc-3.3-p7)
-set(PETSC_DIR /home/bkhanal/Documents/softwares/petsc-3.4.1)
+set(PETSC_DIR /home/bkhanal/Documents/softwares/petsc-3.4.2)
 set(PETSC_ARCH arch-linux2-cxx-debug)
 
 

@@ -24,6 +24,8 @@ public:
     PetscReal aNode(PetscInt x, PetscInt y);
     PetscReal getP0Cell();
     PetscErrorCode solveModel(bool writeToMatlab, const std::string& filename);
+    static PetscErrorCode computeMatrixTaras2D(KSP, Mat, Mat, MatStructure*, void*);
+    static PetscErrorCode computeRHSTaras2D(KSP, Vec, void*);
 
 protected:
     DM mDa;
@@ -44,6 +46,5 @@ protected:
 };
 
 
-PetscErrorCode computeMatrixTaras2D(KSP, Mat, Mat, MatStructure*, void*);
-PetscErrorCode computeRHSTaras2D(KSP, Vec, void*);
+
 #endif // PETSCADLEMTARAS2D_HXX

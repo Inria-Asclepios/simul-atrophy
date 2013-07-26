@@ -8,10 +8,15 @@ link_directories(${PETSC_LIBRARIES})
 #add_executable(PetscStokes2D PetscStokes2DTest.cxx)
 #target_link_libraries(PetscStokes2D ${PETSC_LIBRARIES})
 
-add_executable(AdLem2Dmain
-    PetscAdLem2DMain.cxx
+add_executable(AdLemMain
+    PetscAdLemMain.cxx
     AdLem2D.cxx
     PetscAdLem2D.cxx
     PetscAdLemTaras2D.cxx
+    AdLem3D.cxx
+    PetscAdLem3D.cxx
+    PetscAdLemTaras3D.cxx
 )
-target_link_libraries(AdLem2Dmain ${PETSC_LIBRARIES})
+
+
+target_link_libraries(AdLemMain ${PETSC_LIBRARIES})
