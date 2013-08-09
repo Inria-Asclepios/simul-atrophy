@@ -15,6 +15,7 @@ PetscAdLemTaras2D::PetscAdLemTaras2D(AdLem2D *model):
     ierr = DMDASetFieldName(mDa,0,"vx");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,2,"p");CHKERRXX(ierr);
+
 }
 
 PetscAdLemTaras2D::~PetscAdLemTaras2D()

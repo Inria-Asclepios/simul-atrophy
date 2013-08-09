@@ -1,12 +1,12 @@
-% Create results: At ../../results/
+%% Create results: At ../../results/
 clear all;clc;
-addpath('petscMatlab/');
+addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
 res_path = '/user/bkhanal/home/works/AdLemModel/results/';
 
-% fname = 'sol_cluster'; %later make it sol_cluster
-% sfName = 'size_cluster';
+% fname = 'sol_cluster_big';
+% sfName = 'size_cluster_big';
 
-fname = 'lin_sys';
+fname = 'sol';
 sfName = 'size_lin_sys';
 
 size_file = fopen([res_path sfName]); 
@@ -19,8 +19,11 @@ petscObj = PetscReadBinaryMatlab([res_path fname]);
 vx = petscObj.x.vx;
 vy = petscObj.x.vy;
 vz = petscObj.x.vz;
+p = petscObj.x.p;
 
 vec3DToVtk(vx,vy,vz,ax,ay,az,[res_path 'velocity.vtk']);
-
-p = petscObj.x.p;
 savevtk(p,[res_path 'pressure.vtk']);
+
+%% System matrix
+ sysFname = 'lin_sys';
+A = PetscBinaryRead([res_path sysFname]);

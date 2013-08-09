@@ -1,34 +1,269 @@
 #include "PetscAdLemTaras3D.hxx"
 
-PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model):
-    PetscAdLem3D(model, std::string("Taras Method"))
+PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
+    PetscAdLem3D(model, std::string("Taras Method")),
+    mWriteParaToFile((PetscBool)writeParaToFile)
 {
     PetscErrorCode ierr;
+    /*    //DMDA for Velocity field: dof=3; node_grid_num = cells_num + 1
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
+                        DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
+                        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,3,1,0,0,0,&mDaV);CHKERRXX(ierr);
 
-    //Linear Solver context:
-    ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);CHKERRXX(ierr);
+    ierr = DMDASetFieldName(mDaV,0,"vx");CHKERRXX(ierr);
+    ierr = DMDASetFieldName(mDaV,1,"vy");CHKERRXX(ierr);
+    ierr = DMDASetFieldName(mDaV,2,"vz");CHKERRXX(ierr);
 
-    //DMDA with 4 dof; node_grid_num = cells_num + 1
+
+   */ //DMDA for only pressure field that is used in Schur Complement solve Sp=rhs.
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
+                        DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
+                        PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDaP);CHKERRXX(ierr);
+
+    ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
+
+
+    /*//Compose the two DMs
+    ierr = DMCompositeCreate(PETSC_COMM_WORLD,&mDa);CHKERRXX(ierr);
+    ierr = DMSetOptionsPrefix(mDa,"da_");CHKERRXX(ierr);
+    ierr = DMCompositeAddDM(mDa,mDaV);CHKERRXX(ierr);
+    ierr = DMCompositeAddDM(mDa,mDaP);CHKERRXX(ierr);
+    ierr = DMSetFromOptions(mDa);CHKERRXX(ierr);
+
+    ierr = DMCompositeGetGlobalISs(mDa,&mIs);
+*/
+
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,4,1,0,0,0,&mDa);CHKERRXX(ierr);
 
-    ierr = DMDASetUniformCoordinates(mDa,0,1,0,1,0,1);CHKERRXX(ierr);
-//    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
+    //    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,0,"vx");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,2,"vz");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,3,"p");CHKERRXX(ierr);
+
+    //Linear Solver context:
+    ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);CHKERRXX(ierr);
+
+    createPcForSc();
+    setNullSpace();
+
+    mParaVecsCreated = PETSC_FALSE;
 }
 
 PetscAdLemTaras3D::~PetscAdLemTaras3D()
 {
     PetscErrorCode ierr;
-    ierr = DMDestroy(&mDa);CHKERRXX(ierr);
+
     ierr = KSPDestroy(&mKsp);CHKERRXX(ierr);
+    ierr = VecDestroy(&mNullBasis);CHKERRXX(ierr);
+    ierr = MatNullSpaceDestroy(&mNullSpace);CHKERRXX(ierr);
+    ierr = VecDestroy(&mNullBasisP);CHKERRXX(ierr);
+    ierr = MatNullSpaceDestroy(&mNullSpaceP);CHKERRXX(ierr);
+
+    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
+
+    if(mParaVecsCreated) {
+        ierr = VecDestroy(&mAtrophy);CHKERRXX(ierr);
+        ierr = VecDestroy(&mMu);CHKERRXX(ierr);
+    }
+
+    ierr = DMDestroy(&mDa);CHKERRXX(ierr);
+    ierr = DMDestroy(&mDaP);CHKERRXX(ierr);
 }
 
-PetscReal PetscAdLemTaras3D::getP0Cell() { return 4.0; }
+
+void PetscAdLemTaras3D::setNullSpace()
+{
+    // Compute the Null space Basis vector i.e. constant pressure, let's set (0 0 ... 0 1 ... 1)
+    //where all the pressure dof except the ghost pressures are set to 1. Others are set to 0.
+    PetscInt ierr;
+    ierr = DMCreateGlobalVector(mDa,&mNullBasis);CHKERRXX(ierr);
+    DMDALocalInfo info;
+    ierr = DMDAGetLocalInfo(mDa,&info);
+
+    PetscAdLemTaras3D::Field    ***nullVec;
+    ierr = DMDAVecGetArray(mDa, mNullBasis, &nullVec);CHKERRXX(ierr);
+
+    //FIXME: Must handle c++ exception using the error codd PETSC_ERR_SUP, cannot use SETERRQ.
+    /*if (this->getProblemModel()->getBcType() != this->getProblemModel()->DIRICHLET) {
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition implemented",0);
+    }*/
+    for (PetscInt k=info.zs; k<info.zs+info.zm; ++k) {
+        for (PetscInt j=info.ys; j<info.ys+info.ym; ++j) {
+            for (PetscInt i=info.xs; i<info.xs+info.xm; ++i) {
+                nullVec[k][j][i].vx = 0;
+                nullVec[k][j][i].vy = 0;
+                nullVec[k][j][i].vz = 0;
+                if (i==0 || j==0 || k==0) //Ghost values
+                    /*|| (i==1 && (j==1 || j==info.my-1 || k==1 || k==info.mz-1)) //four edges in x-start face.
+                        || (i==info.mx-1 && (j==1 || j==info.my-1 || k==1 || k==info.mz-1)) //four edges in x-end face.
+                        || (j==1 && (k==1 || k== info.mz-1)) //two edges in y-start face.
+                        || (j==info.my-1 && (k==1 || k==info.mz-1)))*/ { //two edges in y-end face
+
+                    nullVec[k][j][i].p = 0;
+                } else
+                    nullVec[k][j][i].p = 1;
+            }
+        }
+    }
+
+    ierr = DMDAVecRestoreArray(mDa, mNullBasis, &nullVec);CHKERRXX(ierr);
+    ierr = VecAssemblyBegin(mNullBasis);CHKERRXX(ierr);
+    ierr = VecAssemblyEnd(mNullBasis);CHKERRXX(ierr);
+    ierr = VecNormalize(mNullBasis,NULL);CHKERRXX(ierr);
+    //Null Space context:
+    ierr = MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_FALSE,1,&mNullBasis,&mNullSpace);
+
+    ierr = DMCreateGlobalVector(mDaP,&mNullBasisP);CHKERRXX(ierr);
+
+    ierr = VecStrideGather(mNullBasis,3,mNullBasisP,INSERT_VALUES); //insert the fourth field (pos:3, i.e. pressure)
+    ierr = VecNormalize(mNullBasisP,NULL);CHKERRXX(ierr);
+
+    //Null Space context:
+    ierr = MatNullSpaceCreate(PETSC_COMM_WORLD,PETSC_FALSE,1,&mNullBasisP,&mNullSpaceP);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "solveModel"
+PetscErrorCode PetscAdLemTaras3D::solveModel()
+{
+    PetscErrorCode ierr;
+    PetscFunctionBeginUser;
+    ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3D,this);CHKERRQ(ierr);
+    ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3D,this);CHKERRQ(ierr);
+    ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);
+    ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);
+    ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
+    ierr = KSPSetUp(mKsp);CHKERRQ(ierr);
+
+    ierr = KSPGetPC(mKsp,&mPc);
+
+    ierr = PCFieldSplitSchurPrecondition(mPc,PC_FIELDSPLIT_SCHUR_PRE_USER,mPcForSc);CHKERRQ(ierr);
+
+    KSP *kspSchur;
+    PetscInt kspSchurPos = 1;
+    ierr = PCFieldSplitGetSubKSP(mPc,&kspSchurPos,&kspSchur);CHKERRQ(ierr);
+
+    ierr = KSPSetNullSpace(kspSchur[1],mNullSpaceP);CHKERRQ(ierr);
+    PetscBool isNull;
+    Mat matSc;
+    ierr = KSPGetOperators(kspSchur[1],&matSc,NULL,NULL);CHKERRQ(ierr);
+    ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
+    if(!isNull)
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
+    ierr = KSPGetOperators(mKsp,&mA,NULL,NULL);CHKERRQ(ierr);
+    ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
+    if(!isNull)
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
+
+    ierr = PetscFree(kspSchur);CHKERRQ(ierr);
+    ierr = KSPSolve(mKsp,NULL,NULL);CHKERRQ(ierr);
+    ierr = KSPGetSolution(mKsp,&mX);CHKERRQ(ierr);
+    ierr = KSPGetRhs(mKsp,&mB);CHKERRQ(ierr);
+
+
+    PetscFunctionReturn(0);
+
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "writeToMatFile"
+PetscErrorCode PetscAdLemTaras3D::writeToMatFile(
+        const std::string& fileName, bool writeA,
+        const std::string& matFileName)
+{
+    PetscErrorCode ierr;
+    PetscFunctionBeginUser;
+    PetscViewer viewer1;
+    ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fileName.c_str(),FILE_MODE_WRITE,&viewer1);CHKERRQ(ierr);
+    ierr = PetscViewerSetFormat(viewer1,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+
+    ierr = PetscObjectSetName((PetscObject)mX,"x");CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)mB,"b");CHKERRQ(ierr);
+
+    ierr = VecView(mX,viewer1);CHKERRQ(ierr);
+    //        ierr = VecView(mB,viewer);CHKERRQ(ierr);
+
+    Vec res; //residual
+    ierr = VecDuplicate(mX,&res);CHKERRQ(ierr);
+    ierr = VecSet(res,0);CHKERRQ(ierr);
+    ierr = VecAXPY(res,-1.0,mB);CHKERRQ(ierr);
+    ierr = MatMultAdd(mA,mX,res,res);
+    ierr = PetscObjectSetName((PetscObject)res,"residual");CHKERRQ(ierr);
+    ierr = VecView(res,viewer1);CHKERRQ(ierr);
+    ierr = VecDestroy(&res);CHKERRQ(ierr);
+
+    /*ierr = PetscObjectSetName((PetscObject)mNullBasis,"nullBasis");CHKERRQ(ierr);
+    ierr = VecView(mNullBasis,viewer1);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)mNullBasisP,"nullBasisP");CHKERRQ(ierr);
+    ierr = VecView(mNullBasisP,viewer1);CHKERRQ(ierr);*/
+
+
+    if(mWriteParaToFile) {
+        createParaVectors();
+        ierr = PetscObjectSetName((PetscObject)mAtrophy,"atrophy");CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)mMu,"mu");CHKERRQ(ierr);
+        ierr = VecView(mAtrophy,viewer1);CHKERRQ(ierr);
+        ierr = VecView(mMu,viewer1);CHKERRQ(ierr);
+    }
+    ierr = PetscViewerDestroy(&viewer1);CHKERRQ(ierr);
+
+    if(writeA) {
+        PetscViewer viewer2;
+        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,matFileName.c_str(),FILE_MODE_WRITE,&viewer2);CHKERRQ(ierr);
+        ierr = PetscViewerSetFormat(viewer2,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)mA,"A");CHKERRQ(ierr);
+//        ierr = MatView(mA,viewer2);CHKERRQ(ierr);
+        ierr = PetscObjectSetName((PetscObject)mPcForSc,"PcForSc");CHKERRQ(ierr);
+        ierr = MatView(mPcForSc,viewer2);CHKERRQ(ierr);
+        ierr = PetscViewerDestroy(&viewer2);CHKERRQ(ierr);
+    }
+    PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "createParaVectors"
+PetscErrorCode PetscAdLemTaras3D::createParaVectors()
+{
+    mParaVecsCreated = PETSC_TRUE;
+    PetscFunctionBeginUser;
+    PetscInt ierr;
+
+    ierr = DMCreateGlobalVector(mDaP,&mAtrophy);CHKERRQ(ierr);
+//    ierr = DMCreateGlobalVector(mDaP,&mMu);CHKERRQ(ierr);
+    ierr = VecDuplicate(mAtrophy,&mMu);CHKERRQ(ierr);
+    DMDALocalInfo info;
+    ierr = DMDAGetLocalInfo(mDaP,&info);
+
+    PetscReal    ***atrophyArray, ***muArray;
+    ierr = DMDAVecGetArray(mDaP, mAtrophy, &atrophyArray);CHKERRQ(ierr);
+    ierr = DMDAVecGetArray(mDaP, mMu, &muArray);CHKERRQ(ierr);
+
+    for (PetscInt k=info.zs; k<info.zs+info.zm; ++k) {
+        for (PetscInt j=info.ys; j<info.ys+info.ym; ++j) {
+            for (PetscInt i=info.xs; i<info.xs+info.xm; ++i) {
+                atrophyArray[k][j][i] = aC(i,j,k);
+                muArray[k][j][i] = muC(i,j,k);
+            }
+        }
+    }
+
+    ierr = DMDAVecRestoreArray(mDaP, mAtrophy, &atrophyArray);CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(mAtrophy);CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(mAtrophy);CHKERRQ(ierr);
+
+    ierr = DMDAVecRestoreArray(mDaP, mMu, &muArray);CHKERRQ(ierr);
+    ierr = VecAssemblyBegin(mMu);CHKERRQ(ierr);
+    ierr = VecAssemblyEnd(mMu);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+}
+
+MatNullSpace PetscAdLemTaras3D::getNullSpace()
+{
+    return mNullSpace;
+}
 
 #undef __FUNCT__
 #define __FUNCT__ "dataCenterAt"
@@ -192,41 +427,48 @@ PetscReal PetscAdLemTaras3D::lambdaYz(PetscInt x, PetscInt y, PetscInt z)
     return dataYzAt("lambda",x,y,z);
 }
 
+
 #undef __FUNCT__
-#define __FUNCT__ "solveModel"
-PetscErrorCode PetscAdLemTaras3D::solveModel(bool fileToMatlab, const std::string &filename)
+#define __FUNCT__ "createPcForSc"
+void PetscAdLemTaras3D::createPcForSc()
 {
+    PetscInt        i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs;
     PetscErrorCode ierr;
-    Vec b,x;
     PetscFunctionBeginUser;
-    ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3D,this);CHKERRQ(ierr);
-    ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3D,this);CHKERRQ(ierr);
-    ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);
-    ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
-    ierr = KSPSetUp(mKsp);CHKERRQ(ierr);
-    ierr = KSPSolve(mKsp,NULL,NULL);CHKERRQ(ierr);
-    ierr = KSPGetSolution(mKsp,&x);CHKERRQ(ierr);
-    ierr = KSPGetRhs(mKsp,&b);CHKERRQ(ierr);
-    if (fileToMatlab) {
-//        Mat mat1, mat2;
-//        ierr = KSPGetOperators(mKsp,&mat1,&mat2,0);CHKERRQ(ierr);
 
-        PetscViewer viewer;
-        ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,filename.c_str(),FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
-        ierr = PetscViewerSetFormat(viewer,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
-//        ierr = PetscViewerSetFormat(viewer,PETSC_VIEWER_ASCII_VTK);CHKERRQ(ierr);
+    ierr = DMDAGetInfo(mDaP,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRXX(ierr);
+    ierr = DMDAGetCorners(mDaP,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRXX(ierr);
 
-        ierr = PetscObjectSetName((PetscObject)x,"x");CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)b,"b");CHKERRQ(ierr);
-        ierr = VecView(x,viewer);CHKERRQ(ierr);
-//        ierr = VecView(b,viewer);CHKERRQ(ierr);
+    ierr = DMSetMatrixPreallocateOnly(mDaP,PETSC_TRUE);CHKERRXX(ierr);
+    ierr = DMCreateMatrix(mDaP,MATMPIAIJ,&mPcForSc);CHKERRXX(ierr);
 
-//        ierr = MatView(mat1,viewer);CHKERRQ(ierr); //doesn't work, probably not supported?
-        ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+
+    MatStencil row, col;
+    PetscReal v;
+    row.c = 0;
+    for (k=zs; k<zs+zm; ++k) {
+        for (j=ys; j<ys+ym; ++j) {
+            for (i=xs; i<xs+xm; ++i) {
+                /*if (i==0 || j==0 || k==0 //Ghost values
+                        || (i==1 && (j==1 || j==my-1 || k==1 || k==mz-1)) //four edges in x-start face.
+                        || (i==mx-1 && (j==1 || j==my-1 || k==1 || k==mz-1)) //four edges in x-end face.
+                        || (j==1 && (k==1 || k== mz-1)) //two edges in y-start face.
+                        || (j==my-1 && (k==1 || k==mz-1)) //two edges in y-end face
+                        ) {
+                    continue;
+                } else {
+                    ++mNumOfZeroDiag;
+                }*/
+                row.i = i;  row.j = j;  row.k = k;
+                col.i = i;  col.j = j;  col.k = k;
+                v = 1.0/muC(i,j,k);
+                MatSetValuesStencil(mPcForSc,1,&row,1,&col,&v,INSERT_VALUES);CHKERRXX(ierr);
+            }
+        }
     }
-
-    PetscFunctionReturn(0);
-
+    ierr = MatAssemblyBegin(mPcForSc,MAT_FINAL_ASSEMBLY);CHKERRXX(ierr);
+    ierr = MatAssemblyEnd(mPcForSc,MAT_FINAL_ASSEMBLY);CHKERRXX(ierr);
+    PetscFunctionReturnVoid();
 }
 
 #undef __FUNCT__
@@ -242,15 +484,15 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3D(
     PetscScalar     v[17];
     MatStencil      row, col[17];
     DM              da;
-    PetscReal       kBond = 1.0; //need to change it to scale the coefficients.
+    PetscReal       kBond = 250; //need to change it to scale the coefficients.
     PetscReal       kCont = 1.0; //need to change it to scale the coefficients.
 
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx = 1./(mx-1);
-    Hy = 1./(my-1);
-    Hz = 1./(mz-1);
+    Hx = 1;//1./(mx-1);
+    Hy = 1;//1./(my-1);
+    Hz = 1;//1./(mz-1);
     HyHzdHx = (Hy*Hz)/Hx;
     HxHzdHy = (Hx*Hz)/Hy;
     HxHydHz = (Hx*Hy)/Hz;
@@ -539,7 +781,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3D(
                         v[0] = kBond;       col[0].i=i;     col[0].j=j;     col[0].k=k;
                         v[1] = -kBond;      col[1].i=i;     col[1].j=j-1;   col[1].k=k;
                         ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                    }/* else { //one cell NOTE: RHS needs to be set to kBond*pCell;
+                    } /*else { //one cell NOTE: RHS needs to be set to kBond*pCell;
                         v[0] = kBond;       col[0].i=i;     col[0].j=j;     col[0].k=k;
                         ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     }*/
@@ -585,9 +827,9 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3D(KSP ksp, Vec b, void *ctx)
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da, 0, &mx, &my, &mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx   = 1.0 / (PetscReal)(mx-1);
-    Hy   = 1.0 / (PetscReal)(my-1);
-    Hz   = 1.0 / (PetscReal)(mz-1);
+    Hx   = 1;//1.0 / (PetscReal)(mx-1);
+    Hy   = 1;//1.0 / (PetscReal)(my-1);
+    Hz   = 1;//1.0 / (PetscReal)(mz-1);
 
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da, b, &rhs);CHKERRQ(ierr);
@@ -632,10 +874,10 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3D(KSP ksp, Vec b, void *ctx)
                         || (i==mx-1 && (j==1 || j==my-1 || k==1 || k==mz-1)) //four edges in x-end face.
                         || (j==1 && (k==1 || k== mz-1)) //two edges in y-start face.
                         || (j==my-1 && (k==1 || k==mz-1))) { //two edges in y-end face
-                        rhs[k][j][i].p = 0;
-                }/* else if (i==2 && j==1 && k==1) {//constant pressure point
+                    rhs[k][j][i].p = 0;
+                } /*else if (i==2 && j==1 && k==1) {//constant pressure point
                     rhs[k][j][i].p = kCont*user->getP0Cell();
-                }*/ else {
+                } */else {
                     rhs[k][j][i].p = kCont*user->aC(i,j,k);
                 }
             }
@@ -645,6 +887,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3D(KSP ksp, Vec b, void *ctx)
     ierr = DMDAVecRestoreArray(da, b, &rhs);CHKERRQ(ierr);
     ierr = VecAssemblyBegin(b);CHKERRQ(ierr);
     ierr = VecAssemblyEnd(b);CHKERRQ(ierr);
+    ierr = MatNullSpaceRemove(user->getNullSpace(),b,NULL);CHKERRQ(ierr);
 
     PetscFunctionReturn(0);
 

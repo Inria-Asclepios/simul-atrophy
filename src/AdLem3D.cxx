@@ -14,14 +14,22 @@ AdLem3D::AdLem3D(int mx, int my, int mz, double muCsf, double lambdaCsf,
 
 long double AdLem3D::muAt(int x, int y, int z) const
 {
-    return mMuGm;
-//    return x+y+z;
+    if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
+         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
+         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
+        return mMuGm;
+    }
+    return mMuCsf;
 }
 
 long double AdLem3D::lambdaAt(int x, int y, int z) const
 {
-    return mLambdaGm;
-//    return x-y-z;
+    if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
+         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
+         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
+        return mLambdaGm;
+    }
+    return mLambdaCsf;
 }
 
 long double AdLem3D::aAt(int x, int y, int z) const
@@ -30,8 +38,16 @@ long double AdLem3D::aAt(int x, int y, int z) const
          && (y > (mYnum/2. - 1)) && (y < (mYnum/2. + 1))
          && (z > (mZnum/2. - 1)) && (z < (mZnum/2. + 1))) {
         return -0.2;
-    } else
-        return 0;
+    } else {
+        if (x == 3 && y == 3 && z == 3)
+            return 0.1;
+        else {
+            if (x==mXnum-3 && y==3 && z==3)
+                return 0.1;
+            else
+                return 0;
+        }
+    }
 }
 
 

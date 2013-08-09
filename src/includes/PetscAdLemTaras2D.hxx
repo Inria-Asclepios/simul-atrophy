@@ -6,6 +6,7 @@
 #include<petscsys.h>
 #include<petscdm.h>
 #include<petscksp.h>
+#include<petscpc.h>
 #include<petscdmda.h>
 
 class PetscAdLemTaras2D : public PetscAdLem2D{

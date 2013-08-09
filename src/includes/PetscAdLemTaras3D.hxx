@@ -8,14 +8,17 @@
 #include<petscdm.h>
 #include<petscksp.h>
 #include<petscdmda.h>
+#include<petscdmcomposite.h>
 
 class PetscAdLemTaras3D : public PetscAdLem3D {
 public:
     typedef struct {
         PetscScalar vx, vy, vz, p;
     } Field;
-    PetscAdLemTaras3D(AdLem3D* );
+    PetscAdLemTaras3D(AdLem3D *model ,bool writeParaToFile);
     virtual ~PetscAdLemTaras3D();
+
+    MatNullSpace getNullSpace();
     PetscReal muC(PetscInt x, PetscInt y, PetscInt z);
     PetscReal muXy(PetscInt x, PetscInt y, PetscInt z);
     PetscReal muXz(PetscInt x, PetscInt y, PetscInt z);
@@ -27,14 +30,44 @@ public:
     PetscReal lambdaYz(PetscInt x, PetscInt y, PetscInt z);
 
     PetscReal aC(PetscInt x, PetscInt y, PetscInt z);
-    PetscReal getP0Cell();
-    PetscErrorCode solveModel(bool fileToMatlab, const std::string& filename);
+    PetscErrorCode solveModel();
+    PetscErrorCode writeToMatFile(const std::string& fileName, bool writeA, const std::string& matFileName);
     static PetscErrorCode computeMatrixTaras3D(KSP, Mat, Mat, MatStructure*, void*);
     static PetscErrorCode computeRHSTaras3D(KSP, Vec, void*);
+    static PetscErrorCode computeNullSpace(MatNullSpace, Vec, void*);
 
 protected:
-    DM mDa;
+    //Write Parameters to file
+    PetscBool mWriteParaToFile;
+    Vec mAtrophy, mMu;
+    PetscBool mParaVecsCreated; //bool that is by default false, but
+    //should be set to true by any non-static method that creates these vectors.
+    //so that destructor will destroy them.
+    //Global system i.e for Ax=b, with x containing all the velocity components and pressure nodes.
+    Mat mA;
+    Vec mX, mB;
+    DM mDa;                     //combined DMDA for both pressure and velocity.
     KSP mKsp;
+    PC mPc;
+    MatNullSpace mNullSpace;    //Null space for the global system.
+    Vec mNullBasis;             //Null basis for the global system.
+
+
+    Vec mXv, mBv;               //vectors for the velocity field.
+
+    Vec mXp, mBp;               //vectors for the pressure field.
+    DM mDaP;                    //DMDA for pressure variable.
+    Mat mPcForSc;               //Preconditioner matrix for the Schur Complement.
+    MatNullSpace mNullSpaceP;   //Null space for the pressure field.
+    Vec mNullBasisP;            //Null basis for the pressure field.
+
+
+
+    void setNullSpace();
+    PetscErrorCode createParaVectors();
+
+    //Create preconditioner matrix for the Schur's Complement outer solve.
+    void createPcForSc();
 
     PetscReal dataCenterAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);
     PetscReal dataXyAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);

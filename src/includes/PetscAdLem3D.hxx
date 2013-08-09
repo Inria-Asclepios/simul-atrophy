@@ -3,6 +3,9 @@
 //base class solver for AdLem3D using Petsc.
 #include<string>
 #include<petscsys.h>
+#include<petscvec.h>
+#include<petscmat.h>
+
 #include"AdLem3D.hxx"
 
 class PetscAdLem3D {

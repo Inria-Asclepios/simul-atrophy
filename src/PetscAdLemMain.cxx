@@ -19,7 +19,7 @@ int main(int argc,char **argv)
     int zn = 16;
 //    AdLem2D model(xn,yn,20,10,1,1);
 //    AdLem2D *model_ptr;
-    AdLem3D model(xn,yn,zn,20,10,1,1);
+    AdLem3D model(xn,yn,zn,2.5,10,1000,1000);
     AdLem3D *model_ptr;
 
     model_ptr = &model;
@@ -32,9 +32,11 @@ int main(int argc,char **argv)
         in error because the PetscFinalize() will see pets-objects allocated but not freed!*/
 
 //        PetscAdLemTaras2D solver1(model_ptr);
-        PetscAdLemTaras3D solver1(model_ptr);
-        std::string wFileName("/user/bkhanal/home/works/AdLemModel/results/lin_sys");
-        solver1.solveModel(true,wFileName);
+        PetscAdLemTaras3D solver1(model_ptr,false);
+        std::string wFileName("/user/bkhanal/home/works/AdLemModel/results/sol");
+        std::string wFileNameSys("/user/bkhanal/home/works/AdLemModel/results/lin_sys");
+        solver1.solveModel();
+        solver1.writeToMatFile(wFileName,true,wFileNameSys);
     }
     PetscErrorCode ierr;
 
@@ -43,7 +45,6 @@ int main(int argc,char **argv)
     size_file.open("/user/bkhanal/home/works/AdLemModel/results/size_lin_sys");
     size_file<<xn+1<<" "<<yn+1<<" "<<zn+1;
     size_file.close();
-
     return 0;
 }
 
