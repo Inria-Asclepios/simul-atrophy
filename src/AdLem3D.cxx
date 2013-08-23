@@ -42,7 +42,7 @@ long double AdLem3D::aAt(int x, int y, int z) const
         if (x == 3 && y == 3 && z == 3)
             return 0.1;
         else {
-            if (x==mXnum-3 && y==3 && z==3)
+            if (x==mXnum-4 && y==3 && z==3)
                 return 0.1;
             else
                 return 0;

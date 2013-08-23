@@ -20,6 +20,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDaP);CHKERRXX(ierr);
 
+    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
 
 
@@ -37,7 +38,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,4,1,0,0,0,&mDa);CHKERRXX(ierr);
 
-    //    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
+    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,0,"vx");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,2,"vz");CHKERRXX(ierr);
@@ -133,23 +134,36 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
     PetscFunctionBeginUser;
     ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3D,this);CHKERRQ(ierr);
     ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3D,this);CHKERRQ(ierr);
-    ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);
-    ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);
+    ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);              //mDa with dof = 4, vx,vy,vz and p.
+    ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
     ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
-    ierr = KSPSetUp(mKsp);CHKERRQ(ierr);
+    ierr = KSPSetUp(mKsp);CHKERRQ(ierr);                  //register the fieldsplits obtained from options.
 
-    ierr = KSPGetPC(mKsp,&mPc);
-
+    //Setting up user PC for Schur Complement
+    ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
     ierr = PCFieldSplitSchurPrecondition(mPc,PC_FIELDSPLIT_SCHUR_PRE_USER,mPcForSc);CHKERRQ(ierr);
 
-    KSP *kspSchur;
-    PetscInt kspSchurPos = 1;
-    ierr = PCFieldSplitGetSubKSP(mPc,&kspSchurPos,&kspSchur);CHKERRQ(ierr);
-
-    ierr = KSPSetNullSpace(kspSchur[1],mNullSpaceP);CHKERRQ(ierr);
+    KSP *subKsp;
+    PetscInt subKspPos = 0;
+    //Set up nearNullspace for A00 block.
+    /*ierr = PCFieldSplitGetSubKSP(mPc,&subKspPos,&subKsp);CHKERRQ(ierr);
+    MatNullSpace rigidBodyModes;
+    Vec coords;
+    ierr = DMGetCoordinates(mDa,&coords);CHKERRQ(ierr);
+    ierr = MatNullSpaceCreateRigidBody(coords,&rigidBodyModes);CHKERRQ(ierr);
+    Mat matA00;
+    ierr = KSPGetOperators(subKsp[0],&matA00,NULL,NULL);CHKERRQ(ierr);
+    ierr = MatSetNearNullSpace(matA00,rigidBodyModes);CHKERRQ(ierr);
+    ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
+*/
+    //Position 1 => Ksp corresponding to Schur complement S on pressure space
+    subKspPos = 1;
+    ierr = PCFieldSplitGetSubKSP(mPc,&subKspPos,&subKsp);CHKERRQ(ierr);
+    //Set up the null space of constant pressure.
+    ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
     PetscBool isNull;
     Mat matSc;
-    ierr = KSPGetOperators(kspSchur[1],&matSc,NULL,NULL);CHKERRQ(ierr);
+    ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
     ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
     if(!isNull)
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
@@ -158,7 +172,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
     if(!isNull)
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
 
-    ierr = PetscFree(kspSchur);CHKERRQ(ierr);
+    ierr = PetscFree(subKsp);CHKERRQ(ierr);
     ierr = KSPSolve(mKsp,NULL,NULL);CHKERRQ(ierr);
     ierr = KSPGetSolution(mKsp,&mX);CHKERRQ(ierr);
     ierr = KSPGetRhs(mKsp,&mB);CHKERRQ(ierr);
@@ -215,8 +229,8 @@ PetscErrorCode PetscAdLemTaras3D::writeToMatFile(
         ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,matFileName.c_str(),FILE_MODE_WRITE,&viewer2);CHKERRQ(ierr);
         ierr = PetscViewerSetFormat(viewer2,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)mA,"A");CHKERRQ(ierr);
-//        ierr = MatView(mA,viewer2);CHKERRQ(ierr);
-        ierr = PetscObjectSetName((PetscObject)mPcForSc,"PcForSc");CHKERRQ(ierr);
+        ierr = MatView(mA,viewer2);CHKERRQ(ierr);
+//        ierr = PetscObjectSetName((PetscObject)mPcForSc,"PcForSc");CHKERRQ(ierr);
         ierr = MatView(mPcForSc,viewer2);CHKERRQ(ierr);
         ierr = PetscViewerDestroy(&viewer2);CHKERRQ(ierr);
     }
@@ -484,7 +498,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3D(
     PetscScalar     v[17];
     MatStencil      row, col[17];
     DM              da;
-    PetscReal       kBond = 250; //need to change it to scale the coefficients.
+    PetscReal       kBond = 1.0; //need to change it to scale the coefficients.
     PetscReal       kCont = 1.0; //need to change it to scale the coefficients.
 
     PetscFunctionBeginUser;

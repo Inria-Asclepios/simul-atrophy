@@ -14,12 +14,12 @@ static char help[] = "Solves AdLem model.\n\n";
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
-    int xn = 16;
-    int yn = 16;
-    int zn = 16;
+    int xn = 13;
+    int yn = 13;
+    int zn = 13;
 //    AdLem2D model(xn,yn,20,10,1,1);
 //    AdLem2D *model_ptr;
-    AdLem3D model(xn,yn,zn,2.5,10,1000,1000);
+    AdLem3D model(xn,yn,zn,1,1,1,1);
     AdLem3D *model_ptr;
 
     model_ptr = &model;
@@ -36,7 +36,7 @@ int main(int argc,char **argv)
         std::string wFileName("/user/bkhanal/home/works/AdLemModel/results/sol");
         std::string wFileNameSys("/user/bkhanal/home/works/AdLemModel/results/lin_sys");
         solver1.solveModel();
-        solver1.writeToMatFile(wFileName,true,wFileNameSys);
+        solver1.writeToMatFile(wFileName,false,wFileNameSys);
     }
     PetscErrorCode ierr;
 
