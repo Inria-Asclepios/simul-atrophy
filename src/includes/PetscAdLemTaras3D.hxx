@@ -1,13 +1,13 @@
 #ifndef PETSCADLEMTARAS3D_HXX
 #define PETSCADLEMTARAS3D_HXX
 
-#include"AdLem3D.hxx"
 #include"PetscAdLem3D.hxx"
+//#include"AdLem3D.hxx"
 
 #include<petscsys.h>
-#include<petscdm.h>
-#include<petscksp.h>
-#include<petscdmda.h>
+//#include<petscdm.h>
+//#include<petscksp.h>
+//#include<petscdmda.h>
 #include<petscdmcomposite.h>
 
 class PetscAdLemTaras3D : public PetscAdLem3D {
@@ -43,11 +43,6 @@ protected:
     PetscBool mParaVecsCreated; //bool that is by default false, but
     //should be set to true by any non-static method that creates these vectors.
     //so that destructor will destroy them.
-    //Global system i.e for Ax=b, with x containing all the velocity components and pressure nodes.
-    Mat mA;
-    Vec mX, mB;
-    DM mDa;                     //combined DMDA for both pressure and velocity.
-    KSP mKsp;
     PC mPc;
     MatNullSpace mNullSpace;    //Null space for the global system.
     Vec mNullBasis;             //Null basis for the global system.
@@ -60,6 +55,7 @@ protected:
     Mat mPcForSc;               //Preconditioner matrix for the Schur Complement.
     MatNullSpace mNullSpaceP;   //Null space for the pressure field.
     Vec mNullBasisP;            //Null basis for the pressure field.
+
 
 
 
