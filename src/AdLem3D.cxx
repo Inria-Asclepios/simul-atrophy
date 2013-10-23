@@ -35,15 +35,16 @@ void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[], bool f
         mDomainRegion.SetIndex(domainOrigin);
         mDomainRegion.SetSize(domainSize);
     }
+//    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
 void AdLem3D::solveModel()
 {
+    mPetscSolverTarasUsed = true;
     mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
     mPetscSolverTaras->solveModel();
-    mPetscSolverTarasUsed = true;
 }
 
 //does not guarantee that this is a valid atrophy!
@@ -120,8 +121,8 @@ void AdLem3D::createAtrophy(unsigned int size[3])
                 /*if(!((i>= (xn/2)-1) && (i<=xn/2) &&
                         (j>= (yn/2)-1) && (j<=yn/2) &&
                         (k>= (zn/2)-1) && (k<=zn/2)))*/
-                if(mAtrophy->GetPixel(pos) != posAtrophy)
-                    mAtrophy->SetPixel(pos,negAtrophy);
+                if(mAtrophy->GetPixel(pos) != posAtrophy) //prolly not a good idea to have inequality for double type!
+                    mAtrophy->SetPixel(pos,negAtrophy); //so use the above commented condition instead ?
             }
         }
     }
@@ -232,19 +233,22 @@ void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
     mLambdaGm = lambdaCsf*lambdaRatio;      mLambdaWm = lambdaCsf*lambdaRatio;
 }
 
-void AdLem3D::writeSolution(std::string resultsPath)
+void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool inMatlabFormatSystemMatrix)
 {
     std::string velocityFileName(resultsPath+"vel.mha");
     std::string pressureFileName(resultsPath+"press.mha");
-    std::string matSolFileName(resultsPath+"sol");
-    std::string matSysFileName(resultsPath+"sys");
-    std::string matSizeSysFileName(resultsPath+"size_lin_sys");
-    mPetscSolverTaras->writeToMatFile(matSolFileName,false,matSysFileName);
-    std::ofstream size_file;
-    size_file.open(matSizeSysFileName.c_str());
-    size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
+    if(inMatlabFormat) {
+        std::string matSolFileName(resultsPath+"sol");
+        std::string matSysFileName(resultsPath+"sys");
+        std::string matSizeSysFileName(resultsPath+"size_lin_sys");
+        mPetscSolverTaras->writeToMatFile(matSolFileName,inMatlabFormatSystemMatrix,matSysFileName);
+//        mPetscSolverTaras->writeToMatFile(matSolFileName,true,matSysFileName);
+        std::ofstream size_file;
+        size_file.open(matSizeSysFileName.c_str());
+        size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
             <<mDomainRegion.GetSize()[2]+1;
-    size_file.close();
+        size_file.close();
+    }
 
     itk::Index<3>           outputImageStart;       //should be 0!
     ScalarImageType::RegionType domainRegion;
@@ -257,16 +261,16 @@ void AdLem3D::writeSolution(std::string resultsPath)
 
     mVelocity = VectorImageType::New();
     mVelocity->SetRegions(domainRegion);
-    mVelocity->SetOrigin(mAtrophy->GetOrigin());
+    /*mVelocity->SetOrigin(mAtrophy->GetOrigin());
     mVelocity->SetSpacing(mAtrophy->GetSpacing());
-    mVelocity->SetDirection(mAtrophy->GetDirection());
+    mVelocity->SetDirection(mAtrophy->GetDirection());*/
     mVelocity->Allocate();
 
     mPressure = ScalarImageType::New();
     mPressure->SetRegions(domainRegion);
-    mPressure->SetOrigin(mAtrophy->GetOrigin());
+    /*mPressure->SetOrigin(mAtrophy->GetOrigin());
     mPressure->SetSpacing(mAtrophy->GetSpacing());
-    mPressure->SetDirection(mAtrophy->GetDirection());
+    mPressure->SetDirection(mAtrophy->GetDirection());*/
     mPressure->Allocate();
 
     typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
@@ -314,6 +318,10 @@ void AdLem3D::writeSolution(std::string resultsPath)
 
 }
 
+void AdLem3D::writeResidual(std::string resultsPath)
+{
+    mPetscSolverTaras->writeResidual(resultsPath);
+}
 
 long double AdLem3D::muAt(int x, int y, int z) const
 {
@@ -338,20 +346,6 @@ long double AdLem3D::lambdaAt(int x, int y, int z) const
 
 long double AdLem3D::aAt(int x, int y, int z) const
 {
-    /*if ( (x > (mXnum/2. - 1)) && (x < (mXnum/2. + 1))
-         && (y > (mYnum/2. - 1)) && (y < (mYnum/2. + 1))
-         && (z > (mZnum/2. - 1)) && (z < (mZnum/2. + 1))) {
-        return -0.9;
-    } else {
-        if (x == 3 && y == 3 && z == 3)
-            return 0.6;
-        else {
-            if (x==mXnum-4 && y==3 && z==3)
-                return 0.3;
-            else
-                return 0;
-        }
-    }*/
     ScalarImageType::IndexType pos;
     pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
     pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
@@ -378,16 +372,22 @@ long double AdLem3D::dataAt(std::string dType, int x, int y, int z)
 int AdLem3D::getXnum() const
 {
     return mDomainRegion.GetSize()[0];
+//    return 182;
+//    return 10;
 }
 
 int AdLem3D::getYnum() const
 {
     return mDomainRegion.GetSize()[1];
+//    return 218;
+//    return 10;
 }
 
 int AdLem3D::getZnum() const
 {
     return mDomainRegion.GetSize()[2];
+//    return 182;
+//    return 10;
 }
 
 AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }

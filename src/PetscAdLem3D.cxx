@@ -32,6 +32,28 @@ AdLem3D* PetscAdLem3D::getProblemModel() const
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "writeResidual"
+PetscErrorCode PetscAdLem3D::writeResidual(std::string resultPath)
+{
+    PetscErrorCode ierr;
+    Vec res;
+    PetscFunctionBeginUser;
+    ierr = DMCreateGlobalVector(mDa,&res);CHKERRQ(ierr);
+    ierr = VecSet(res,0);CHKERRQ(ierr);
+    ierr = VecAXPY(res,-1.0,mB);CHKERRQ(ierr);
+    ierr = MatMultAdd(mA,mX,res,res);
+
+    std::string fileName = resultPath + "res.vts";
+    PetscViewer viewer;
+    ierr = PetscViewerVTKOpen(PETSC_COMM_WORLD,fileName.c_str(),FILE_MODE_WRITE,&viewer);CHKERRQ(ierr);
+    ierr = PetscObjectSetName((PetscObject)res,"residual");CHKERRQ(ierr);
+    ierr = VecView(res,viewer);CHKERRQ(ierr);
+    ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
+    ierr = VecDestroy(&res);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "getSolutionArray"
 PetscErrorCode PetscAdLem3D::getSolutionArray()
 {
@@ -46,7 +68,7 @@ PetscErrorCode PetscAdLem3D::getSolutionArray()
     ierr = VecScatterEnd(mScatterCtx,xNatural,mXLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecGetArray(mXLocal,&mSol);CHKERRQ(ierr);
     ierr = VecDestroy(&xNatural);CHKERRQ(ierr);
-//    ierr = VecView(mXLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    //    ierr = VecView(mXLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     PetscFunctionReturn(0);
 }
 

@@ -19,6 +19,7 @@ public:
 
     double getSolVelocityAt(unsigned int pos[3],unsigned int component);
     double getSolPressureAt(unsigned int pos[3]);
+    PetscErrorCode writeResidual(std::string resultPath);
 
 protected:
     AdLem3D* mProblemModel;
@@ -34,7 +35,6 @@ protected:
 
     Vec mXLocal;              //one that stores velocity vector to be sent outside.
     VecScatter mScatterCtx;     //context to scatter global mX to mXvLocal and mXpLocal.
-
     PetscScalar *mSol;         //Array to access mXLocal.
 
     PetscErrorCode getSolutionArray(); //point mSol to proper solution vector mXLocal.

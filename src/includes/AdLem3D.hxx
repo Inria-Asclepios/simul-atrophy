@@ -55,7 +55,9 @@ public:
                          bool fullImageSize = false);
 
     void solveModel();
-    void writeSolution(std::string resultsPath);
+    void writeSolution(std::string resultsPath, bool inMatlabFormat = false,
+                       bool inMatlabFormatSystemSolution = false);
+    void writeResidual(std::string resultsPath);
 
     void createAtrophy(unsigned int size[3]);
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);

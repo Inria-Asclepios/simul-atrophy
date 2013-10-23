@@ -25,5 +25,25 @@ vec3DToVtk(vx,vy,vz,ax,ay,az,[res_path 'velocity.vtk']);
 savevtk(p,[res_path 'pressure.vtk']);
 
 %% System matrix
- sysFname = 'lin_sys';
+clear all;clc;
+addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
+res_path = '/user/bkhanal/home/works/AdLemModel/results/';
+
+ sysFname = 'sys';
 A = PetscBinaryRead([res_path sysFname]);
+
+%% 
+L = full(L);
+A = full(A);
+[rows cols] = size(A);
+n = 4;
+indxP = 1:(rows/n);
+A_indx = zeros(1,rows);
+A_indx(2:end) = 1:rows-1;
+A_indx(:,(indxP-1)*4+1) = 4*indxP;
+AA = A(A_indx,A_indx);
+
+% length = m/4;
+% Avx = zeros(length); Avy = Avx; Avz = Avy; Ap = Avz;
+% indx = [0:length-1]';
+% Avx = A(indx*4 + 1);
