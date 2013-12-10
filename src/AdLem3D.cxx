@@ -4,19 +4,161 @@
 #include <itkMultiplyImageFilter.h>
 #include<iostream>
 
-//Initialize with Dirichlet boundary condition, no other boundary condition for now.
-AdLem3D::AdLem3D()
+#undef __FUNCT__
+#define __FUNCT__ "AdLem3D"
+AdLem3D::AdLem3D():mWallVelocities(18)
 {
-//    FIXME: Initialize the region!!
-    //Ask whether full Image will be used or not, if not set a bool variable for
-    //region as unInitialized?
+    //Initialize with Dirichlet boundary condition, no other boundary condition for now.
     mBc= AdLem3D::DIRICHLET;
     mPetscSolverTarasUsed = false;
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "~AdLem3D"
 AdLem3D::~AdLem3D()
 {
     if(mPetscSolverTarasUsed) delete mPetscSolverTaras;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getBcType"
+AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }
+
+bool AdLem3D::isMuConstant() const
+{
+    return mIsMuConstant;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "setWallVelocities"
+void AdLem3D::setWallVelocities(std::vector<double>& wallVelocities) {
+    mWallVelocities = wallVelocities;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getWallVelocities"
+void AdLem3D::getWallVelocities(std::vector<double>& wallVelocities) {
+    wallVelocities = mWallVelocities;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "setLameParameters"
+void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
+                                bool isMuConstant,
+                                double muRatio, double lambdaRatio)
+{
+    mMuCsf = muCsf;
+    mLambdaCsf = lambdaCsf;
+    if(!isMuConstant) {
+        mIsMuConstant = false;
+        mMuGm = muCsf*muRatio;      mMuWm = muCsf*muRatio;
+        mLambdaGm = lambdaCsf*lambdaRatio;      mLambdaWm = lambdaCsf*lambdaRatio;
+    } else {
+        mIsMuConstant = true;
+        mMuGm = muCsf;          mMuWm = muCsf;
+        mLambdaGm = lambdaCsf;   mLambdaWm = lambdaCsf;
+    }
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "setPressureMassCoeffCsf"
+void AdLem3D::setPressureMassCoeffCsf(int coeff)
+{
+    mPressureMassCoeffCsf = coeff;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getPressureMassCoeffCsf"
+int AdLem3D::getPressureMassCoeffCsf()
+{
+    return mPressureMassCoeffCsf;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "muAt"
+double AdLem3D::muAt(int x, int y, int z) const
+{
+    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
+         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
+         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
+        return mMuGm;
+    }*/
+    return mMuCsf;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "lambdaAt"
+double AdLem3D::lambdaAt(int x, int y, int z) const
+{
+    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
+         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
+         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
+        return mLambdaGm;
+    }
+    return mLambdaCsf;*/
+    return mLambdaCsf;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "aAt"
+double AdLem3D::aAt(int x, int y, int z) const
+{
+    ScalarImageType::IndexType pos;
+    pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
+    pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
+    pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+
+    return(mAtrophy->GetPixel(pos));
+
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "brainMaskAt"
+int AdLem3D::brainMaskAt(int x, int y, int z) const
+{
+    ScalarImageType::IndexType pos;
+    pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
+    pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
+    pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+
+    return(mBrainMask->GetPixel(pos));
+
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "dataAt"
+double AdLem3D::dataAt(std::string dType, int x, int y, int z)
+{
+    if (dType.compare("mu") == 0)
+        return muAt(x,y,z);
+    else if (dType.compare("lambda") == 0)
+        return lambdaAt(x,y,z);
+    else if (dType.compare("atrophy") == 0)
+        return aAt(x,y,z);
+    else
+        std::cout<<"invalid option: "<<dType<<" : for funciton dataAt"<<std::endl;
+    return 0;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getXnum"
+int AdLem3D::getXnum() const
+{
+    return mDomainRegion.GetSize()[0];
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getYnum"
+int AdLem3D::getYnum() const
+{
+    return mDomainRegion.GetSize()[1];
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getZnum"
+int AdLem3D::getZnum() const
+{
+    return mDomainRegion.GetSize()[2];
 }
 
 #undef __FUNCT__
@@ -56,14 +198,23 @@ void AdLem3D::setAtrophy(std::string atrophyImageFile)
     setAtrophy(scalarReader->GetOutput());
 }
 
+
+#undef __FUNCT__
+#define __FUNCT__ "setBrainMask"
+void AdLem3D::setBrainMask(std::string maskImageFile)
+{
+
+    ScalarReaderType::Pointer   scalarReader = ScalarReaderType::New();
+    scalarReader->SetFileName(maskImageFile);
+    scalarReader->Update();
+    mBrainMask = scalarReader->GetOutput();
+}
+
 //does not guarantee that this is a valid atrophy!
+//Should be taken care in the input itself, or use modifyAtrophy function.
 void AdLem3D::setAtrophy(ScalarImageType::Pointer inputAtrophy)
 {
     mAtrophy = inputAtrophy;
-    //Make it valid or not (for DIRICHLET bc)! i.e.
-    //1. Set all border pixels to 0;
-    //2. Modify all second-last border pixels such that sum of all pixels = 0;
-//    modifyAtrophy();
 }
 
 void AdLem3D::scaleAtorphy(double factor)
@@ -148,6 +299,8 @@ void AdLem3D::createAtrophy(unsigned int size[3])
 //Valid atrophy has:
 //total sum close to zero, i.e. < sumMaxValue.
 //all boundary voxels has zero.
+#undef __FUNCT__
+#define __FUNCT__ "isAtrophyValid"
 bool AdLem3D::isAtrophyValid(double sumMaxValue) {
     //Check if sum is zero:
     itk::ImageRegionIterator<ScalarImageType> it(mAtrophy,mDomainRegion);
@@ -165,6 +318,8 @@ bool AdLem3D::isAtrophyValid(double sumMaxValue) {
 
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "writeAtrophyToFile"
 void AdLem3D::writeAtrophyToFile(std::string fileName) {
     ScalarWriterType::Pointer writer = ScalarWriterType::New();
     writer->SetFileName(fileName);
@@ -172,6 +327,8 @@ void AdLem3D::writeAtrophyToFile(std::string fileName) {
     writer->Update();
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "modifyAtrophy"
 void AdLem3D::modifyAtrophy() {
     ScalarImageType::RegionType innerRegion;
     ScalarImageType::SizeType offset;
@@ -215,24 +372,10 @@ void AdLem3D::modifyAtrophy() {
     }
 }
 
-void AdLem3D::setBrainMask(std::string maskImageFile)
-{
 
-    ScalarReaderType::Pointer   scalarReader;
-    scalarReader->SetFileName(maskImageFile);
-    scalarReader->Update();
-    mBrainMask = scalarReader->GetOutput();
-}
 
-void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
-                                double muRatio, double lambdaRatio)
-{
-    mMuCsf = muCsf;
-    mLambdaCsf = lambdaCsf;
-    mMuGm = muCsf*muRatio;      mMuWm = muCsf*muRatio;
-    mLambdaGm = lambdaCsf*lambdaRatio;      mLambdaWm = lambdaCsf*lambdaRatio;
-}
-
+#undef __FUNCT__
+#define __FUNCT__ "writeSolution"
 void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool inMatlabFormatSystemMatrix)
 {
     std::string velocityFileName(resultsPath+"vel.mha");
@@ -261,16 +404,16 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
 
     mVelocity = VectorImageType::New();
     mVelocity->SetRegions(domainRegion);
-    /*mVelocity->SetOrigin(mAtrophy->GetOrigin());
+    mVelocity->SetOrigin(mAtrophy->GetOrigin());
     mVelocity->SetSpacing(mAtrophy->GetSpacing());
-    mVelocity->SetDirection(mAtrophy->GetDirection());*/
+    mVelocity->SetDirection(mAtrophy->GetDirection());
     mVelocity->Allocate();
 
     mPressure = ScalarImageType::New();
     mPressure->SetRegions(domainRegion);
-    /*mPressure->SetOrigin(mAtrophy->GetOrigin());
+    mPressure->SetOrigin(mAtrophy->GetOrigin());
     mPressure->SetSpacing(mAtrophy->GetSpacing());
-    mPressure->SetDirection(mAtrophy->GetDirection());*/
+    mPressure->SetDirection(mAtrophy->GetDirection());
     mPressure->Allocate();
 
     typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
@@ -318,76 +461,10 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
 
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "writeResidual"
 void AdLem3D::writeResidual(std::string resultsPath)
 {
     mPetscSolverTaras->writeResidual(resultsPath);
 }
 
-long double AdLem3D::muAt(int x, int y, int z) const
-{
-    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
-         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
-         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
-        return mMuGm;
-    }*/
-    return mMuCsf;
-}
-
-long double AdLem3D::lambdaAt(int x, int y, int z) const
-{
-    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
-         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
-         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
-        return mLambdaGm;
-    }
-    return mLambdaCsf;*/
-    return mLambdaCsf;
-}
-
-long double AdLem3D::aAt(int x, int y, int z) const
-{
-    ScalarImageType::IndexType pos;
-    pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
-    pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
-    pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
-
-    return(mAtrophy->GetPixel(pos));
-
-}
-
-
-long double AdLem3D::dataAt(std::string dType, int x, int y, int z)
-{
-    if (dType.compare("mu") == 0)
-        return muAt(x,y,z);
-    else if (dType.compare("lambda") == 0)
-        return lambdaAt(x,y,z);
-    else if (dType.compare("atrophy") == 0)
-        return aAt(x,y,z);
-    else
-        std::cout<<"invalid option: "<<dType<<" : for funciton dataAt"<<std::endl;
-    return 0;
-}
-
-int AdLem3D::getXnum() const
-{
-    return mDomainRegion.GetSize()[0];
-//    return 182;
-//    return 10;
-}
-
-int AdLem3D::getYnum() const
-{
-    return mDomainRegion.GetSize()[1];
-//    return 218;
-//    return 10;
-}
-
-int AdLem3D::getZnum() const
-{
-    return mDomainRegion.GetSize()[2];
-//    return 182;
-//    return 10;
-}
-
-AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }

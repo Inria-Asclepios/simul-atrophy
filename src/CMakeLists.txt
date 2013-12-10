@@ -16,6 +16,8 @@ add_executable(AdLemMain
     AdLem3D.cxx
     PetscAdLem3D.cxx
     PetscAdLemTaras3D.cxx
+    #PetscAdLemTaras3D_computeMatrixRhsDrivenCavityTest.cxx
+    #PetscAdLemTaras3D_computeMatrixRhsDrivenCavityTest1.cxx
 )
 
 

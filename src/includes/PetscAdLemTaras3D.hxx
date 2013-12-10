@@ -32,11 +32,17 @@ public:
     PetscReal aC(PetscInt x, PetscInt y, PetscInt z);
     PetscErrorCode solveModel();
     PetscErrorCode writeToMatFile(const std::string& fileName, bool writeA, const std::string& matFileName);
-    static PetscErrorCode computeMatrixTaras3D(KSP, Mat, Mat, MatStructure*, void*);
-    static PetscErrorCode computeRHSTaras3D(KSP, Vec, void*);
+    static PetscErrorCode computeMatrixTaras3d(KSP, Mat, Mat, MatStructure*, void*);
+    static PetscErrorCode computeRHSTaras3d(KSP, Vec, void*);
     static PetscErrorCode computeNullSpace(MatNullSpace, Vec, void*);
+    static PetscErrorCode computeMatrixTaras3dConstantMu(KSP, Mat, Mat, MatStructure*, void*);
+    static PetscErrorCode computeRHSTaras3dConstantMu(KSP, Vec, void*);
+
+    PetscInt bMaskAt(PetscInt x, PetscInt y, PetscInt z);
 
 protected:
+    //Is it a constant viscosity case or discontinuous?
+    PetscBool mIsMuConstant;
     //Write Parameters to file
     PetscBool mWriteParaToFile;
     Vec mAtrophy, mMu;
@@ -46,7 +52,6 @@ protected:
     PC mPc;
     MatNullSpace mNullSpace;    //Null space for the global system.
     Vec mNullBasis;             //Null basis for the global system.
-
 
     Vec mXv, mBv;               //vectors for the velocity field.
 

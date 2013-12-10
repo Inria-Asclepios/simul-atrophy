@@ -13,12 +13,15 @@
 /* Linear Elastic Model 3D for AD deformation. This model contains parameters and
   inputs of the following system:
   div(mu grad(v)) - grad(p) = (mu + lambda)grad(a)
-  div(v)                    = -a
+  div(v)          + c*p          = -a
 
 where,
 mu and lambda are the Lame coefficients,
 v is the velcoity/displacement for small time step,
-and a is the atrophy
+a is the atrophy,
+c is a function of position. Options:
+c=0 everywhere, to enforce incompressibility everywhere.
+c=non-zero, 1/lambda ? pressureMasscoeff; at places where one wants to release the incompressibility.
 */
 
 class PetscAdLemTaras3D;
@@ -28,7 +31,6 @@ public:
         DIRICHLET, NEUMANN
     };
 
-//    typedef typename itk::Image<int, 3>         IntegerImageType;
     typedef typename itk::Image<double, 3>      ScalarImageType;
     typedef typename itk::Image<itk::Vector<double,3>, 3>   VectorImageType;
 
@@ -42,23 +44,37 @@ public:
     int getXnum() const;
     int getYnum() const;
     int getZnum() const;
+
+    //--**********Boundary condition related functions**************//
     bcType getBcType() const;
+    void setWallVelocities(std::vector<double>& wallVelocities);
+    void getWallVelocities(std::vector<double>& wallVelocities); //copies mWallVelocities content.
+
+
+    //--***********Model parameters related functions***************//
+    bool isMuConstant() const;
+
+    void setLameParameters(double muCsf, double lambdaCsf,
+                           bool isMuConstant = true,
+                           double muRatio = 1, double lambdaRatio = 1);
+    void setPressureMassCoeffCsf(int coeff);    //value of c.
+    int getPressureMassCoeffCsf();
 
     //string should be either of "mu", "lambda" or "atrophy"
-    long double dataAt(std::string dType, int x, int y, int z);
+    double dataAt(std::string dType, int x, int y, int z);
+    int brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
 
     void setBrainMask(std::string maskImageFile);
-    void setLameParameters(double muCsf, double lambdaCsf,
-                           double muRatio, double lambdaRatio);
-    //void setOrigin() //Get Origin from atrophy or mask Image!
+
+    //solver related functions
     void setDomainRegion(unsigned int origin[3], unsigned int size[3],
                          bool fullImageSize = false);
-
     void solveModel();
     void writeSolution(std::string resultsPath, bool inMatlabFormat = false,
                        bool inMatlabFormatSystemSolution = false);
     void writeResidual(std::string resultsPath);
 
+    //Atrophy related functions
     void createAtrophy(unsigned int size[3]);
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);
     void setAtrophy(std::string atrophyImageFile);
@@ -75,18 +91,27 @@ protected:
 
     ScalarImageType::RegionType mDomainRegion;
 
+    //Boundary condition:
     AdLem3D::bcType             mBc;
+    std::vector<double> mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
 
     //parameters for Gray matter, White matter and Csf:
-    long double mMuGm, mMuWm, mMuCsf;
-    long double mLambdaGm, mLambdaWm, mLambdaCsf;
+    double      mMuGm, mMuWm, mMuCsf;
+    double      mLambdaGm, mLambdaWm, mLambdaCsf;
+    bool        mIsMuConstant;
 
-    PetscAdLemTaras3D *mPetscSolverTaras;
+    //pressure coefficient at CSF: 0 => strictly follow incompressibilty constraint.
+    //big number => release IC and allow pressure to vary.
+    //by default, it's set to zero.
+    int      mPressureMassCoeffCsf;
+
+    //Solver option
+    PetscAdLemTaras3D   *mPetscSolverTaras;
     bool                mPetscSolverTarasUsed;
 
-    long double muAt(int x, int y, int z) const;
-    long double lambdaAt(int x, int y, int z) const;
-    long double aAt(int x, int y, int z) const;
+    double muAt(int x, int y, int z) const;
+    double lambdaAt(int x, int y, int z) const;
+    double aAt(int x, int y, int z) const;
 };
 
 #endif // ADLEM3D_HXX

@@ -1,7 +1,8 @@
 %% Create results: At ../../results/
 clear all;clc;
-addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
-res_path = '/user/bkhanal/home/works/AdLemModel/results/';
+% addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
+addpath(genpath('/home/bkhanal/Documents/softwares/petsc-3.4.3/bin/matlab/'));
+res_path = '/user/bkhanal/home/works/AdLemModel/results/patients/matlabPetscCompare/';
 
 % fname = 'sol_cluster_big';
 % sfName = 'size_cluster_big';
@@ -26,10 +27,11 @@ savevtk(p,[res_path 'pressure.vtk']);
 
 %% System matrix
 clear all;clc;
-addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
-res_path = '/user/bkhanal/home/works/AdLemModel/results/';
+% addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
+addpath(genpath('/home/bkhanal/Documents/softwares/petsc-3.4.3/bin/matlab/'));
+res_path = '/user/bkhanal/home/works/AdLemModel/results/patients/matlabPetscCompare/';
 
- sysFname = 'sys';
+sysFname = 'sys';
 A = PetscBinaryRead([res_path sysFname]);
 
 %% 
