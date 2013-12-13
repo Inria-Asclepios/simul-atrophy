@@ -32,8 +32,10 @@ public:
     };
 
     typedef typename itk::Image<double, 3>      ScalarImageType;
+    typedef typename itk::Image<int, 3>         IntegerImageType;
     typedef typename itk::Image<itk::Vector<double,3>, 3>   VectorImageType;
 
+    typedef typename itk::ImageFileReader<IntegerImageType>  IntegerImageReaderType;
     typedef typename itk::ImageFileReader<ScalarImageType>  ScalarReaderType;
     typedef typename itk::ImageFileWriter<ScalarImageType>  ScalarWriterType;
     typedef typename itk::ImageFileWriter<VectorImageType>  VectorWriterType;
@@ -58,13 +60,20 @@ public:
                            bool isMuConstant = true,
                            double muRatio = 1, double lambdaRatio = 1);
     void setPressureMassCoeffCsf(int coeff);    //value of c.
-    int getPressureMassCoeffCsf();
+    int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy"
     double dataAt(std::string dType, int x, int y, int z);
     int brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
+    int getRelaxIcLabel() const;  //Return the label present in BrainMask where the IC is to be relaxed,
+    //by setting pressureMassCoeff.
 
-    void setBrainMask(std::string maskImageFile);
+    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff);
+    //relaxIc should almost always be true because the utility of Brain mask is only
+    //when we want to release IC on certain places!
+    //IMPORTANT: The maskImage must have at least some interior voxels where
+    //the values are equal to relaxIcLabel IF mPressureMassCoeffCsf is non-zero;
+    //This is because the Taras solver will not be able to produce appropriate null-space.
 
     //solver related functions
     void setDomainRegion(unsigned int origin[3], unsigned int size[3],
@@ -79,13 +88,18 @@ public:
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);
     void setAtrophy(std::string atrophyImageFile);
     bool isAtrophyValid(double sumMaxValue);
-    void modifyAtrophy();
+
+    //By default, the total sum of atrophy is not forced to be zero; use this option
+    //if you want to enforce IC everywhere, that this is usually the case when you
+    //are not using brainMask.
+    //By default, uses brainMask.
+    void modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero = false);
     void scaleAtorphy(double factor);
     void writeAtrophyToFile(std::string fileName);
 
 protected:
     ScalarImageType::Pointer    mAtrophy;           //Input atrophy-map.
-    ScalarImageType::Pointer    mBrainMask;         //Input segmentation.
+    IntegerImageType::Pointer   mBrainMask;         //Input segmentation.
     ScalarImageType::Pointer    mPressure;          //Output pressure-map.
     VectorImageType::Pointer    mVelocity;          //Output velocity field.
 
@@ -100,10 +114,11 @@ protected:
     double      mLambdaGm, mLambdaWm, mLambdaCsf;
     bool        mIsMuConstant;
 
-    //pressure coefficient at CSF: 0 => strictly follow incompressibilty constraint.
+    //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
     //big number => release IC and allow pressure to vary.
     //by default, it's set to zero.
-    int      mPressureMassCoeffCsf;
+    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at mRelaxIcLabel values of the brain mask.
+    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
 
     //Solver option
     PetscAdLemTaras3D   *mPetscSolverTaras;

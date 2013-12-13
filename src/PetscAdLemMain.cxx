@@ -57,23 +57,20 @@ int main(int argc,char **argv)
         //AdLemModel.writeAtrophyToFile(resultsPath + "atrophyOrig.mha");
 
         AdLemModel.setAtrophy(divFileName);
-        AdLemModel.setBrainMask(maskFileName);
+
+        AdLemModel.setBrainMask(maskFileName,1,1); //1 is the CSF label, 1 coeff for p dof.
         //origin[0] = 50;  origin[1] = 50;  origin[2] = 50;
         //size[0] = 182;   size[1] = 218;       size[2] = 182;
         //AdLemModel.setDomainRegion(origin,size);
         AdLemModel.setDomainRegion(origin,size,true);
-        //Must call modifyAtrophy after setDomainRegion, if you want
-        //to use valid atrophy for this new region!
         //        AdLemModel.scaleAtorphy(-1);
-//                        AdLemModel.modifyAtrophy();
+        AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
+        AdLemModel.modifyAtrophy(0,0);  //non-brain region, set zero atrophy
 
-        //        AdLemModel.writeAtrophyToFile(resultsPath + "atrophyModified.mha");
+        AdLemModel.writeAtrophyToFile(resultsPath + "atrophyModified.mha");
 
         AdLemModel.setLameParameters(1,1);
         //        AdLemModel.setLameParameters(1,1,false,10,20);
-//        AdLemModel.setPressureMassCoeffCsf(0);
-//        AdLemModel.setPressureMassCoeffCsf(10000);
-        AdLemModel.setPressureMassCoeffCsf(1);
 
         AdLemModel.solveModel(); //it's not just the ratios!! Figure out how it affects the velocity!!
                 AdLemModel.writeSolution(resultsPath);

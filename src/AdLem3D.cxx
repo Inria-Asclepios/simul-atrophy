@@ -2,6 +2,7 @@
 #include"PetscAdLemTaras3D.hxx"
 #include <itkImageRegionIteratorWithIndex.h>
 #include <itkMultiplyImageFilter.h>
+#include <itkMaskImageFilter.h>
 #include<iostream>
 
 #undef __FUNCT__
@@ -11,6 +12,7 @@ AdLem3D::AdLem3D():mWallVelocities(18)
     //Initialize with Dirichlet boundary condition, no other boundary condition for now.
     mBc= AdLem3D::DIRICHLET;
     mPetscSolverTarasUsed = false;
+    mRelaxIcPressureCoeff = 0;  //This gets non-zero only if brain mask is set
 }
 
 #undef __FUNCT__
@@ -61,17 +63,10 @@ void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "setPressureMassCoeffCsf"
-void AdLem3D::setPressureMassCoeffCsf(int coeff)
+#define __FUNCT__ "getRelaxIcPressureCoeff"
+int AdLem3D::getRelaxIcPressureCoeff()
 {
-    mPressureMassCoeffCsf = coeff;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "getPressureMassCoeffCsf"
-int AdLem3D::getPressureMassCoeffCsf()
-{
-    return mPressureMassCoeffCsf;
+    return mRelaxIcPressureCoeff;
 }
 
 #undef __FUNCT__
@@ -126,6 +121,13 @@ int AdLem3D::brainMaskAt(int x, int y, int z) const
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "getRelaxIcLabel"
+int AdLem3D::getRelaxIcLabel() const
+{
+    return mRelaxIcLabel;
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "dataAt"
 double AdLem3D::dataAt(std::string dType, int x, int y, int z)
 {
@@ -177,7 +179,7 @@ void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[], bool f
         mDomainRegion.SetIndex(domainOrigin);
         mDomainRegion.SetSize(domainSize);
     }
-//    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
+    //    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
 }
 
 #undef __FUNCT__
@@ -201,13 +203,16 @@ void AdLem3D::setAtrophy(std::string atrophyImageFile)
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(std::string maskImageFile)
+void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff)
 {
 
-    ScalarReaderType::Pointer   scalarReader = ScalarReaderType::New();
-    scalarReader->SetFileName(maskImageFile);
-    scalarReader->Update();
-    mBrainMask = scalarReader->GetOutput();
+    IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
+    imageReader->SetFileName(maskImageFile);
+    imageReader->Update();
+    mBrainMask = imageReader->GetOutput();
+    mRelaxIcLabel = relaxIcLabel;
+    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+
 }
 
 //does not guarantee that this is a valid atrophy!
@@ -290,7 +295,7 @@ void AdLem3D::createAtrophy(unsigned int size[3])
             }
         }
     }
-//    std::cout<<"Sum of created Atrophy: "<<pixelSum<<std::endl;
+    //    std::cout<<"Sum of created Atrophy: "<<pixelSum<<std::endl;
     if(!isAtrophyValid(0.000009)) {
         std::cout<<"yaha, strange, should be valid!!"<<std::endl;
     }
@@ -329,46 +334,53 @@ void AdLem3D::writeAtrophyToFile(std::string fileName) {
 
 #undef __FUNCT__
 #define __FUNCT__ "modifyAtrophy"
-void AdLem3D::modifyAtrophy() {
-    ScalarImageType::RegionType innerRegion;
-    ScalarImageType::SizeType offset;
-    ScalarImageType::SizeType Size(mDomainRegion.GetSize());
-    offset.Fill(2);
-    innerRegion.SetIndex(mDomainRegion.GetIndex() + offset);
-    offset.Fill(4);
-    innerRegion.SetSize(Size - offset);
-    itk::ImageRegionIterator<ScalarImageType> itInner(mAtrophy,innerRegion);
-    double aSum = 0;
-    for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
-        aSum += itInner.Get();
-    unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
-                    -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
-//    std::cout<<"num of pixels: "<<numOfPixels<<std::endl;
-    aSum/=(-1*(double)numOfPixels);
-//    std::cout<<"asum = "<<aSum<<std::endl;
+void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
+    if(!makeSumZero) {
+        typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType,
+                ScalarImageType> MaskFilterType;
+        MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+        maskFilter->SetInput(mAtrophy);
+        maskFilter->SetMaskImage(mBrainMask);
+        maskFilter->SetMaskingValue(maskLabel); //The naming conventions are tricky :)
+        maskFilter->SetOutsideValue(maskValue); //with itk's convention for mask label and values.
+        maskFilter->Update();
+        mAtrophy = maskFilter->GetOutput();
+    } else {
+        ScalarImageType::RegionType innerRegion;
+        ScalarImageType::SizeType offset;
+        ScalarImageType::SizeType Size(mDomainRegion.GetSize());
+        offset.Fill(2);
+        innerRegion.SetIndex(mDomainRegion.GetIndex() + offset);
+        offset.Fill(4);
+        innerRegion.SetSize(Size - offset);
+        itk::ImageRegionIterator<ScalarImageType> itInner(mAtrophy,innerRegion);
+        double aSum = 0;
+        for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
+            aSum += itInner.Get();
+        unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
+                -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
+        aSum/=(-1*(double)numOfPixels);
 
-    itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
-    for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
-        ScalarImageType::IndexType pos = itOuter.GetIndex();
-        if(pos[0] == mDomainRegion.GetIndex()[0] ||
-                pos[1] == mDomainRegion.GetIndex()[1] ||
-                pos[2] == mDomainRegion.GetIndex()[2] ||
-                pos[0] == mDomainRegion.GetUpperIndex()[0] ||
-                pos[1] == mDomainRegion.GetUpperIndex()[1] ||
-                pos[2] == mDomainRegion.GetUpperIndex()[2]) {
-            itOuter.Set(0);
-        } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
-                pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
-                pos[2] == (mDomainRegion.GetIndex()[2] + 1) ||
-                pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
-                pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
-                pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
-                ) {
-            itOuter.Set(aSum);
+        itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
+        for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
+            ScalarImageType::IndexType pos = itOuter.GetIndex();
+            if(pos[0] == mDomainRegion.GetIndex()[0] ||
+                    pos[1] == mDomainRegion.GetIndex()[1] ||
+                    pos[2] == mDomainRegion.GetIndex()[2] ||
+                    pos[0] == mDomainRegion.GetUpperIndex()[0] ||
+                    pos[1] == mDomainRegion.GetUpperIndex()[1] ||
+                    pos[2] == mDomainRegion.GetUpperIndex()[2]) {
+                itOuter.Set(0);
+            } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
+                       pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
+                       pos[2] == (mDomainRegion.GetIndex()[2] + 1) ||
+                       pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
+                       pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
+                       pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
+                       ) {
+                itOuter.Set(aSum);
+            }
         }
-    }
-    if(!isAtrophyValid(0.000009)) {
-        std::cout<<"strange, should be valid!!"<<std::endl;
     }
 }
 
@@ -385,11 +397,11 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
         std::string matSysFileName(resultsPath+"sys");
         std::string matSizeSysFileName(resultsPath+"size_lin_sys");
         mPetscSolverTaras->writeToMatFile(matSolFileName,inMatlabFormatSystemMatrix,matSysFileName);
-//        mPetscSolverTaras->writeToMatFile(matSolFileName,true,matSysFileName);
+        //        mPetscSolverTaras->writeToMatFile(matSolFileName,true,matSysFileName);
         std::ofstream size_file;
         size_file.open(matSizeSysFileName.c_str());
         size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
-            <<mDomainRegion.GetSize()[2]+1;
+                <<mDomainRegion.GetSize()[2]+1;
         size_file.close();
     }
 

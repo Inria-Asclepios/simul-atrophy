@@ -161,9 +161,9 @@ void PetscAdLemTaras3D::createPcForSc()
                 col.i = i;  col.j = j;  col.k = k;
 //                v = 1.0/muC(i,j,k);
                 v = 0;
-                if(this->getProblemModel()->getPressureMassCoeffCsf()>0) {
-                    if(this->getProblemModel()->brainMaskAt(i,j,k) < 2)
-                        v = this->getProblemModel()->getPressureMassCoeffCsf();
+                if(this->getProblemModel()->getRelaxIcPressureCoeff()>0) {
+                    if(this->bMaskAt(i,j,k) == this->getProblemModel()->getRelaxIcLabel())
+                        v = this->getProblemModel()->getRelaxIcPressureCoeff();
                 }
                 MatSetValuesStencil(mPcForSc,1,&row,1,&col,&v,INSERT_VALUES);CHKERRXX(ierr);
             }
@@ -188,7 +188,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
         ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
         ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
     }
-    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
+    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
         ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
     }
     ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
@@ -198,7 +198,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
     ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
 
     PetscBool isNull;
-    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
+    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
         ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
         if(!isNull)
             SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
@@ -242,7 +242,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
                     subKspPos = 1;
                     ierr = PCFieldSplitGetSubKSP(mPc,&subKspPos,&subKsp);CHKERRQ(ierr);
                     //Set up the null space of constant pressure.
-                    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
+                    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
                         ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
                         Mat matSc;
                         ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
@@ -1167,13 +1167,13 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                     v[4] = kCont/Hz;    col[4].i = i-1; col[4].j=j-1;   col[4].k=k;
                     v[5] = -v[4];       col[5].i = i-1; col[5].j=j-1;   col[5].k=k-1;
 
-                    if((user->getProblemModel()->getPressureMassCoeffCsf() > 0) &&
-                            (user->bMaskAt(i,j,k) < 2)) {
+                    if((user->getProblemModel()->getRelaxIcPressureCoeff() > 0) &&
+                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
                         //Relax compressibility at certain points by putting diagonal term for pressure.
                         //points obtained from Mask:
                             col[6].c = 3;
                             col[6].i = i;   col[6].j = j;   col[6].k = k;
-                            v[6] = user->getProblemModel()->getPressureMassCoeffCsf();
+                            v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
                             ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else{
                         ierr=MatSetValuesStencil(jac,1,&row,6,col,v,INSERT_VALUES);CHKERRQ(ierr);
