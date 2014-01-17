@@ -10,7 +10,7 @@
 //#include"PetscAdLem3D.hxx"
 //#include<petscsys.h>
 
-/* Linear Elastic Model 3D for AD deformation. This model contains parameters and
+/* Linear Elastic Model/Viscous fluid model? 3D for AD deformation. This model contains parameters and
   inputs of the following system:
   div(mu grad(v)) - grad(p) = (mu + lambda)grad(a)
   div(v)          + c*p          = -a
@@ -52,39 +52,35 @@ public:
     void setWallVelocities(std::vector<double>& wallVelocities);
     void getWallVelocities(std::vector<double>& wallVelocities); //copies mWallVelocities content.
 
-
     //--***********Model parameters related functions***************//
-    bool isMuConstant() const;
-
     void setLameParameters(double muCsf, double lambdaCsf,
                            bool isMuConstant = true,
                            double muRatio = 1, double lambdaRatio = 1);
-    void setPressureMassCoeffCsf(int coeff);    //value of c.
+    bool isMuConstant() const;
+    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff);
     int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy"
     double dataAt(std::string dType, int x, int y, int z);
     int brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
-    int getRelaxIcLabel() const;  //Return the label present in BrainMask where the IC is to be relaxed,
-    //by setting pressureMassCoeff.
+    int getRelaxIcLabel() const;  //Return the label present in BrainMask where the IC is to be relaxed.
+    //Relaxes IC on those region where maskImageFile has values relaxIcLabel.
+    //Normally, relaxIcPressureCoeff should be non-zero.
+    //If you do want to relax IC anywhere, set relaxIcPressureCoeff to zero.
 
-    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff);
-    //relaxIc should almost always be true because the utility of Brain mask is only
-    //when we want to release IC on certain places!
-    //IMPORTANT: The maskImage must have at least some interior voxels where
-    //the values are equal to relaxIcLabel IF mPressureMassCoeffCsf is non-zero;
-    //This is because the Taras solver will not be able to produce appropriate null-space.
-
-    //solver related functions
+    //BrainMask must already be set before using this, because for full size region it
+    //gets the region info from the BrainMask image!!
     void setDomainRegion(unsigned int origin[3], unsigned int size[3],
                          bool fullImageSize = false);
+
+    //solver related functions
     void solveModel();
     void writeSolution(std::string resultsPath, bool inMatlabFormat = false,
                        bool inMatlabFormatSystemSolution = false);
     void writeResidual(std::string resultsPath);
 
     //Atrophy related functions
-    void createAtrophy(unsigned int size[3]);
+    void createAtrophy(unsigned int size[3]);   //This should be later moved to another class!
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);
     void setAtrophy(std::string atrophyImageFile);
     bool isAtrophyValid(double sumMaxValue);
@@ -92,7 +88,8 @@ public:
     //By default, the total sum of atrophy is not forced to be zero; use this option
     //if you want to enforce IC everywhere, that this is usually the case when you
     //are not using brainMask.
-    //By default, uses brainMask.
+    //By default, uses brainMask and sets the value maskValue to all the places
+    //where brainMask has the value maskLabel.
     void modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero = false);
     void scaleAtorphy(double factor);
     void writeAtrophyToFile(std::string fileName);
@@ -107,7 +104,7 @@ protected:
 
     //Boundary condition:
     AdLem3D::bcType             mBc;
-    std::vector<double> mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
+    std::vector<double>         mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
 
     //parameters for Gray matter, White matter and Csf:
     double      mMuGm, mMuWm, mMuCsf;
@@ -116,8 +113,8 @@ protected:
 
     //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
     //big number => release IC and allow pressure to vary.
-    //by default, it's set to zero.
-    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at mRelaxIcLabel values of the brain mask.
+    //the constructor sets it to zero.
+    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
     int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
 
     //Solver option

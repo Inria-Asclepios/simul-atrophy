@@ -41,34 +41,28 @@ public:
     PetscInt bMaskAt(PetscInt x, PetscInt y, PetscInt z);
 
 protected:
-    //Is it a constant viscosity case or discontinuous?
-    PetscBool mIsMuConstant;
-    //Write Parameters to file
-    PetscBool mWriteParaToFile;
-    Vec mAtrophy, mMu;
-    PetscBool mParaVecsCreated; //bool that is by default false, but
-    //should be set to true by any non-static method that creates these vectors.
-    //so that destructor will destroy them.
-    PC mPc;
-    MatNullSpace mNullSpace;    //Null space for the global system.
-    Vec mNullBasis;             //Null basis for the global system.
+    PetscBool           mParaVecsCreated; //by default false but,
+    //should be set to true by any non-static method
+    //that creates them, so that destructor can destroy them.
+    PetscBool           mWriteParaToFile;  //set by the constructor; used in the method writeToMatFile.
+    Vec                 mAtrophy, mMu;
 
-    Vec mXv, mBv;               //vectors for the velocity field.
+    PC              mPc;
+    DM              mDaP;                    //DMDA for pressure variable.
+    Mat             mPcForSc;               //Preconditioner matrix for the Schur Complement.
 
-    Vec mXp, mBp;               //vectors for the pressure field.
-    DM mDaP;                    //DMDA for pressure variable.
-    Mat mPcForSc;               //Preconditioner matrix for the Schur Complement.
-    MatNullSpace mNullSpaceP;   //Null space for the pressure field.
-    Vec mNullBasisP;            //Null basis for the pressure field.
+    Vec             mXv, mBv;               //vectors for the velocity field.
+    Vec             mXp, mBp;               //vectors for the pressure field.
 
+    PetscBool       mPressureNullspacePresent;    //true if constant pressure null space is present.
+    MatNullSpace    mNullSpace;    //Null space for the global system.
+    MatNullSpace    mNullSpaceP;   //Null space for the pressure field.
+    Vec             mNullBasis;             //Null basis for the global system.
+    Vec             mNullBasisP;            //Null basis for the pressure field.
 
-
-
-    void setNullSpace();
-    PetscErrorCode createParaVectors();
-
-    //Create preconditioner matrix for the Schur's Complement outer solve.
-    void createPcForSc();
+    void            setNullSpace();
+    PetscErrorCode  createParaVectors();
+    void            createPcForSc();        //Preconditioner for Schur Complement.
 
     PetscReal dataCenterAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);
     PetscReal dataXyAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);

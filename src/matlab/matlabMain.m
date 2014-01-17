@@ -1,12 +1,16 @@
 %% Create results: At ../../results/
 clear all;clc;
 % addpath(genpath('/home/bkhanal/works/AdLemModel/src/matlab'));
-addpath(genpath('/home/bkhanal/Documents/softwares/petsc-3.4.3/bin/matlab/'));
-res_path = '/user/bkhanal/home/works/AdLemModel/results/patients/matlabPetscCompare/';
-
+% addpath(genpath('/home/bkhanal/Documents/softwares/petsc-3.4.3/bin/matlab/'));
+addpath(genpath('/home/bkhanal/Documents/softwares/petsc/bin/matlab/'));
+% res_path = '/user/bkhanal/home/works/AdLemModel/results/patients/matlabPetscCompare/';
+res_path = '/user/bkhanal/home/works/AdLemModel/results/patients/drivenCavity/';
+petscObj = PetscReadBinaryMatlab([res_path 'poisson']);
 % fname = 'sol_cluster_big';
 % sfName = 'size_cluster_big';
 
+%IMPORTANT::: The filename present in the file to be read must have its complete
+%path i.e. take care of that when writing from the petsc!
 fname = 'sol';
 sfName = 'size_lin_sys';
 

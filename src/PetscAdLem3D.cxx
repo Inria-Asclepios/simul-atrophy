@@ -7,11 +7,14 @@ PetscAdLem3D::PetscAdLem3D(AdLem3D *model, const std::string & description):
     mProblemModel(model), mContextDesc(description)
 {
     mSolAllocated = PETSC_FALSE;
+    mIsMuConstant = (PetscBool)model->isMuConstant();
+
 }
 
 PetscAdLem3D::~PetscAdLem3D()
 {
     PetscErrorCode ierr;
+
     if (mSolAllocated) {
         ierr = VecRestoreArray(mX,&mSol);CHKERRXX(ierr);
         ierr = VecScatterDestroy(&mScatterCtx);CHKERRXX(ierr);

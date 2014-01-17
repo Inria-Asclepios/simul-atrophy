@@ -22,25 +22,11 @@ AdLem3D::~AdLem3D()
     if(mPetscSolverTarasUsed) delete mPetscSolverTaras;
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "getBcType"
-AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }
-
-bool AdLem3D::isMuConstant() const
-{
-    return mIsMuConstant;
-}
 
 #undef __FUNCT__
 #define __FUNCT__ "setWallVelocities"
 void AdLem3D::setWallVelocities(std::vector<double>& wallVelocities) {
     mWallVelocities = wallVelocities;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "getWallVelocities"
-void AdLem3D::getWallVelocities(std::vector<double>& wallVelocities) {
-    wallVelocities = mWallVelocities;
 }
 
 #undef __FUNCT__
@@ -61,6 +47,37 @@ void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
         mLambdaGm = lambdaCsf;   mLambdaWm = lambdaCsf;
     }
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "setBrainMask"
+void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff)
+{
+
+    IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
+    imageReader->SetFileName(maskImageFile);
+    imageReader->Update();
+    mBrainMask = imageReader->GetOutput();
+    mRelaxIcLabel = relaxIcLabel;
+    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "getBcType"
+AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }
+
+bool AdLem3D::isMuConstant() const
+{
+    return mIsMuConstant;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getWallVelocities"
+void AdLem3D::getWallVelocities(std::vector<double>& wallVelocities) {
+    wallVelocities = mWallVelocities;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "getRelaxIcPressureCoeff"
@@ -168,7 +185,7 @@ int AdLem3D::getZnum() const
 void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[], bool fullImageSize)
 {
     if(fullImageSize) {
-        mDomainRegion = mAtrophy->GetLargestPossibleRegion();
+        mDomainRegion = mBrainMask->GetLargestPossibleRegion();//mAtrophy->GetLargestPossibleRegion();
     } else {
         ScalarImageType::IndexType domainOrigin;
         ScalarImageType::SizeType domainSize;
@@ -191,7 +208,8 @@ void AdLem3D::solveModel()
     mPetscSolverTaras->solveModel();
 }
 
-//does not guarantee that this is a valid atrophy!
+#undef __FUNCT__
+#define __FUNCT__ "setAtrophy"
 void AdLem3D::setAtrophy(std::string atrophyImageFile)
 {
     ScalarReaderType::Pointer   scalarReader = ScalarReaderType::New();
@@ -202,26 +220,14 @@ void AdLem3D::setAtrophy(std::string atrophyImageFile)
 
 
 #undef __FUNCT__
-#define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff)
-{
-
-    IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
-    imageReader->SetFileName(maskImageFile);
-    imageReader->Update();
-    mBrainMask = imageReader->GetOutput();
-    mRelaxIcLabel = relaxIcLabel;
-    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
-
-}
-
-//does not guarantee that this is a valid atrophy!
-//Should be taken care in the input itself, or use modifyAtrophy function.
+#define __FUNCT__ "setAtrophy"
 void AdLem3D::setAtrophy(ScalarImageType::Pointer inputAtrophy)
 {
     mAtrophy = inputAtrophy;
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "scaleAtrophy"
 void AdLem3D::scaleAtorphy(double factor)
 {
     typedef itk::MultiplyImageFilter<ScalarImageType, ScalarImageType, ScalarImageType> MultiplyImageFilterType;
@@ -232,7 +238,10 @@ void AdLem3D::scaleAtorphy(double factor)
     mAtrophy=multiplyImageFilter->GetOutput();
 }
 
-void AdLem3D::createAtrophy(unsigned int size[3])
+
+#undef __FUNCT__
+#define __FUNCT__ "createAtrophy"
+void AdLem3D::createAtrophy(unsigned int size[3])  //Must be removed and put to another class!!
 {
     ScalarImageType::IndexType  start;
     start.Fill(0);
@@ -323,14 +332,6 @@ bool AdLem3D::isAtrophyValid(double sumMaxValue) {
 
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "writeAtrophyToFile"
-void AdLem3D::writeAtrophyToFile(std::string fileName) {
-    ScalarWriterType::Pointer writer = ScalarWriterType::New();
-    writer->SetFileName(fileName);
-    writer->SetInput(mAtrophy);
-    writer->Update();
-}
 
 #undef __FUNCT__
 #define __FUNCT__ "modifyAtrophy"
@@ -384,6 +385,14 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
     }
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "writeAtrophyToFile"
+void AdLem3D::writeAtrophyToFile(std::string fileName) {
+    ScalarWriterType::Pointer writer = ScalarWriterType::New();
+    writer->SetFileName(fileName);
+    writer->SetInput(mAtrophy);
+    writer->Update();
+}
 
 
 #undef __FUNCT__

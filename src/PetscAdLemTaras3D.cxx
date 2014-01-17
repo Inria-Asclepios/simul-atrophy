@@ -11,7 +11,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dmda of size: (%d,%d,%d)\n",
                             model->getXnum()+1,model->getYnum()+1,model->getZnum()+1);
 
-    mIsMuConstant = (PetscBool)model->isMuConstant();
+    mParaVecsCreated = PETSC_FALSE;
     if(mIsMuConstant)
         PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!");
     else
@@ -23,7 +23,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDaP);CHKERRXX(ierr);
 
     //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
-    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
+//    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
@@ -31,7 +31,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,4,1,0,0,0,&mDa);CHKERRXX(ierr);
 
     //    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
-    //    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum()+1,0,model->getYnum()+1,0,model->getZnum()+1);CHKERRXX(ierr);
+    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum()+1,0,model->getYnum()+1,0,model->getZnum()+1);CHKERRXX(ierr);
     ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,0,"vx");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
@@ -42,11 +42,14 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     //Linear Solver context:
     ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);CHKERRXX(ierr);
 
-    createPcForSc();
-    setNullSpace();
+//    createPcForSc();
 
-    mParaVecsCreated = PETSC_FALSE;
-
+    if(this->getProblemModel()->getRelaxIcPressureCoeff() == 0) {
+        mPressureNullspacePresent = PETSC_TRUE;
+        setNullSpace();
+    } else {
+        mPressureNullspacePresent = PETSC_FALSE;
+    }
 }
 
 #undef __FUNCT__
@@ -54,19 +57,18 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
 PetscAdLemTaras3D::~PetscAdLemTaras3D()
 {
     PetscErrorCode ierr;
-
-    ierr = VecDestroy(&mNullBasis);CHKERRXX(ierr);
-    ierr = MatNullSpaceDestroy(&mNullSpace);CHKERRXX(ierr);
-    ierr = VecDestroy(&mNullBasisP);CHKERRXX(ierr);
-    ierr = MatNullSpaceDestroy(&mNullSpaceP);CHKERRXX(ierr);
-
-    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
-
     if(mParaVecsCreated) {
         ierr = VecDestroy(&mAtrophy);CHKERRXX(ierr);
         ierr = VecDestroy(&mMu);CHKERRXX(ierr);
     }
 
+    if(mPressureNullspacePresent) {
+        ierr = VecDestroy(&mNullBasis);CHKERRXX(ierr);
+        ierr = MatNullSpaceDestroy(&mNullSpace);CHKERRXX(ierr);
+        ierr = VecDestroy(&mNullBasisP);CHKERRXX(ierr);
+        ierr = MatNullSpaceDestroy(&mNullSpaceP);CHKERRXX(ierr);
+    }
+//    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
     ierr = DMDestroy(&mDaP);CHKERRXX(ierr);
 }
 
@@ -74,7 +76,7 @@ PetscAdLemTaras3D::~PetscAdLemTaras3D()
 #define __FUNCT__ "setNullSpace"
 void PetscAdLemTaras3D::setNullSpace()
 {
-    // Compute the Null space Basis vector i.e. constant pressure, let's set (0 0 ... 0 1 ... 1)
+    // Compute the Null space Basis vector:
     //where all the pressure dof except the ghost pressures are set to 1. Others are set to 0.
     PetscInt ierr;
     ierr = DMCreateGlobalVector(mDa,&mNullBasis);CHKERRXX(ierr);
@@ -100,10 +102,9 @@ void PetscAdLemTaras3D::setNullSpace()
                         || (i==info.mx-1 && (j==1 || j==info.my-1 || k==1 || k==info.mz-1)) //east wall edges
                         || (j==1 && (k==1 || k== info.mz-1)) //front wall horizontal edges
                         || (j==info.my-1 && (k==1 || k==info.mz-1))){ //back wall horizontal edges
-
                     nullVec[k][j][i].p = 0;
                 } else {
-                        nullVec[k][j][i].p = 1;
+                       nullVec[k][j][i].p = 1;
                     }
 
                 }
@@ -161,7 +162,7 @@ void PetscAdLemTaras3D::createPcForSc()
                 col.i = i;  col.j = j;  col.k = k;
 //                v = 1.0/muC(i,j,k);
                 v = 0;
-                if(this->getProblemModel()->getRelaxIcPressureCoeff()>0) {
+                if(!mPressureNullspacePresent) {
                     if(this->bMaskAt(i,j,k) == this->getProblemModel()->getRelaxIcLabel())
                         v = this->getProblemModel()->getRelaxIcPressureCoeff();
                 }
@@ -188,7 +189,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
         ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
         ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
     }
-    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
+    if(mPressureNullspacePresent) {
         ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
     }
     ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
@@ -198,15 +199,13 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
     ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
 
     PetscBool isNull;
-    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
+    if(mPressureNullspacePresent) {
         ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
         if(!isNull)
             SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
     }
 
-    //Work out the fiedsplits and schur complement preconditioner from the options.
-    //Set a Null space for Schur complement if schur pc type is used and fieldsplit 0,1,2 used.
-    //Set a near-nullspace if gamg used for A00 block.
+    //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
     PetscBool optionFlag = PETSC_FALSE;
     char optionString[PETSC_MAX_PATH_LEN];
     ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_type",optionString,10,&optionFlag);CHKERRQ(ierr);
@@ -217,17 +216,21 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
             if(optionFlag) {
                 if(strcmp(optionString,"0,1,2")==0) {
                     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using user defined split \n");
-                    KSP *subKsp;
-                    PetscInt subKspPos = 0;
                     //                    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
 //                                            ierr = PCFieldSplitSchurPrecondition(mPc,PC_FIELDSPLIT_SCHUR_PRE_USER,mPcForSc);CHKERRQ(ierr);
                     //                    }
+                    KSP *subKsp;
+                    PetscInt numOfSplits = 1;
+                    ierr = PCFieldSplitGetSubKSP(mPc,&numOfSplits,&subKsp);CHKERRQ(ierr);
+                    if (numOfSplits != 2) {
+                        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"strange there should be only two splits!! \n");
+                    }
+
+                    //If gamg used, set up near-nullspace for fieldsplit_0
                     ierr = PetscOptionsGetString(NULL,"-fieldsplit_0_pc_type",optionString,10,&optionFlag);
                     if(strcmp(optionString,"gamg")==0) {
-                        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using gamg for A00 \n");
-                        //and near null space for gamg computed according to the split provided;
+                       PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using gamg for A00 \n");
                         //Set up nearNullspace for A00 block.
-                        ierr = PCFieldSplitGetSubKSP(mPc,&subKspPos,&subKsp);CHKERRQ(ierr);
                         MatNullSpace rigidBodyModes;
                         Vec coords;
                         ierr = DMGetCoordinates(mDa,&coords);CHKERRQ(ierr);
@@ -238,11 +241,8 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
                         ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
                     }
 
-                    //Position 1 => Ksp corresponding to Schur complement S on pressure space
-                    subKspPos = 1;
-                    ierr = PCFieldSplitGetSubKSP(mPc,&subKspPos,&subKsp);CHKERRQ(ierr);
-                    //Set up the null space of constant pressure.
-                    if(getProblemModel()->getRelaxIcPressureCoeff() == 0) {
+                    //If constant pressure nullspace present, set it to SchurComplement ksp.
+                    if(mPressureNullspacePresent) {
                         ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
                         Mat matSc;
                         ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
@@ -251,6 +251,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
                             SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
                         }
                     }
+
                     ierr = PetscFree(subKsp);CHKERRQ(ierr);
                 }
             }
@@ -1167,6 +1168,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                     v[4] = kCont/Hz;    col[4].i = i-1; col[4].j=j-1;   col[4].k=k;
                     v[5] = -v[4];       col[5].i = i-1; col[5].j=j-1;   col[5].k=k-1;
 
+                    //Cannot use member mPressureNullspacePresent here because, this is a static function!!
                     if((user->getProblemModel()->getRelaxIcPressureCoeff() > 0) &&
                             (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
                         //Relax compressibility at certain points by putting diagonal term for pressure.
