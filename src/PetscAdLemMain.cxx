@@ -1,14 +1,14 @@
 #include"AdLem3D.hxx"
 
-#include<iostream>
-#include<iomanip>
-#include<fstream>
-
-#include<petscsys.h>
+#include <iostream>
+#include <sstream>
+#include <petscsys.h>
 
 #include <itkImage.h>
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
+#include <itkWarpImageFilter.h>
+#include <itkMultiplyImageFilter.h>
 
 static char help[] = "Solves AdLem model.\n\n";
 
@@ -26,8 +26,8 @@ int main(int argc,char **argv)
        9,10,11,     //east wall
        12,13,14,     //front wall
        15,16,17    //back wall*/
-    unsigned int wallPos = 6;
-        wallVelocities.at(wallPos) = 1;
+    //    unsigned int wallPos = 6;
+    //        wallVelocities.at(wallPos) = 1;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
     {
@@ -52,32 +52,52 @@ int main(int argc,char **argv)
         AdLemModel.setWallVelocities(wallVelocities);
         AdLemModel.setLameParameters(1,1);
         //        AdLemModel.setLameParameters(1,1,false,10,20);
-//        AdLemModel.setBrainMask(maskFileName,1,1); //1 is the CSF label, 1 coeff for p dof.
-        AdLemModel.setBrainMask(maskFileName,1,0); //don't relase IC
+        AdLemModel.setBrainMask(maskFileName,1,1); //1 is the CSF label, 1 coeff for p dof.
+        //        AdLemModel.setBrainMask(maskFileName,1,0); //don't relase IC
 
         //-------------------*** Set the computational region***-------------------//
-        unsigned int origin[3] = {0,0,0};
-        unsigned int size[3] = {10,10,10};
-        //origin[0] = 50;  origin[1] = 50;  origin[2] = 50;
-        //size[0] = 182;   size[1] = 218;       size[2] = 182;
+        //        unsigned int origin[3] = {0,0,0};
+        //        unsigned int size[3] = {10,10,10};
         //AdLemModel.setDomainRegion(origin,size);
-        AdLemModel.setDomainRegion(origin,size,true);
+        AdLemModel.setDomainRegionFullImage();
 
         //-------------------------*** Set up the atrophy map ***--------------------------//
         AdLemModel.setAtrophy(divFileName);
-        //AdLemModel.writeAtrophyToFile(resultsPath + "atrophyOrig.mha");
-        //        AdLemModel.scaleAtorphy(-1);
-        /*AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
+        //AdLemModel.scaleAtrophy(-1);
+        AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
         AdLemModel.modifyAtrophy(0,0);  //non-brain region, set zero atrophy
-        AdLemModel.writeAtrophyToFile(resultsPath + "atrophyModified.mha");*/
 
-        //-----------------------------*** Solve the system ***----------------------------//
-        AdLemModel.solveModel();
 
-        //-------------------------***  Write the results ***-------------------------------//
-        AdLemModel.writeSolution(resultsPath);
-        //        AdLemModel.writeSolution(resultsPath,true,true);
-        AdLemModel.writeResidual(resultsPath);
+        typedef itk::WarpImageFilter<AdLem3D::ScalarImageType, AdLem3D::ScalarImageType,
+                AdLem3D::VectorImageType> WarperType;
+        typedef itk::MultiplyImageFilter<AdLem3D::VectorImageType> MultiplyFilterType;
+
+        for(int i = 0; i<3; ++i) {
+            std::stringstream fileIndex;
+            fileIndex << i+1;
+            AdLemModel.writeAtrophyToFile(resultsPath + "atrophyStep" + fileIndex.str() + ".mha");
+            AdLemModel.solveModel();
+            AdLemModel.writeSolution(resultsPath + "step" + fileIndex.str());
+            //        AdLemModel.writeSolution(resultsPath,true,true);
+            AdLemModel.writeResidual(resultsPath + "step" + fileIndex.str());
+
+            MultiplyFilterType::Pointer multiplier = MultiplyFilterType::New();
+            multiplier->SetInput(AdLemModel.getVelocityImage());
+            multiplier->SetConstant(-1);
+            multiplier->Update();
+            WarperType::Pointer warper = WarperType::New();
+            warper->SetDisplacementField(multiplier->GetOutput());
+            warper->SetOutputSpacing( AdLemModel.getAtrophyImage()->GetSpacing() );
+            warper->SetOutputOrigin( AdLemModel.getAtrophyImage()->GetOrigin() );
+            warper->SetOutputDirection( AdLemModel.getAtrophyImage()->GetDirection() );
+            warper->SetInput(AdLemModel.getAtrophyImage());
+            //warper->SetInterpolator(Interpolator);
+            warper->Update();
+
+            AdLemModel.setAtrophy(warper->GetOutput());
+            AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
+            AdLemModel.modifyAtrophy(0,0);  //non-brain region, set zero atrophy
+        }
 
     }
     PetscErrorCode ierr;

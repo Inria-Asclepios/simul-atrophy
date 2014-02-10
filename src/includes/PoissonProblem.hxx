@@ -1,6 +1,8 @@
 #ifndef POISSONPROBLEM_H
 #define POISSONPROBLEM_H
 
+//Bishesh Khanal, Asclepios INRIA Sophia Antipolis
+
 #include "PoissonSolver.hxx"
 
 #include <iostream>

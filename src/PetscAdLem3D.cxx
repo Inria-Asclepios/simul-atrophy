@@ -16,7 +16,7 @@ PetscAdLem3D::~PetscAdLem3D()
     PetscErrorCode ierr;
 
     if (mSolAllocated) {
-        ierr = VecRestoreArray(mX,&mSol);CHKERRXX(ierr);
+        ierr = VecRestoreArray(mX,&mSolArray);CHKERRXX(ierr);
         ierr = VecScatterDestroy(&mScatterCtx);CHKERRXX(ierr);
         ierr = VecDestroy(&mXLocal);CHKERRXX(ierr);
     }
@@ -69,7 +69,7 @@ PetscErrorCode PetscAdLem3D::getSolutionArray()
     ierr = VecScatterCreateToAll(xNatural,&mScatterCtx,&mXLocal);CHKERRQ(ierr);
     ierr = VecScatterBegin(mScatterCtx,xNatural,mXLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterEnd(mScatterCtx,xNatural,mXLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
-    ierr = VecGetArray(mXLocal,&mSol);CHKERRQ(ierr);
+    ierr = VecGetArray(mXLocal,&mSolArray);CHKERRQ(ierr);
     ierr = VecDestroy(&xNatural);CHKERRQ(ierr);
     //    ierr = VecView(mXLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     PetscFunctionReturn(0);
@@ -95,14 +95,14 @@ double PetscAdLem3D::getSolVelocityAt(unsigned int pos[], unsigned int component
     //Velocity solution were computed at faces, so interpolate to get at cell centers.
     double solAtcenter;
     if (component == 0) { //x-component vx_c = vx(i,j,k) + vx(i+1,j,k)
-        solAtcenter = mSol[(x+ xn*y + xn*yn*z)*4 + component]
-                + mSol[(x+1 + xn*y + xn*yn*z)*4 + component];
+        solAtcenter = mSolArray[(x+ xn*y + xn*yn*z)*4 + component]
+                + mSolArray[(x+1 + xn*y + xn*yn*z)*4 + component];
     } else if (component == 1) {
-        solAtcenter = mSol[(x + xn*y + xn*yn*z)*4 + component]
-                + mSol[(x + xn*(y+1) + xn*yn*z)*4 + component];
+        solAtcenter = mSolArray[(x + xn*y + xn*yn*z)*4 + component]
+                + mSolArray[(x + xn*(y+1) + xn*yn*z)*4 + component];
     } else if (component == 2) {
-        solAtcenter = mSol[(x + xn*y + xn*yn*z)*4 + component]
-                + mSol[(x + xn*y + xn*yn*(z+1))*4 + component];
+        solAtcenter = mSolArray[(x + xn*y + xn*yn*z)*4 + component]
+                + mSolArray[(x + xn*y + xn*yn*(z+1))*4 + component];
     } else
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"velocity component should be 0, 1 or 2 for 3D\n");
     PetscFunctionReturn(solAtcenter/2.);
@@ -122,5 +122,5 @@ double PetscAdLem3D::getSolPressureAt(unsigned int pos[])
 
     if(x<1 || x>=xn || y<1 || y>=yn || z<1 || z>=zn) //<1 because 1 already added in this function!
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"out of range position asked for pressure solution.\n");
-    PetscFunctionReturn(mSol[(x+ xn*y + xn*yn*z)*4 + 3]);
+    PetscFunctionReturn(mSolArray[(x+ xn*y + xn*yn*z)*4 + 3]);
 }

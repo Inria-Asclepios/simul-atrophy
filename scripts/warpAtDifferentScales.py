@@ -96,12 +96,12 @@ while num <= options.numOfScales:
 if options.choice == "r":
     outputImageFileName = "image4dFromRegistration.mha"
 else:
-    outputImageFileName = "image4dFromBiophysicalModel.mha"
+    outputImageFileName = "image4dFromBiophysicalModel1.mha"
 
 combineImagesOptions = " " + str(options.numOfScales) + " " + ".mha" + " " + resultsPath + "warpedByDisp" + " " + resultsPath + outputImageFileName
 print combineImages + combineImagesOptions + "\n"
 subprocess.call(combineImages + combineImagesOptions, shell = True)
 #delete inidvidual images:
-print "rm " + resultsPath + "warpedByDisp*.mha" + "\n"
-subprocess.call("rm " + resultsPath + "warpedByDisp*.mha", shell=True)
+#print "rm " + resultsPath + "warpedByDisp*.mha" + "\n"
+#subprocess.call("rm " + resultsPath + "warpedByDisp*.mha", shell=True)
 

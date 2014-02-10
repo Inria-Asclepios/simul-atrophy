@@ -37,7 +37,7 @@ protected:
 
     Vec         mXLocal;              //one that stores velocity vector to be sent outside.
     VecScatter  mScatterCtx;   //context to scatter global mX to mXvLocal and mXpLocal.
-    PetscScalar *mSol;         //Array to access mXLocal.
+    PetscScalar *mSolArray;         //Array to access mXLocal.
 
     PetscErrorCode          getSolutionArray(); //point mSol to proper solution vector mXLocal.
 };

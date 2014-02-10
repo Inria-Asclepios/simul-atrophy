@@ -47,6 +47,7 @@ protected:
     PetscBool           mWriteParaToFile;  //set by the constructor; used in the method writeToMatFile.
     Vec                 mAtrophy, mMu;
 
+    PetscBool       mOperatorComputed;
     PC              mPc;
     DM              mDaP;                    //DMDA for pressure variable.
     Mat             mPcForSc;               //Preconditioner matrix for the Schur Complement.

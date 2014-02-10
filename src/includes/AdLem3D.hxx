@@ -58,6 +58,7 @@ public:
                            double muRatio = 1, double lambdaRatio = 1);
     bool isMuConstant() const;
     void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff);
+    void setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff);
     int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy"
@@ -70,11 +71,14 @@ public:
 
     //BrainMask must already be set before using this, because for full size region it
     //gets the region info from the BrainMask image!!
-    void setDomainRegion(unsigned int origin[3], unsigned int size[3],
-                         bool fullImageSize = false);
+    void setDomainRegionFullImage();
+    void setDomainRegion(unsigned int origin[3], unsigned int size[3]);
 
     //solver related functions
     void solveModel();
+    VectorImageType::Pointer getVelocityImage();
+    ScalarImageType::Pointer getPressureImage();
+
     void writeSolution(std::string resultsPath, bool inMatlabFormat = false,
                        bool inMatlabFormatSystemSolution = false);
     void writeResidual(std::string resultsPath);
@@ -84,6 +88,7 @@ public:
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);
     void setAtrophy(std::string atrophyImageFile);
     bool isAtrophyValid(double sumMaxValue);
+    ScalarImageType::Pointer getAtrophyImage();
 
     //By default, the total sum of atrophy is not forced to be zero; use this option
     //if you want to enforce IC everywhere, that this is usually the case when you
@@ -91,16 +96,21 @@ public:
     //By default, uses brainMask and sets the value maskValue to all the places
     //where brainMask has the value maskLabel.
     void modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero = false);
-    void scaleAtorphy(double factor);
+    void scaleAtrophy(double factor);
     void writeAtrophyToFile(std::string fileName);
 
 protected:
-    ScalarImageType::Pointer    mAtrophy;           //Input atrophy-map.
     IntegerImageType::Pointer   mBrainMask;         //Input segmentation.
-    ScalarImageType::Pointer    mPressure;          //Output pressure-map.
-    VectorImageType::Pointer    mVelocity;          //Output velocity field.
+    bool                        mIsBrainMaskSet;
+    //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
+    //big number => release IC and allow pressure to vary.
+    //the constructor sets it to zero.
+    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
+    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
 
     ScalarImageType::RegionType mDomainRegion;
+
+    ScalarImageType::Pointer    mAtrophy;           //Input atrophy-map.
 
     //Boundary condition:
     AdLem3D::bcType             mBc;
@@ -111,11 +121,8 @@ protected:
     double      mLambdaGm, mLambdaWm, mLambdaCsf;
     bool        mIsMuConstant;
 
-    //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
-    //big number => release IC and allow pressure to vary.
-    //the constructor sets it to zero.
-    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
-    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
+    ScalarImageType::Pointer    mPressure;          //Output pressure-map.
+    VectorImageType::Pointer    mVelocity;          //Output velocity field.
 
     //Solver option
     PetscAdLemTaras3D   *mPetscSolverTaras;
@@ -124,6 +131,7 @@ protected:
     double muAt(int x, int y, int z) const;
     double lambdaAt(int x, int y, int z) const;
     double aAt(int x, int y, int z) const;
+    void createResultImages();
 };
 
 #endif // ADLEM3D_HXX

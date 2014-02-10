@@ -11,6 +11,7 @@ AdLem3D::AdLem3D():mWallVelocities(18)
 {
     //Initialize with Dirichlet boundary condition, no other boundary condition for now.
     mBc= AdLem3D::DIRICHLET;
+    mIsBrainMaskSet = false;
     mPetscSolverTarasUsed = false;
     mRelaxIcPressureCoeff = 0;  //This gets non-zero only if brain mask is set
 }
@@ -56,12 +57,43 @@ void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int rela
     IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
     imageReader->SetFileName(maskImageFile);
     imageReader->Update();
-    mBrainMask = imageReader->GetOutput();
-    mRelaxIcLabel = relaxIcLabel;
-    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
-
+    setBrainMask(imageReader->GetOutput(),relaxIcLabel,relaxIcPressureCoeff);
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "setBrainMask"
+void AdLem3D::setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff)
+{
+    mBrainMask = brainMask;
+    mRelaxIcLabel = relaxIcLabel;
+    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+    mIsBrainMaskSet = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "setDomainRegionFullImage"
+void AdLem3D::setDomainRegionFullImage()
+{
+    if(!mIsBrainMaskSet) {
+        std::cerr<<"must first set the brain mask image to obtain the largest possible region"<<std::endl;
+    }
+    mDomainRegion = mBrainMask->GetLargestPossibleRegion();
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "setDomainRegion"
+void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[])
+{
+        ScalarImageType::IndexType domainOrigin;
+        ScalarImageType::SizeType domainSize;
+        for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
+            domainSize.SetElement(i,size[i]);     //size!!
+            domainOrigin.SetElement(i,origin[i]); //provided is less or equal to the input
+        }
+        mDomainRegion.SetIndex(domainOrigin);
+        mDomainRegion.SetSize(domainSize);
+    //    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
+}
 
 #undef __FUNCT__
 #define __FUNCT__ "getBcType"
@@ -180,32 +212,18 @@ int AdLem3D::getZnum() const
     return mDomainRegion.GetSize()[2];
 }
 
-#undef __FUNCT__
-#define __FUNCT__ "setDomainRegion"
-void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[], bool fullImageSize)
-{
-    if(fullImageSize) {
-        mDomainRegion = mBrainMask->GetLargestPossibleRegion();//mAtrophy->GetLargestPossibleRegion();
-    } else {
-        ScalarImageType::IndexType domainOrigin;
-        ScalarImageType::SizeType domainSize;
-        for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
-            domainSize.SetElement(i,size[i]);     //size!!
-            domainOrigin.SetElement(i,origin[i]); //provided is less or equal to the input
-        }
-        mDomainRegion.SetIndex(domainOrigin);
-        mDomainRegion.SetSize(domainSize);
-    }
-    //    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
-}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
 void AdLem3D::solveModel()
 {
-    mPetscSolverTarasUsed = true;
-    mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
+    if(!mPetscSolverTarasUsed) {
+        mPetscSolverTarasUsed = true;
+        mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
+    }
     mPetscSolverTaras->solveModel();
+    createResultImages();
 }
 
 #undef __FUNCT__
@@ -228,7 +246,7 @@ void AdLem3D::setAtrophy(ScalarImageType::Pointer inputAtrophy)
 
 #undef __FUNCT__
 #define __FUNCT__ "scaleAtrophy"
-void AdLem3D::scaleAtorphy(double factor)
+void AdLem3D::scaleAtrophy(double factor)
 {
     typedef itk::MultiplyImageFilter<ScalarImageType, ScalarImageType, ScalarImageType> MultiplyImageFilterType;
     MultiplyImageFilterType::Pointer multiplyImageFilter = MultiplyImageFilterType::New();
@@ -386,6 +404,13 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "getAtrophyImage"
+AdLem3D::ScalarImageType::Pointer AdLem3D::getAtrophyImage()
+{
+    return mAtrophy;
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "writeAtrophyToFile"
 void AdLem3D::writeAtrophyToFile(std::string fileName) {
     ScalarWriterType::Pointer writer = ScalarWriterType::New();
@@ -394,13 +419,27 @@ void AdLem3D::writeAtrophyToFile(std::string fileName) {
     writer->Update();
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "getVelocityImage"
+AdLem3D::VectorImageType::Pointer AdLem3D::getVelocityImage()
+{
+    return mVelocity;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getPressureImage"
+AdLem3D::ScalarImageType::Pointer AdLem3D::getPressureImage()
+{
+    return mPressure;
+}
+
+
 
 #undef __FUNCT__
 #define __FUNCT__ "writeSolution"
 void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool inMatlabFormatSystemMatrix)
 {
-    std::string velocityFileName(resultsPath+"vel.mha");
-    std::string pressureFileName(resultsPath+"press.mha");
+
     if(inMatlabFormat) {
         std::string matSolFileName(resultsPath+"sol");
         std::string matSysFileName(resultsPath+"sys");
@@ -413,15 +452,35 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
                 <<mDomainRegion.GetSize()[2]+1;
         size_file.close();
     }
+    std::string velocityFileName(resultsPath+"vel.mha");
+    std::string pressureFileName(resultsPath+"press.mha");
+    ScalarWriterType::Pointer   scalarWriter = ScalarWriterType::New();
+    VectorWriterType::Pointer   vectorWriter = VectorWriterType::New();
+    vectorWriter->SetFileName(velocityFileName);
+    vectorWriter->SetInput(mVelocity);
+    vectorWriter->Update();
 
+    scalarWriter->SetFileName(pressureFileName);
+    scalarWriter->SetInput(mPressure);
+    scalarWriter->Update();
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "writeResidual"
+void AdLem3D::writeResidual(std::string resultsPath)
+{
+    mPetscSolverTaras->writeResidual(resultsPath);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "createImageOf"
+void AdLem3D::createResultImages()
+{
     itk::Index<3>           outputImageStart;       //should be 0!
     ScalarImageType::RegionType domainRegion;
     for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
     domainRegion.SetSize(mDomainRegion.GetSize());
     domainRegion.SetIndex(outputImageStart);
-
-    ScalarWriterType::Pointer   scalarWriter = ScalarWriterType::New();
-    VectorWriterType::Pointer   vectorWriter = VectorWriterType::New();
 
     mVelocity = VectorImageType::New();
     mVelocity->SetRegions(domainRegion);
@@ -471,21 +530,4 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
         }
         ++k;
     }
-
-    vectorWriter->SetFileName(velocityFileName);
-    vectorWriter->SetInput(mVelocity);
-    vectorWriter->Update();
-
-    scalarWriter->SetFileName(pressureFileName);
-    scalarWriter->SetInput(mPressure);
-    scalarWriter->Update();
-
 }
-
-#undef __FUNCT__
-#define __FUNCT__ "writeResidual"
-void AdLem3D::writeResidual(std::string resultsPath)
-{
-    mPetscSolverTaras->writeResidual(resultsPath);
-}
-

@@ -23,7 +23,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDaP);CHKERRXX(ierr);
 
     //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
-//    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
+    //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
 
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
@@ -42,7 +42,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     //Linear Solver context:
     ierr = KSPCreate(PETSC_COMM_WORLD,&mKsp);CHKERRXX(ierr);
 
-//    createPcForSc();
+    //    createPcForSc();
 
     if(this->getProblemModel()->getRelaxIcPressureCoeff() == 0) {
         mPressureNullspacePresent = PETSC_TRUE;
@@ -50,6 +50,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     } else {
         mPressureNullspacePresent = PETSC_FALSE;
     }
+    mOperatorComputed = PETSC_FALSE;
 }
 
 #undef __FUNCT__
@@ -68,7 +69,7 @@ PetscAdLemTaras3D::~PetscAdLemTaras3D()
         ierr = VecDestroy(&mNullBasisP);CHKERRXX(ierr);
         ierr = MatNullSpaceDestroy(&mNullSpaceP);CHKERRXX(ierr);
     }
-//    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
+    //    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
     ierr = DMDestroy(&mDaP);CHKERRXX(ierr);
 }
 
@@ -104,12 +105,12 @@ void PetscAdLemTaras3D::setNullSpace()
                         || (j==info.my-1 && (k==1 || k==info.mz-1))){ //back wall horizontal edges
                     nullVec[k][j][i].p = 0;
                 } else {
-                       nullVec[k][j][i].p = 1;
-                    }
-
+                    nullVec[k][j][i].p = 1;
                 }
+
             }
         }
+    }
 
     ierr = DMDAVecRestoreArray(mDa, mNullBasis, &nullVec);CHKERRXX(ierr);
     ierr = VecAssemblyBegin(mNullBasis);CHKERRXX(ierr);
@@ -160,7 +161,7 @@ void PetscAdLemTaras3D::createPcForSc()
                 }*/
                 row.i = i;  row.j = j;  row.k = k;
                 col.i = i;  col.j = j;  col.k = k;
-//                v = 1.0/muC(i,j,k);
+                //                v = 1.0/muC(i,j,k);
                 v = 0;
                 if(!mPressureNullspacePresent) {
                     if(this->bMaskAt(i,j,k) == this->getProblemModel()->getRelaxIcLabel())
@@ -181,87 +182,90 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
 {
     PetscErrorCode ierr;
     PetscFunctionBeginUser;
-    ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);              //mDa with dof = 4, vx,vy,vz and p.
-    if(mIsMuConstant) {
-        ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
-        ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
-    } else {
-        ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
-        ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
-    }
-    if(mPressureNullspacePresent) {
-        ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
-    }
-    ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
-    ierr = KSPSetUp(mKsp);CHKERRQ(ierr);                  //register the fieldsplits obtained from options.
 
-    ierr = KSPGetOperators(mKsp,&mA,NULL,NULL);CHKERRQ(ierr);
-    ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
+    if(!mOperatorComputed) {
+        ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);              //mDa with dof = 4, vx,vy,vz and p.
+        if(mIsMuConstant) {
+            ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
+            ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
+        } else {
+            ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
+            ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
+        }
+        if(mPressureNullspacePresent) {
+            ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
+        }
+        ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
+        ierr = KSPSetUp(mKsp);CHKERRQ(ierr);                  //register the fieldsplits obtained from options.
 
-    PetscBool isNull;
-    if(mPressureNullspacePresent) {
-        ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
-        if(!isNull)
-            SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
-    }
+        ierr = KSPGetOperators(mKsp,&mA,NULL,NULL);CHKERRQ(ierr);
+        ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
 
-    //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
-    PetscBool optionFlag = PETSC_FALSE;
-    char optionString[PETSC_MAX_PATH_LEN];
-    ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_type",optionString,10,&optionFlag);CHKERRQ(ierr);
-    if(optionFlag) {
-        if(strcmp(optionString,"schur")==0){
-            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using schur complement \n");
-            ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_0_fields",optionString,10,&optionFlag);CHKERRQ(ierr);
-            if(optionFlag) {
-                if(strcmp(optionString,"0,1,2")==0) {
-                    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using user defined split \n");
-                    //                    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
-//                                            ierr = PCFieldSplitSchurPrecondition(mPc,PC_FIELDSPLIT_SCHUR_PRE_USER,mPcForSc);CHKERRQ(ierr);
-                    //                    }
-                    KSP *subKsp;
-                    PetscInt numOfSplits = 1;
-                    ierr = PCFieldSplitGetSubKSP(mPc,&numOfSplits,&subKsp);CHKERRQ(ierr);
-                    if (numOfSplits != 2) {
-                        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"strange there should be only two splits!! \n");
-                    }
+        PetscBool isNull;
+        if(mPressureNullspacePresent) {
+            ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
+            if(!isNull)
+                SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
+        }
 
-                    //If gamg used, set up near-nullspace for fieldsplit_0
-                    ierr = PetscOptionsGetString(NULL,"-fieldsplit_0_pc_type",optionString,10,&optionFlag);
-                    if(strcmp(optionString,"gamg")==0) {
-                       PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using gamg for A00 \n");
-                        //Set up nearNullspace for A00 block.
-                        MatNullSpace rigidBodyModes;
-                        Vec coords;
-                        ierr = DMGetCoordinates(mDa,&coords);CHKERRQ(ierr);
-                        ierr = MatNullSpaceCreateRigidBody(coords,&rigidBodyModes);CHKERRQ(ierr);
-                        Mat matA00;
-                        ierr = KSPGetOperators(subKsp[0],&matA00,NULL,NULL);CHKERRQ(ierr);
-                        ierr = MatSetNearNullSpace(matA00,rigidBodyModes);CHKERRQ(ierr);
-                        ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
-                    }
-
-                    //If constant pressure nullspace present, set it to SchurComplement ksp.
-                    if(mPressureNullspacePresent) {
-                        ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
-                        Mat matSc;
-                        ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
-                        ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
-                        if(!isNull) {
-                            SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
+        //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
+        PetscBool optionFlag = PETSC_FALSE;
+        char optionString[PETSC_MAX_PATH_LEN];
+        ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_type",optionString,10,&optionFlag);CHKERRQ(ierr);
+        if(optionFlag) {
+            if(strcmp(optionString,"schur")==0){
+                PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using schur complement \n");
+                ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_0_fields",optionString,10,&optionFlag);CHKERRQ(ierr);
+                if(optionFlag) {
+                    if(strcmp(optionString,"0,1,2")==0) {
+                        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using user defined split \n");
+                        //                    if(getProblemModel()->getPressureMassCoeffCsf() == 0) {
+                        //                                            ierr = PCFieldSplitSchurPrecondition(mPc,PC_FIELDSPLIT_SCHUR_PRE_USER,mPcForSc);CHKERRQ(ierr);
+                        //                    }
+                        KSP *subKsp;
+                        PetscInt numOfSplits = 1;
+                        ierr = PCFieldSplitGetSubKSP(mPc,&numOfSplits,&subKsp);CHKERRQ(ierr);
+                        if (numOfSplits != 2) {
+                            SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"strange there should be only two splits!! \n");
                         }
-                    }
 
-                    ierr = PetscFree(subKsp);CHKERRQ(ierr);
+                        //If gamg used, set up near-nullspace for fieldsplit_0
+                        ierr = PetscOptionsGetString(NULL,"-fieldsplit_0_pc_type",optionString,10,&optionFlag);
+                        if(strcmp(optionString,"gamg")==0) {
+                            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using gamg for A00 \n");
+                            //Set up nearNullspace for A00 block.
+                            MatNullSpace rigidBodyModes;
+                            Vec coords;
+                            ierr = DMGetCoordinates(mDa,&coords);CHKERRQ(ierr);
+                            ierr = MatNullSpaceCreateRigidBody(coords,&rigidBodyModes);CHKERRQ(ierr);
+                            Mat matA00;
+                            ierr = KSPGetOperators(subKsp[0],&matA00,NULL,NULL);CHKERRQ(ierr);
+                            ierr = MatSetNearNullSpace(matA00,rigidBodyModes);CHKERRQ(ierr);
+                            ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
+                        }
+
+                        //If constant pressure nullspace present, set it to SchurComplement ksp.
+                        if(mPressureNullspacePresent) {
+                            ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
+                            Mat matSc;
+                            ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
+                            ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
+                            if(!isNull) {
+                                SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
+                            }
+                        }
+
+                        ierr = PetscFree(subKsp);CHKERRQ(ierr);
+                    }
                 }
             }
         }
+        mOperatorComputed = PETSC_TRUE;
     }
 
     ierr = KSPSolve(mKsp,NULL,NULL);CHKERRQ(ierr);
     ierr = KSPGetSolution(mKsp,&mX);CHKERRQ(ierr);
     ierr = KSPGetRhs(mKsp,&mB);CHKERRQ(ierr);
-
     ierr = getSolutionArray();CHKERRQ(ierr); //to get the local solution vector in each processor.
 
     PetscFunctionReturn(0);
@@ -1173,10 +1177,10 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                             (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
                         //Relax compressibility at certain points by putting diagonal term for pressure.
                         //points obtained from Mask:
-                            col[6].c = 3;
-                            col[6].i = i;   col[6].j = j;   col[6].k = k;
-                            v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
-                            ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                        col[6].c = 3;
+                        col[6].i = i;   col[6].j = j;   col[6].k = k;
+                        v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+                        ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else{
                         ierr=MatSetValuesStencil(jac,1,&row,6,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     }
