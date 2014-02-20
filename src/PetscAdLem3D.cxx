@@ -124,3 +124,32 @@ double PetscAdLem3D::getSolPressureAt(unsigned int pos[])
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"out of range position asked for pressure solution.\n");
     PetscFunctionReturn(mSolArray[(x+ xn*y + xn*yn*z)*4 + 3]);
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "getDivergenceAt"
+//the size that was originally used by the user to create the model.
+double PetscAdLem3D::getDivergenceAt(unsigned int pos[])
+{
+    PetscFunctionBeginUser;
+    PetscInt x,y,z,xn,yn,zn;
+    x = pos[0]; y=pos[1];   z=pos[2];
+    //Adapt for the staggered grid DM which has one greater dimension.
+    xn = mProblemModel->getXnum()+1;
+    yn = mProblemModel->getYnum()+1;
+    zn = mProblemModel->getZnum()+1;
+
+    if(x<0 || x>=xn-1 || y<0 || y>=yn-1 || z<0 || z>=zn-1) //>=xn-1 because xn has one bigger size than the input size of the model!
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"out of range position asked for velocity solution.\n");
+
+    //Velocity solution were computed at faces, so the divergence lies in the cell centers.
+    double divergence;
+    //a = vx(i+1,j,k) - vx(i,j,k) + vy(i,j+1,k) - vy(i,j,k) + vz(i,j,k+1) - vz(i,j,k)
+        divergence = mSolArray[(x+1 + xn*y + xn*yn*z)*4 + 0]
+                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 0]
+                    +mSolArray[(x + xn*(y+1) + xn*yn*z)*4 + 1]
+                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 1]
+                    +mSolArray[(x + xn*y + xn*yn*(z+1))*4 + 2]
+                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 2];
+    PetscFunctionReturn(divergence);
+}
+

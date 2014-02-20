@@ -17,6 +17,9 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     else
         PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for variable viscosity case!");
 
+    //IMPORTANT CHANGE REQUIRED LATER IF USING NON CONSTANT MU:
+    //MUST CREATE THE DMDA of stencil width 2 instead of 1 in that case.
+    //Easy fix: just put the conditional creation of dmda in the above if(mIsMuConstant) condition!
     //DMDA for only pressure field that is used in Schur Complement solve Sp=rhs.
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
@@ -1219,6 +1222,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     Hy   = 1;//1.0 / (PetscReal)(my-1);
     Hz   = 1;//1.0 / (PetscReal)(mz-1);
 
+    //TEST:
+    //Diagonal components of a diagonal tensor that multiplies force in the momentum equation to create the
+    //effect of anisotropy.
+    PetscReal diagXX = 1.0;
+    PetscReal diagYY = 1.0;
+    PetscReal diagZZ = 1.0;
+
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da, b, &rhs);CHKERRQ(ierr);
 
@@ -1244,7 +1254,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 } else if(k==mz-2) {    //north wall:    2nx
                     rhs[k][j][i].vx = 2*wallVel.at(nWall);
                 }else { //interior points, x-momentum equation
-                    rhs[k][j][i].vx = Hy*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)
+                    rhs[k][j][i].vx = diagXX*Hy*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i,j+1,k+1)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i,j+1,k+1))/2.0;
                 }
@@ -1265,7 +1275,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 } else if(k==mz-2) {    //north wall:    2ny
                     rhs[k][j][i].vy = 2*wallVel.at(nWall+1);
                 } else { //interior points, y-momentum equation
-                    rhs[k][j][i].vy = Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
+                    rhs[k][j][i].vy = diagYY*Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j,k+1)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j,k+1))/2.0;
                 }
@@ -1286,7 +1296,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 } else if(j==my-2) {    //back wall:   2bz
                     rhs[k][j][i].vz = 2*wallVel.at(bWall+2);
                 } else { //interior points, z-momentum equation
-                    rhs[k][j][i].vz = Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
+                    rhs[k][j][i].vz = diagZZ*Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j+1,k)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j+1,k))/2.0;
                 }

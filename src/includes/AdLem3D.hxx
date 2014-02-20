@@ -123,6 +123,7 @@ protected:
 
     ScalarImageType::Pointer    mPressure;          //Output pressure-map.
     VectorImageType::Pointer    mVelocity;          //Output velocity field.
+    ScalarImageType::Pointer    mDivergence;        //Divergence map of the solution (computed by the solver)
 
     //Solver option
     PetscAdLemTaras3D   *mPetscSolverTaras;

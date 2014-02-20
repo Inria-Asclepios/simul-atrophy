@@ -1,4 +1,5 @@
 #include"AdLem3D.hxx"
+#include "GlobalConstants.hxx"
 
 #include <iostream>
 #include <sstream>
@@ -16,8 +17,9 @@ static char help[] = "Solves AdLem model.\n\n";
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
-    std::string divFileName, maskFileName;
+    std::string atrophyFileName, maskFileName;
     std::string resultsPath;
+    int stepIndex;
 
     std::vector<double> wallVelocities(18);
     /*0,1,2,     //south wall
@@ -35,8 +37,8 @@ int main(int argc,char **argv)
         PetscErrorCode ierr;
         PetscBool optionFlag = PETSC_FALSE;
         char optionString[PETSC_MAX_PATH_LEN];
-        ierr = PetscOptionsGetString(NULL,"-divFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) divFileName = optionString;
+        ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(optionFlag) atrophyFileName = optionString;
         ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) maskFileName = optionString;
         ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -46,13 +48,22 @@ int main(int argc,char **argv)
         } else {
             resultsPath = optionString;
         }
+        ierr = PetscOptionsGetInt(NULL,"-stepIndex",&stepIndex,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag) {
+            std::cerr<<"MUST provide a valid step index option: e.g. -stepIndex 1"<<std::endl;
+            return(EXIT_FAILURE);
+        }
+
+        /*std::cout<<"atrophy file: "<<atrophyFileName<<std::endl;
+        std::cout<<"mask file: "<<maskFileName<<std::endl;
+        std::cout<<"results path: "<<resultsPath<<std::endl;*/
 
         //------------------------*** Set up the model parameters ***-----------------------//
         AdLem3D AdLemModel; //xn,yn,zn,1,1,1,1);
         AdLemModel.setWallVelocities(wallVelocities);
         AdLemModel.setLameParameters(1,1);
         //        AdLemModel.setLameParameters(1,1,false,10,20);
-        AdLemModel.setBrainMask(maskFileName,1,1); //1 is the CSF label, 1 coeff for p dof.
+        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1); //1 is the CSF label, 1 coeff for p dof.
         //        AdLemModel.setBrainMask(maskFileName,1,0); //don't relase IC
 
         //-------------------*** Set the computational region***-------------------//
@@ -62,43 +73,17 @@ int main(int argc,char **argv)
         AdLemModel.setDomainRegionFullImage();
 
         //-------------------------*** Set up the atrophy map ***--------------------------//
-        AdLemModel.setAtrophy(divFileName);
-        //AdLemModel.scaleAtrophy(-1);
-        AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
-        AdLemModel.modifyAtrophy(0,0);  //non-brain region, set zero atrophy
+        AdLemModel.setAtrophy(atrophyFileName);
+        AdLemModel.modifyAtrophy(constants::CSF_LABEL,0);  //CSF region, set zero atrophy
+        AdLemModel.modifyAtrophy(constants::NBR_LABEL,0);  //non-brain region, set zero atrophy
 
-
-        typedef itk::WarpImageFilter<AdLem3D::ScalarImageType, AdLem3D::ScalarImageType,
-                AdLem3D::VectorImageType> WarperType;
-        typedef itk::MultiplyImageFilter<AdLem3D::VectorImageType> MultiplyFilterType;
-
-        for(int i = 0; i<3; ++i) {
-            std::stringstream fileIndex;
-            fileIndex << i+1;
-            AdLemModel.writeAtrophyToFile(resultsPath + "atrophyStep" + fileIndex.str() + ".mha");
-            AdLemModel.solveModel();
-            AdLemModel.writeSolution(resultsPath + "step" + fileIndex.str());
-            //        AdLemModel.writeSolution(resultsPath,true,true);
-            AdLemModel.writeResidual(resultsPath + "step" + fileIndex.str());
-
-            MultiplyFilterType::Pointer multiplier = MultiplyFilterType::New();
-            multiplier->SetInput(AdLemModel.getVelocityImage());
-            multiplier->SetConstant(-1);
-            multiplier->Update();
-            WarperType::Pointer warper = WarperType::New();
-            warper->SetDisplacementField(multiplier->GetOutput());
-            warper->SetOutputSpacing( AdLemModel.getAtrophyImage()->GetSpacing() );
-            warper->SetOutputOrigin( AdLemModel.getAtrophyImage()->GetOrigin() );
-            warper->SetOutputDirection( AdLemModel.getAtrophyImage()->GetDirection() );
-            warper->SetInput(AdLemModel.getAtrophyImage());
-            //warper->SetInterpolator(Interpolator);
-            warper->Update();
-
-            AdLemModel.setAtrophy(warper->GetOutput());
-            AdLemModel.modifyAtrophy(1,0);  //CSF region, set zero atrophy
-            AdLemModel.modifyAtrophy(0,0);  //non-brain region, set zero atrophy
-        }
-
+        std::stringstream fileIndex;
+        fileIndex << stepIndex;
+        AdLemModel.writeAtrophyToFile(resultsPath + "step" + fileIndex.str() + "AtrophyModified.mha");
+        AdLemModel.solveModel();
+        AdLemModel.writeSolution(resultsPath + "step" + fileIndex.str());
+        //        AdLemModel.writeSolution(resultsPath,true,true);
+        AdLemModel.writeResidual(resultsPath + "step" + fileIndex.str());
     }
     PetscErrorCode ierr;
     ierr = PetscFinalize();CHKERRQ(ierr);

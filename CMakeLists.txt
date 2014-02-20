@@ -22,6 +22,8 @@ MESSAGE(FATAL_ERROR
 "ITK not found. Please set ITK_DIR.")
 ENDIF(ITK_FOUND)
 
+#boost
+find_package(Boost COMPONENTS program_options REQUIRED)
 add_subdirectory(src)
 
 

@@ -454,15 +454,22 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
     }
     std::string velocityFileName(resultsPath+"vel.mha");
     std::string pressureFileName(resultsPath+"press.mha");
-    ScalarWriterType::Pointer   scalarWriter = ScalarWriterType::New();
+    std::string divergenceFileName(resultsPath+"div.mha");
+
     VectorWriterType::Pointer   vectorWriter = VectorWriterType::New();
     vectorWriter->SetFileName(velocityFileName);
     vectorWriter->SetInput(mVelocity);
     vectorWriter->Update();
 
+    ScalarWriterType::Pointer   scalarWriter = ScalarWriterType::New();
     scalarWriter->SetFileName(pressureFileName);
     scalarWriter->SetInput(mPressure);
     scalarWriter->Update();
+
+    ScalarWriterType::Pointer divWriter = ScalarWriterType::New();
+    divWriter->SetFileName(divergenceFileName);
+    divWriter->SetInput(mDivergence);
+    divWriter->Update();
 }
 
 #undef __FUNCT__
@@ -496,18 +503,30 @@ void AdLem3D::createResultImages()
     mPressure->SetDirection(mAtrophy->GetDirection());
     mPressure->Allocate();
 
+
+    mDivergence = ScalarImageType::New();
+    mDivergence->SetRegions(domainRegion);
+    mDivergence->SetOrigin(mAtrophy->GetOrigin());
+    mDivergence->SetSpacing(mAtrophy->GetSpacing());
+    mDivergence->SetDirection(mAtrophy->GetDirection());
+    mDivergence->Allocate();
+
+
     typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
     typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
 
     VectorIteratorType velocityIterator(mVelocity,mVelocity->GetLargestPossibleRegion());
     ScalarIteratorType pressureIterator(mPressure,mPressure->GetLargestPossibleRegion());
+    ScalarIteratorType divergenceIterator(mDivergence,mDivergence->GetLargestPossibleRegion());
     VectorImageType::PixelType velocityPixel;
     ScalarImageType::PixelType pressurePixel;
+    ScalarImageType::PixelType divergencePixel;
 
     unsigned int pos[3];
     unsigned int k = 0;
     velocityIterator.GoToBegin();
     pressureIterator.GoToBegin();
+    divergenceIterator.GoToBegin();
     while(k<mDomainRegion.GetSize()[2] && !velocityIterator.IsAtEnd()) {
         pos[2] = k;
         unsigned int j = 0;
@@ -524,6 +543,9 @@ void AdLem3D::createResultImages()
                 pressurePixel = mPetscSolverTaras->getSolPressureAt(pos);
                 pressureIterator.Set(pressurePixel);
                 ++pressureIterator;
+                divergencePixel = mPetscSolverTaras->getDivergenceAt(pos);
+                divergenceIterator.Set(divergencePixel);
+                ++divergenceIterator;
                 ++i;
             }
             ++j;

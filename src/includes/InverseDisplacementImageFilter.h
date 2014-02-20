@@ -14,6 +14,7 @@
 //#include "itkVectorLinearInterpolateImageFunction.h"
 #include <itkVectorLinearInterpolateNearestNeighborExtrapolateImageFunction.h>
 #include "itkImageRegionIterator.h"
+#include "itkImageRegionIteratorWithIndex.h"
 
 template<typename TDisplacementField>
 class InverseDisplacementImageFilter: public itk::ImageToImageFilter< TDisplacementField, TDisplacementField >

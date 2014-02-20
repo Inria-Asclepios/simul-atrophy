@@ -20,6 +20,7 @@ public:
 
     double getSolVelocityAt(unsigned int pos[3],unsigned int component);
     double getSolPressureAt(unsigned int pos[3]);
+    double getDivergenceAt(unsigned int pos[3]);
     PetscErrorCode writeResidual(std::string resultPath);
 
 protected:

@@ -28,3 +28,22 @@ add_executable(UpdateMaskAndAtrophy
 target_link_libraries(UpdateMaskAndAtrophy ${ITK_LIBRARIES})
 
 
+include_directories( ${Boost_INCLUDE_DIR} )
+add_executable(ModifyAtrophy
+    testsMain.cxx
+)
+target_link_libraries(ModifyAtrophy ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+
+include_directories( ${Boost_INCLUDE_DIR} )
+add_executable(WarpImage
+    WarpImage.cxx
+)
+target_link_libraries(WarpImage ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+

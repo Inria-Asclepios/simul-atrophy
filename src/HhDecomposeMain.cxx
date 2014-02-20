@@ -75,8 +75,8 @@ int main(int argc, char **argv)
         unsigned int size[3] = {50, 50, 50};
 
         for(int i = 0; i<numOfRhs; ++ i) {
-            hh.setV(inVecFiles.at(i), false,origin,size);
-//                    hh.setV(rhsFileNames.at(i),true,NULL,NULL);
+//            hh.setV(inVecFiles.at(i), false,origin,size);
+                    hh.setV(inVecFiles.at(i),true,NULL,NULL);
 
             HelmHoltzDecomposer::ScalarWriterPointerType divWriter = HelmHoltzDecomposer::ScalarWriterType::New();
             divWriter->SetFileName(resPaths.at(i) + "hh_div.mha");
