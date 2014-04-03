@@ -47,3 +47,18 @@ target_link_libraries(WarpImage ${ITK_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
+add_executable(BinarizeThreshold
+    binarizeThreshold.cxx
+)
+target_link_libraries(BinarizeThreshold ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+add_executable(CreateImageFromRegion
+    CreateImageFromRegion.cxx
+)
+target_link_libraries(CreateImageFromRegion ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)

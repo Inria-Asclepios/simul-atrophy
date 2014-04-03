@@ -452,9 +452,9 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
                 <<mDomainRegion.GetSize()[2]+1;
         size_file.close();
     }
-    std::string velocityFileName(resultsPath+"vel.mha");
-    std::string pressureFileName(resultsPath+"press.mha");
-    std::string divergenceFileName(resultsPath+"div.mha");
+    std::string velocityFileName(resultsPath+"vel.nii.gz");
+    std::string pressureFileName(resultsPath+"press.nii.gz");
+    std::string divergenceFileName(resultsPath+"div.nii.gz");
 
     VectorWriterType::Pointer   vectorWriter = VectorWriterType::New();
     vectorWriter->SetFileName(velocityFileName);
