@@ -57,8 +57,8 @@ public:
                            bool isMuConstant = true,
                            double muRatio = 1, double lambdaRatio = 1);
     bool isMuConstant() const;
-    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff);
-    void setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff);
+    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
+    void setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
     int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy"
@@ -68,6 +68,9 @@ public:
     //Relaxes IC on those region where maskImageFile has values relaxIcLabel.
     //Normally, relaxIcPressureCoeff should be non-zero.
     //If you do want to relax IC anywhere, set relaxIcPressureCoeff to zero.
+
+    bool shouldSkullVelSetToZero();
+    int getSkullLabel();
 
     //BrainMask must already be set before using this, because for full size region it
     //gets the region info from the BrainMask image!!
@@ -107,6 +110,8 @@ protected:
     //the constructor sets it to zero.
     int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
     int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
+    bool     mSetSkullVelToZero;        //if true, the velocity at all the places in bMask with label value of mDirchletBoundaryLabel will be set to zero.
+    int      mSkullLabel;   //Label value in the brainMask where the velocity will be imposed to be zero
 
     ScalarImageType::RegionType mDomainRegion;
 

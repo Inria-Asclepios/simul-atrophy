@@ -1032,6 +1032,12 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j;   col[1].k=k-1;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                             user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
+                            ) { //vx lying in the face that touches a skull (non-brain region) cell
+                    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 }
                 else { //interior points, x-momentum equation
                     //vx-coefficients, seven terms.
@@ -1078,6 +1084,12 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j;   col[1].k=k-1;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                             user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getSkullLabel())
+                            ) { //vy lying in the face that touches a skull (non-brain region) cell
+                    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 }
                 else { //interior points, y-momentum equation
                     //vy-coefficients, seven terms.
@@ -1127,6 +1139,12 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j-1; col[1].k=k;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                             user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getSkullLabel())
+                            ) { //vz lying in the face that touches a skull (non-brain region) cell
+                    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 }
                 else { //interior points, z-momentum equation
                     //vz-coefficients, seven terms.
@@ -1159,7 +1177,22 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         ) {
                     v[0] = kBond;       col[0].i=i; col[0].j=j; col[0].k=k;
                     ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                } else {
+                } else if (
+                           (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                           (user->bMaskAt(i,j,k) == user->getProblemModel()->getSkullLabel() ||
+                             ( user->bMaskAt(i+1,j,k) == user->getProblemModel()->getSkullLabel() &&
+                               user->bMaskAt(i-1,j,k) == user->getProblemModel()->getSkullLabel() &&
+                               user->bMaskAt(i,j+1,k) == user->getProblemModel()->getSkullLabel() &&
+                               user->bMaskAt(i,j-1,k) == user->getProblemModel()->getSkullLabel() &&
+                               user->bMaskAt(i,j,k+1) == user->getProblemModel()->getSkullLabel() &&
+                               user->bMaskAt(i,j,k-1) == user->getProblemModel()->getSkullLabel()
+                             )
+                           )
+                          ) { //Skull cell or a non-skull cell surrounded by skull cells in all its 6-neigbhor.
+                    v[0] = kBond;       col[0].i=i; col[0].j=j; col[0].k=k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                }
+                else {
                     //vx-coefficients, two terms
                     col[0].c = 0;       col[1].c = 0;
                     v[0] = kCont/Hx;    col[0].i = i;   col[0].j=j-1;   col[0].k=k-1;
@@ -1253,7 +1286,14 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vx = 2*wallVel.at(sWall);
                 } else if(k==mz-2) {    //north wall:    2nx
                     rhs[k][j][i].vx = 2*wallVel.at(nWall);
-                }else { //interior points, x-momentum equation
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                             user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
+                            ) { //skull or non-brain region:
+                    rhs[k][j][i].vx = 0;
+
+                }
+                else { //interior points, x-momentum equation
                     rhs[k][j][i].vx = diagXX*Hy*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i,j+1,k+1)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i,j+1,k+1))/2.0;
@@ -1274,7 +1314,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vy = 2*wallVel.at(sWall+1);
                 } else if(k==mz-2) {    //north wall:    2ny
                     rhs[k][j][i].vy = 2*wallVel.at(nWall+1);
-                } else { //interior points, y-momentum equation
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                             user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getSkullLabel())
+                            ) { //Skull or non-brain region:
+                    rhs[k][j][i].vy = 0;
+                }
+                else { //interior points, y-momentum equation
                     rhs[k][j][i].vy = diagYY*Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j,k+1)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j,k+1))/2.0;
@@ -1295,7 +1341,14 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vz = 2*wallVel.at(fWall+2);
                 } else if(j==my-2) {    //back wall:   2bz
                     rhs[k][j][i].vz = 2*wallVel.at(bWall+2);
-                } else { //interior points, z-momentum equation
+                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            ( user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
+                              user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getSkullLabel()
+                            )
+                          ) { //skull or non-brain region:
+                    rhs[k][j][i].vz = 0;
+                }
+                else { //interior points, z-momentum equation
                     rhs[k][j][i].vz = diagZZ*Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
                                              +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j+1,k)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j+1,k))/2.0;
@@ -1309,7 +1362,21 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                         || (j==my-1 && (k==1 || k==mz-1)) //back wall corners
                         ) {
                     rhs[k][j][i].p = 0;
-                } else {
+                }  else if (
+                            (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getSkullLabel() ||
+                              ( user->bMaskAt(i+1,j,k) == user->getProblemModel()->getSkullLabel() &&
+                                user->bMaskAt(i-1,j,k) == user->getProblemModel()->getSkullLabel() &&
+                                user->bMaskAt(i,j+1,k) == user->getProblemModel()->getSkullLabel() &&
+                                user->bMaskAt(i,j-1,k) == user->getProblemModel()->getSkullLabel() &&
+                                user->bMaskAt(i,j,k+1) == user->getProblemModel()->getSkullLabel() &&
+                                user->bMaskAt(i,j,k-1) == user->getProblemModel()->getSkullLabel()
+                              )
+                            )
+                           ) { //Skull cell or a non-skull cell surrounded by skull cells in all its 6-neigbhor.
+                    rhs[k][j][i].p = 0;
+                }
+                else {
                     rhs[k][j][i].p = -kCont*user->aC(i,j,k);
                 }
             }

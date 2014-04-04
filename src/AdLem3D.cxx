@@ -51,22 +51,24 @@ void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff)
+void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
 {
 
     IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
     imageReader->SetFileName(maskImageFile);
     imageReader->Update();
-    setBrainMask(imageReader->GetOutput(),relaxIcLabel,relaxIcPressureCoeff);
+    setBrainMask(imageReader->GetOutput(),relaxIcLabel,relaxIcPressureCoeff, setSkullVelToZero, skullLabel);
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff)
+void AdLem3D::setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
 {
     mBrainMask = brainMask;
     mRelaxIcLabel = relaxIcLabel;
     mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+    mSetSkullVelToZero = setSkullVelToZero;
+    mSkullLabel = skullLabel;
     mIsBrainMaskSet = true;
 }
 
@@ -116,6 +118,20 @@ void AdLem3D::getWallVelocities(std::vector<double>& wallVelocities) {
 int AdLem3D::getRelaxIcPressureCoeff()
 {
     return mRelaxIcPressureCoeff;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "shouldSkullVelSetToZero"
+bool AdLem3D::shouldSkullVelSetToZero()
+{
+    return mSetSkullVelToZero;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getSkullLabel"
+int AdLem3D::getSkullLabel()
+{
+    return mSkullLabel;
 }
 
 #undef __FUNCT__

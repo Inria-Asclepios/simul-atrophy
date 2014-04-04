@@ -45,7 +45,7 @@ petscOptions += "-fieldsplit_0_pc_type hypre "
 #monitor options
 petscOptions += "-fieldsplit_1_ksp_converged_reason -ksp_converged_reason "
 #petscOptions += "-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 "
-petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual -log_summary" # -ksp_view"
+petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual" # -log_summary" # -ksp_view"
 
 
 petscCommand += target + " -atrophyFile " + atrophyFile + " -maskFile " + maskFile + " -resPath " + resultsDir + " -stepIndex " + options.stepIndex + petscOptions

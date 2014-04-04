@@ -63,8 +63,11 @@ int main(int argc,char **argv)
         AdLemModel.setWallVelocities(wallVelocities);
         AdLemModel.setLameParameters(1,1);
         //        AdLemModel.setLameParameters(1,1,false,10,20);
-        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1); //1 is the CSF label, 1 coeff for p dof.
-        //        AdLemModel.setBrainMask(maskFileName,1,0); //don't relase IC
+
+        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,true,constants::NBR_LABEL); //1 coeff for p dof.
+//        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,false,constants::NBR_LABEL); //1 coeff for p dof.
+
+        //        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,0); //don't relase IC
 
         //-------------------*** Set the computational region***-------------------//
         //        unsigned int origin[3] = {0,0,0};
