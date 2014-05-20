@@ -1,0 +1,963 @@
+   28  ls ../results/patients/tests1/test1/
+   29  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   30  ls ../results/patients/tests1/test1/
+   31  src/UpdateMaskAndAtrophy ../results/patients/tests1/test1/step1Mask.mha ../results/patients/tests1/test1/step1AtrophyModified.mha ../results/patients/tests1/test1/step1vel.mha ../results/patients/tests1/test1/step2Mask.mha ../results/patients/tests1/test1/step2Atrophy.mha
+   32  ../scripts/runAdLemModel.py -p tests1/test1 -a step2Atrophy.mha -m step2Mask.mha -s 2
+   33  src/UpdateMaskAndAtrophy ../results/patients/tests1/test1/step2Mask.mha ../results/patients/tests1/test1/step2AtrophyModified.mha ../results/patients/tests1/test1/step2vel.mha ../results/patients/tests1/test1/step3Mask.mha ../results/patients/tests1/test1/step3Atrophy.mha
+   34  ../scripts/runAdLemModel.py -p tests1/test1 -a step3Atrophy.mha -m step3Mask.mha -s 3
+   35  cd ../medInria/
+   36  git fetch gpasquie
+   37  git cherry-pick 34349a9d2dd6cfe66e2
+   38  cd ../build/medInria/build/
+   39  make -j4
+   40  ./../../medInria.sh 
+   41  1vel.mha ../results/patients/002_S_0938/step1MaskWarped.mha step1AtrophyWarped.mha
+   42  src/UpdateMaskAndAtrophy /user/bkhanal/home/data/patients/tests1/test1/bMask1.mha /user/bkhanal/home/data/patients/tests1/test1/test1Atrophy1.mha ../results/patients/tests1/test1/vel.mha outputMask.mha outputAtrophy.mha
+   43  gitk
+   44  emacs ../scripts/runAdLemModel.py
+   45  ls ../results/patients/tests1/test1/
+   46  rm ../results/patients/tests1/test1/*
+   47  cp ~/data/patients/tests1/test1/bMask1.mha ../results/patients/tests1/test1/step1Mask.mha
+   48  cp ~/data/patients/tests1/test1/test1Atrophy1.mha ../results/patients/tests1/test1/step1Atrophy.mha
+   49  emacs ../scripts/runAdLemModel.py
+   50  ls ../results/patients/tests1/test1/
+   51  ../scripts/runAdLemModel.py -h
+   52  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   53  emacs ../scripts/runAdLemModel.py
+   54  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   55  emacs ../scripts/runAdLemModel.py
+   56  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   57  emacs ../scripts/runAdLemModel.py
+   58  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   59  ls ../results/patients/tests1/test1/
+   60  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   61  ls ../results/patients/tests1/test1/
+   62  src/UpdateMaskAndAtrophy ../results/patients/tests1/test1/step1Mask.mha ../results/patients/tests1/test1/step1AtrophyModified.mha ../results/patients/tests1/test1/step1vel.mha ../results/patients/tests1/test1/step2Mask.mha ../results/patients/tests1/test1/step2Atrophy.mha
+   63  ../scripts/runAdLemModel.py -p tests1/test1 -a step2Atrophy.mha -m step2Mask.mha -s 2
+   64  src/UpdateMaskAndAtrophy ../results/patients/tests1/test1/step2Mask.mha ../results/patients/tests1/test1/step2AtrophyModified.mha ../results/patients/tests1/test1/step2vel.mha ../results/patients/tests1/test1/step3Mask.mha ../results/patients/tests1/test1/step3Atrophy.mha
+   65  ../scripts/runAdLemModel.py -p tests1/test1 -a step3Atrophy.mha -m step3Mask.mha -s 3
+   66  cd Documents/softwares/medInria/medinria-superproject/build/
+   67  ./medInria.sh 
+   68  cd ~/Documents/softwares/ROBEX/
+   69  ls
+   70  ./runROBEX.sh 
+   71  ./runROBEX.sh ~/data/patients/002_S_0938Test/002_S_0938_T0_W1_MNI.nii.gz 
+   72  ./runROBEX.sh ~/data/patients/002_S_0938Test/002_S_0938_T0_W1_MNI.nii.gz ~/data/patients/002_S_0938Test/002_S_0938_T0_W1_MNI_Stripped.nii.gz 
+   73  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+   74  ./medInria.sh 
+   75  cd works/AdLemModel/build/
+   76  ls ../results/patients/tests2/test1/
+   77  ls ../results/patients/tests1/test1/
+   78  rm ../results/patients/tests2/test1/*
+   79  cp ../results/patients/tests1/test1/step1Atrophy.mha ../results/patients/tests2/test1/
+   80  cp ../results/patients/tests1/test1/step1Mask.mha ../results/patients/tests2/test1/
+   81  ../scripts/runAdLemModel.py -p tests2/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   82  rm ../results/patients/tests3/test1/*
+   83  cp ../results/patients/tests1/test1/step1Mask.mha ../results/patients/tests3/test1/
+   84  cp ../results/patients/tests1/test1/step1Atrophy.mha ../results/patients/tests3/test1/
+   85  ../scripts/runAdLemModel.py -p tests3/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   86  rm ../results/patients/tests4/test1/*
+   87  cp ../results/patients/tests1/test1/step1Atrophy.mha ../results/patients/tests4/test1/
+   88  cp ../results/patients/tests1/test1/step1Mask.mha ../results/patients/tests4/test1/
+   89  ../scripts/runAdLemModel.py -p tests4/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   90  emacs ../configFiles/helmholtz.cfg
+   91  ls ../scripts/
+   92  history | grep HhDecompose
+   93  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type hypre ksp_converged_reason
+   94  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type hypre -ksp_rtol 1.e-10 ksp_converged_reason
+   95  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type gamg -ksp_rtol 1.e-10 ksp_converged_reason
+   96  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_type superlu_dist
+   97  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+   98  ../scripts/runAdLemModel.py -p tests4/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+   99  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+  100  ../scripts/runAdLemModel.py -p tests3/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  101  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+  102  ../scripts/runAdLemModel.py -p tests3/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  103  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+  104  ../scripts/runAdLemModel.py -p tests3/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  105  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+  106  ../scripts/runAdLemModel.py -p tests4/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  107  petsc -n 4 src/HhDecompose -configFile ../configFiles/helmholtz.cfg -ksp_type preonly -pc_type lu -pc_factor_mat_solver_package superlu_dist
+  108  exit
+  109  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage 
+  110  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests1/test1/step1vel.mha ../results/patients/tests1/test1/step1velMag.mha
+  111  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests2/test1/step1vel.mha ../results/patients/tests2/test1/step1velMag.mha
+  112  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests3/test1/step1vel.mha ../results/patients/tests3/test1/step1velMag.mha
+  113  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests4/test1/step1vel.mha ../results/patients/tests3/test1/step1velMag.mha
+  114  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests3/test1/step1vel.mha ../results/patients/tests3/test1/step1velMag.mha
+  115  ~/works/tools/magnitudeOfVectorImage/build/magnitudeOfVectorImage ../results/patients/tests4/test1/step1vel.mha ../results/patients/tests4/test1/step1velMag.mha
+  116  emacs ../configFiles/helmholtz.cfg
+  117  exit
+  118  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  119  ./medInria.sh 
+  120  exit
+  121  cd ~/Documents/softwares/petsc/src/sys/
+  122  ls
+  123  grep PetscInitialize -l
+  124  find . -type f -exec grep -l PetscInitialize {} \
+  125  grep --include={*.c} -rlw '.' -e "PetscInitialize"
+  126  cd ..
+  127  find petscsys.h
+  128  find -r . petscsys.h
+  129  man find
+  130  find ./ petscsys.h
+  131  exit
+  132  cd /usr/
+  133  ls
+  134  cd lib/lib64/
+  135  ls
+  136  locate boost
+  137  emacs ~/.bashrc
+  138  cd ~
+  139  ldconfig | grep boost
+  140  su su40172
+  141  exit
+  142  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  143  ./medInria.sh 
+  144  exit
+  145  cd ~/works/AdLemModel/build/
+  146  ls src/
+  147  src/ModifyAtrophy 
+  148  src/ModifyAtrophy -h
+  149  src/ModifyAtrophy
+  150  src/ModifyAtrophy -m true
+  151  src/ModifyAtrophy -m false
+  152  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false 
+  153  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false 
+  154  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false -c 240,30.6,100 -r 20.5
+  155  src/ModifyAtrophy -h
+  156  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false -c 240,30.6,100 -r 20.5
+  157  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false -c 100,100,100 -r 20.5
+  158  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false -c 10,10,10 -r 5
+  159  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1Atrophy.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m false -c 10,10,10 -r 5 -v 15.67
+  160  src/ModifyAtrophy -i ../results/patients/tests1/test1/step1AtrophyCreated.mha -o ../results/patients/tests1/test1/step1AtrophyCreated.mha -m true -c 10,30,10 -r 5 -v 5.67
+  161  src/ModifyAtrophy -i ../results/patients/002_S_0938/atrophyStep1.mha -o /user/bkhanal/home/data/patients/002_S_0938Test/hippocampal20percent.mha -m false -c -33,18,-18 -r 5 -v 0.5
+  162  src/ModifyAtrophy -i /user/bkhanal/home/data/patients/002_S_0938Test/hippocampal20percent.mha -o /user/bkhanal/home/data/patients/002_S_0938Test/hippocampal20percent.mha -m true -c 33,18,-18 -r 5 -v 0.5
+  163  exit
+  164  history | grep vpn
+  165  locate cisco
+  166  clear
+  167  /opt/cisco/vpn/bin/vpn connect inria.fr
+  168  /opt/cisco/vpn/bin/vpn connect
+  169  /opt/cisco/vpn/bin/vpn connect vpn.inria.fr
+  170  matlab
+  171  emacs /user/bkhanal/home/Documents/MATLAB/startup.m
+  172  exit
+  173  ssh nef-devel
+  174  cd ~/Documents/softwares/ROBEX
+  175  ls
+  176  history | grep runROBEX
+  177  emacs readme.txt 
+  178  ./runROBEX.sh ~/data/patients/002_S_0938Test/002_S_0938_T0_W1_MNI.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMask.nii.gz
+  179  ImageMath
+  180  ssh nef-devel
+  181  exit
+  182  cd ~/works/AdLemModel/build/
+  183  ls src/
+  184  src/WarpImage -h
+  185  ls ../results/patients/tests1/test1/
+  186  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5
+  187  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5 --invert true
+  188  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 10 --invert true
+  189  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5 --invert true
+  190  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5
+  191  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5 --invert true --interpolator bspline --order 4
+  192  src/WarpImage -h
+  193  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5 --invert true --interpolator nearestneighbor
+  194  src/WarpImage --inImage ../results/patients/tests1/test1/step1Mask.mha --outImage ../results/patients/tests1/test1/step1MaskWarped.mha --displacementImage ../results/patients/tests1/test1/step1vel.mha --scaleValue 5 --invert true --modulate true
+  195  mkdir ../results/patients/002_S_0938Atrophy1
+  196  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/step1vel.mha ../results/patients/002_S_0938Atrophy1/
+  197  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/step1press.mha ../results/patients/002_S_0938Atrophy1/
+  198  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/step1res.vts ../results/patients/002_S_0938Atrophy1/
+  199  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/step1AtrophyModified.vts ../results/patients/002_S_0938Atrophy1/
+  200  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/step1AtrophyModified.mha ../results/patients/002_S_0938Atrophy1/
+  201  scp ~/data/patients/002_S_0938Atrophy2/step1Atrophy.mha nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy2/
+  202  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy1/step1vel.mha --scaleValue 5 --invert true
+  203  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy1/step1vel.mha --scaleValue 1 --invert true
+  204  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy1/step1vel.mha --scaleValue 2.5 --invert true
+  205  ls ~/data/patients/002_S_0938Atrophy3/
+  206  mv ~/data/patients/002_S_0938Atrophy3/testImage1.mha ~/data/patients/002_S_0938Atrophy3/step1Atrophy.mha
+  207  scp ~/data/patients/002_S_0938Atrophy3/step1Atrophy.mha nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy3/
+  208  ls ~/works/tools/
+  209  ls ~/works/tools/divergenceMarco/
+  210  ls
+  211  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedWarpedStep111.mha --displacementImage ../results/patients/002_S_0938Atrophy1/step1vel.mha --scaleValue 1 --modulate true
+  212  mkdir ../results/patients/002_S_0938Atrophy3
+  213  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy3/step1* ../results/patients/002_S_0938Atrophy3/
+  214  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 2.5 --invert true
+  215  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert true
+  216  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert false
+  217  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert false --modulate true
+  218  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert true
+  219  ImageMath 3 ../results/patients/002_S_0938Atrophy3/diffImage.mha - ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha
+  220  exit
+  221  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  222  ./medInria.sh 
+  223  exit
+  224  cd ~/works/tools/warpImage/
+  225  ls
+  226  emacs myWarpImage.cxx
+  227  cd ~/data/patients/
+  228  ls
+  229  mkdir 002_S_0938Atrophy1
+  230  cp 002_S_0938Test/* 002_S_0938Atrophy1/
+  231  ls 002_S_0938Atrophy1/
+  232  emacs ~/works/AdLemModel/scripts/runAdLemModel.py
+  233  ls 002_S_0938Atrophy1/
+  234  mv 002_S_0938Atrophy1/hippocampal20percent.mha 002_S_0938Atrophy1/hippocampal50Percent.mha
+  235  ls 002_S_0938Atrophy1/
+  236  fast
+  237  cd 002_S_0938Atrophy1/
+  238  fast 002_S_0938_T0_W1_MNI_Stripped.nii.gz 
+  239  ls
+  240  scp hippocampal50Percent.mha nef:/epi/asclepios2/bkhanal/AdLemModel/results/002_S_0938Atrophy1/
+  241  scp hippocampal50Percent.mha nef:/epi/asclepios2/bkhanal/AdLemModel/results/patients/002_S_0938Atrophy1/
+  242  scp hippocampal50Percent.mha nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/
+  243  scp 002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy1/
+  244  clear
+  245  cd ..
+  246  ls 002_S_0938Atrophy1/
+  247  ls 002_S_0938/
+  248  mkdir 002_S_0938Atrophy2
+  249  mv 002_S_0938/divergence.nii 002_S_0938Atrophy2/atrophy.nii
+  250  cd 002_S_0938Atrophy2/
+  251  mv atrophy.nii ./step1Atrophy.nii
+  252  ls
+  253  ImageMath 3 step1Atrophy.mha abs step1Atrophy.nii
+  254  run_first_all
+  255  mkdir ../002_S_0938Atrophy3
+  256  ls
+  257  cp ../002_S_0938Test/002_S_0938_T0_W1_MNI_Stripped.nii.gz ../002_S_0938Atrophy3/
+  258  cd ../002_S_0938Atrophy3/
+  259  ls
+  260  run_first_all -s L_Hipp,R_Hipp -i 002_S_0938_T0_W1_MNI_Stripped.nii.gz -o 002_S_0938_T0_W1_MNI_HippSegmented.nii.gz
+  261  run_first_all -b -s L_Hipp,R_Hipp -i 002_S_0938_T0_W1_MNI_Stripped.nii.gz -o 002_S_0938_T0_W1_MNI_HippSegmented.nii.gz
+  262  ls
+  263  rm 002_S_0938_T0_W1_MNI_HippSegmented.*
+  264  rm -r 002_S_0938_T0_W1_MNI_HippSegmented.*
+  265  ls
+  266  rm 002_S_0938_T0_W1_MNI_HippSegmented-*
+  267  ls
+  268  rm *.mat
+  269  ls
+  270  ImageMath
+  271  ImageMath 3 testImage.mha / 002_S_0938_T0_W1_MNI_HippSegmented_all_fast_firstseg.nii.gz 002_S_0938_T0_W1_MNI_HippSegmented_all_fast_firstseg.nii.gz
+  272  ImageMath 3 testImage.mha ThresholdAtMean 002_S_0938_T0_W1_MNI_HippSegmented_all_fast_firstseg.nii.gz
+  273  ImageMath 3 testImage1.mha m testImage.mha 0.7
+  274  exit
+  275  cd ~/works/AdLemModel/build/
+  276  history | grep runAdLem
+  277  ls ../results/patients/tests3/test1/
+  278  ../scripts/runAdLemModel.py -p tests2/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  279  ls ../results/patients/tests2/test1/
+  280  rm ../results/patients/tests2/test1/hh*
+  281  src/HhDecompose -h
+  282  src/HhDecompose -configFile ../configFiles/helmholtz.cfg
+  283  ls ../results/patients/tests2/test1/
+  284  rm ../results/patients/tests1/test1/hh*
+  285  ../scripts/runAdLemModel.py -p tests1/test1 -a step1Atrophy.mha -m step1Mask.mha -s 1
+  286  src/HhDecompose -configFile ../configFiles/helmholtz.cfg
+  287  src/WarpImage --inImage ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert true
+  288  ../scripts/runAdLemModel.py -p miccai2014/test1 -a atrophy.mha -m bMask1.mha -s 1
+  289  emacs ../scripts/runAdLemModel.py
+  290  ../scripts/runAdLemModel.py -p miccai2014/test1 -a atrophy.mha -m bMask1.mha -s 1
+  291  emacs ../scripts/runAdLemModel.py
+  292  ../scripts/runAdLemModel.py -p miccai2014/test2 -a atrophy.mha -m bMask1.mha -s 1
+  293  ../scripts/runAdLemModel.py -p miccai2014/test2 -a atrophy.mha -m bMask.mha -s 1
+  294  ../scripts/runAdLemModel.py -p miccai2014/test3 -a atrophy.mha -m bMask.mha -s 1
+  295  ../scripts/runAdLemModel.py -p miccai2014/test4 -a atrophy.mha -m bMask.mha -s 1
+  296  ../scripts/runAdLemModel.py -p miccai2014/test1 -a atrophy.mha -m bMask.mha -s 1
+  297  ../scripts/runAdLemModel.py -p miccai2014/test2 -a atrophy.mha -m bMask.mha -s 1
+  298  ../scripts/runAdLemModel.py -p miccai2014/test3 -a atrophy.mha -m bMask.mha -s 1
+  299  ../scripts/runAdLemModel.py -p miccai2014/test4 -a atrophy.mha -m bMask.mha -s 1
+  300  ../scripts/runAdLemModel.py -p miccai2014/test3 -a atrophy.mha -m bMask.mha -s 1
+  301  ../scripts/runAdLemModel.py -p miccai2014/test4 -a atrophy.mha -m bMask.mha -s 1
+  302  ../scripts/runAdLemModel.py -p miccai2014/test5 -a atrophy.mha -m bMask.mha -s 1
+  303  ../scripts/runAdLemModel.py -p miccai2014/test6 -a atrophy.mha -m bMask.mha -s 1
+  304  ../scripts/runAdLemModel.py -p miccai2014/test7 -a atrophy.mha -m bMask.mha -s 1
+  305  ImageMath
+  306  ImageMath 3 veltest.mha v- ../results/patients/miccai2014/test1/step1vel.mha ../results/patients/miccai2014/test2/step1vel.mha 
+  307  ImageMath | grep subtract
+  308  ImageMath | grep usage:
+  309  ImageMath | grep usage
+  310  exit
+  311  ls ../results/patients/
+  312  mkdir ../results/patients/002_S_0938Atrophy2
+  313  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938Atrophy2/step1* ../results/patients/002_S_0938Atrophy2/
+  314  mkdir ../results/patients/miccai2014
+  315  mkdir ../results/patients/miccai2014/test1
+  316  cp ../src/matlab/modelInMatlab/atrophyGenerationProcessing/atrophy.mha ../results/patients/miccai2014/test1/
+  317  cp ../src/matlab/modelInMatlab/atrophyGenerationProcessing/bMask1.mha ../results/patients/miccai2014/test1/
+  318  mkdir ../results/patients/miccai2014/test2
+  319  cp ../src/matlab/modelInMatlab/atrophyGenerationProcessing/bMask2.mha ../results/patients/miccai2014/test2/
+  320  cp ../src/matlab/modelInMatlab/atrophyGenerationProcessing/atrophy.mha ../results/patients/miccai2014/test2/
+  321  mv ../results/patients/miccai2014/test2/bMask2.mha ../results/patients/miccai2014/test2/bMask.mha
+  322  mv ../results/patients/miccai2014/test1/bMask1.mha ../results/patients/miccai2014/test1/bMask.mha
+  323  mkdir ../results/patients/miccai2014/test3
+  324  mkdir ../results/patients/miccai2014/test4
+  325  rm /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha
+  326  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test3/
+  327  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test4/
+  328  rm ../results/patients/miccai2014/test1/*
+  329  rm ../results/patients/miccai2014/test2/*
+  330  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test1/
+  331  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test2/
+  332  rm ../results/patients/miccai2014/test3/*
+  333  rm ../results/patients/miccai2014/test4/*
+  334  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test3/
+  335  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test4/
+  336  rm ../results/patients/miccai2014/test3/*
+  337  rm ../results/patients/miccai2014/test4/*
+  338  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test3/
+  339  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test4/
+  340  mkdir ../results/patients/miccai2014/test5
+  341  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test5/
+  342  mkdir ../results/patients/miccai2014/test6
+  343  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test6/
+  344  rm ../results/patients/miccai2014/test6/*
+  345  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test6/
+  346  mkdir ../results/patients/miccai2014/test7
+  347  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test7/
+  348  rm ../results/patients/miccai2014/test6/
+  349  rm ../results/patients/miccai2014/test6/*
+  350  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test6/
+  351  exit
+  352  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  353  ./medInria.sh 
+  354  exit
+  355  matlab
+  356  exit
+  357  ../scripts/runAdLemModel.py -p miccai2014/test8 -a atrophy.mha -m bMask.mha -s 1
+  358  ../scripts/runAdLemModel.py -p miccai2014/test9 -a atrophy.mha -m bMask.mha -s 1
+  359  ../scripts/runAdLemModel.py -p miccai2014/test10 -a atrophy.mha -m bMask.mha -s 1
+  360  clear
+  361  src/WarpImage --inImage ~/_T0_W1_MNI_Stripped.nii.gz --outImage ../results/patients/002_S_0938Atrophy3/002_S_0938_T0_W1_MNI_StrippedWarpedStep1.mha --displacementImage ../results/patients/002_S_0938Atrophy3/step1vel.mha --scaleValue 1 --invert trueclear
+  362  src/WarpImage -h
+  363  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test1/ --displacementImage ../results/patients/miccai2014/test1/step1vel.mha 
+  364  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test1/clear --displacementImage ../results/patients/miccai2014/test1/step1vel.mha 
+  365  clear
+  366  ssh nef-devel
+  367  exit
+  368  cd ~/works/AdLemModel/build/
+  369  src/WarpImage -h
+  370  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test1/checkerImageWarped.mha --displacementImage ../results/patients/miccai2014/test1/step1vel.mha 
+  371  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test2/checkerImageWarped.mha --displacementImage ../results/patients/miccai2014/test2/step1vel.mha 
+  372  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test3/checkerImageWarped.mha --displacementImage ../results/patients/miccai2014/test3/step1vel.mha 
+  373  src/WarpImage --inImage checkerImage.mha --outImage ../results/patients/miccai2014/test4/checkerImageWarped.mha --displacementImage ../results/patients/miccai2014/test4/step1vel.mha 
+  374  src/WarpImage --inImage ../results/patients/miccai2014/test7/bMask.mha --outImage ../results/patients/miccai2014/test7/bMaskWarped.mha --displacementImage ../results/patients/miccai2014/test7/step1vel.mha --invert true
+  375  src/WarpImage --inImage ../results/patients/miccai2014/test10/bMask.mha --outImage ../results/patients/miccai2014/test10/bMaskWarped.mha --displacementImage ../results/patients/miccai2014/test10/step1vel.mha --invert true
+  376  ImageMath 3 diffVel.mha v- /results/patients/miccai2014/test7/step1vel.mha /results/patients/miccai2014/test10/step1vel.mha
+  377  ImageMath 3 diffVel.mha v- ../results/patients/miccai2014/test7/step1vel.mha ../results/patients/miccai2014/test10/step1vel.mha
+  378  ls src/
+  379  src/ModifyAtrophy -h
+  380  ls
+  381  rm *.mha
+  382  ls
+  383  mkdir ../results/patients/002_S_0938AtrophySpherical1
+  384  cp ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz ../results/patients/002_S_0938AtrophySpherical1/
+  385  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -o ../results/patients/002_S_0938AtrophySpherical1/bMask.mha -m -c 32,29.5382,10.4763 -r 10 -v 1
+  386  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -o ../results/patients/002_S_0938AtrophySpherical1/bMask.mha -m true -c 32,29.5382,10.4763 -r 10 -v 1
+  387  ls ../results/patients/002_S_0938AtrophySpherical1/
+  388  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -o ../results/patients/002_S_0938AtrophySpherical1/bMask.mha -m true -c 29.5382,10.4763,32 -r 10 -v 1
+  389  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -o ../results/patients/002_S_0938AtrophySpherical1/bMask.mha -m true -c 29.5382,10.4763,32 -r 8 -v 1
+  390  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -o ../results/patients/002_S_0938AtrophySpherical1/bMask.nii -m true -c 29.5382,10.4763,32 -r 8 -v 1
+  391  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/bMask.nii -o ../results/patients/002_S_0938AtrophySpherical1/bMask1.nii -m true -c 29.5382,10.4763,32 -r 7 -v 3
+  392  mv ../results/patients/002_S_0938AtrophySpherical1/bMask.nii ./
+  393  mkdir ../adaptedMasks
+  394  mv bMask.nii ../adaptedMasks/002_S_0938SphereCSF1.nii
+  395  rm ../results/patients/002_S_0938AtrophySpherical1/*.mha
+  396  mv ../results/patients/002_S_0938AtrophySpherical1/bMask1.nii ../results/patients/002_S_0938AtrophySpherical1/bMask.nii
+  397  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/bMask.nii -o ../results/patients/002_S_0938AtrophySpherical1/atrophy.nii -m false -c 29.5382,10.4763,32 -r 7 -v 0.5
+  398  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical1/bMask.nii -o ../results/patients/002_S_0938AtrophySpherical1/atrophy.nii.gz -m false -c 29.5382,10.4763,32 -r 7 -v 0.5
+  399  rm ../results/patients/002_S_0938AtrophySpherical1/atrophy.nii
+  400  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical1/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 7 -v 3
+  401  rm ../results/patients/002_S_0938AtrophySpherical1/bMask.nii
+  402  scp ../results/patients/002_S_0938AtrophySpherical1/*.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical1/
+  403  mkdir ../results/patients/002_S_0938AtrophySpherical2
+  404  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 5 -v 3
+  405  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical2/bMask.nii.gz -m false -c 29.5382,10.4763,32 -r 5 -v 0.55
+  406  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical2/bMask.nii.gz -m false -c 29.5382,10.4763,32 -r 5 -v 3
+  407  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 5 -v 3
+  408  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical2/atrophy.nii.gz -m false -c 29.5382,10.4763,32 -r 5 -v 0.55
+  409  scp ../results/patients/002_S_0938AtrophySpherical2/atrophy.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical2/
+  410  scp ../results/patients/002_S_0938AtrophySpherical2/bMask.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical2/
+  411  mkdir ../results/patients/002_S_0938AtrophySpherical3
+  412  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical3/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 5 -v 3
+  413  src/ModifyAtrophy -i ../adaptedMasks/002_S_0938SphereCSF1.nii -o ../results/patients/002_S_0938AtrophySpherical3/atrophy.nii.gz -m false -c 29.5382,10.4763,32 -r 5 -v 0.8
+  414  scp ../results/patients/002_S_0938AtrophySpherical3/atrophy.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical3/
+  415  scp ../results/patients/002_S_0938AtrophySpherical3/bMask.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical3/
+  416  mkdir ../results/patients/002_S_0938AtrophySpherical4
+  417  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical3/bMask.nii.gz -o ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -m true -c 29.538,2.57,32 -r 8 -v 3
+  418  cp ../results/patients/002_S_0938AtrophySpherical3/atrophy.nii.gz ../results/patients/002_S_0938AtrophySpherical4/atrophy.nii.gz
+  419  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -o ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -m true -c 29.538,2.57,37 -r 8 -v 3
+  420  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -o ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -m true -c 29.538,2.57,27 -r 8 -v 3
+  421  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -o ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -m true -c 29.538,18.57,27 -r 8 -v 3
+  422  src/ModifyAtrophy -i ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -o ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz -m true -c 29.538,18.57,37 -r 8 -v 3
+  423  scp ../results/patients/002_S_0938AtrophySpherical4/atrophy.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical4/
+  424  scp ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical4/
+  425  exit
+  426  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  427  ./medInria.sh 
+  428  exit
+  429  cd ~/works/AdLemModel/build/
+  430  mkdir ../results/patients/miccai2014/test8
+  431  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test8/
+  432  mkdir ../results/patients/miccai2014/test9
+  433  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test9
+  434  mkdir ../results/patients/miccai2014/test10
+  435  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test9
+  436  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/*.mha ../results/patients/miccai2014/test10
+  437  cp /home/bkhanal/works/AdLemModel/src/matlab/modelInMatlab/atrophyGenerationProcessing/checkerImage.mha ./
+  438  ImageMath
+  439  ls ~/Documents/softwares/Ant/
+  440  ls ~/Documents/softwares/Ant/bin/
+  441  ResampleImage
+  442  ResampleImageBySpacing
+  443  CreateWarpedGridImage
+  444  CreateWarpedGridImage 3 ../results/patients/miccai2014/test1/step1vel.mha tstImage
+  445  CreateWarpedGridImage 3 ../results/patients/miccai2014/test1/step1vel.mha tstImage.mha
+  446  ls
+  447  CreateWarpedGridImage 3 ../results/patients/miccai2014/test7/step1vel.mha tstImage.mha
+  448  CreateWarpedGridImage 3 ../results/patients/miccai2014/test9/step1vel.mha tstImage.mha
+  449  ResampleImage 3 ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz tstImage.nii.gz 182x218x182 nn
+  450  ResampleImage 3 ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz tstImage.nii.gz 45x54x45 nn
+  451  ls ~/Documents/softwares/fslbuild/fsl/bin/
+  452  ls ~/Documents/softwares/fslbuild/fsl/bin/ | grep sub
+  453  ls ~/Documents/softwares/fslbuild/fsl/bin/ | grep sam
+  454  ls ~/Documents/softwares/fslbuild/fsl/bin/ | grep size
+  455  fslsize
+  456  fslmaths | grep sub
+  457  fslmaths
+  458  fslmaths ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz -subsamp2 tstImage.nii.gz 
+  459  fslmaths tstImage.nii.gz -subsamp2 tstImage1.nii.gz 
+  460  mkdir ../results/patients/002_S_0938SubSampled4
+  461  fslmaths ~/data/patients/002_S_0938/002_S_0938_T0_W1_MNI.nii.gz -subsamp2 ../results/patients/002_S_0938SubSampled4/tst.nii.gz
+  462  fslmaths ../results/patients/002_S_0938SubSampled4/tst.nii.gz -subsamp2 ../results/patients/002_S_0938SubSampled4/002_S_0938_SubSampled4.nii.gz
+  463  emacs ~/Documents/softwares/ROBEX/readme.txt 
+  464  ~/Documents/softwares/ROBEX/runROBEX.sh ../results/patients/002_S_0938SubSampled4/002_S_0938_SubSampled4.nii.gz ../results/patients/002_S_0938SubSampled4/002_S_0938_SubSampled4_SStripped.nii.gz ../results/patients/002_S_0938SubSampled4/002_S_0938_SubSampled4_SStrip_Mask.nii.gz
+  465  fast
+  466  fast ../results/patients/002_S_0938SubSampled4/002_S_0938_SubSampled4_SStripped.nii.gz
+  467  mv ../results/patients/002_S_0938SubSampled4/ ../results/patients/002_S_0938SubSampled2
+  468  rm ../results/patients/002_S_0938SubSampled2/*
+  469  fslmaths ~/data/patients/002_S_0938/002_S_0938_T0_W1_MNI.nii.gz -subsamp2 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz
+  470  ~/Documents/softwares/ROBEX/runROBEX.sh ../results/patients/002_S_0938SubSampled2/002_S_0938_SubSampled2.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_SubSampled2_SStripped.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_SubSampled2_SStrip_Mask.nii.gz
+  471  ~/Documents/softwares/ROBEX/runROBEX.sh ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask.nii.gz
+  472  fast ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped.nii.gz 
+  473  exit
+  474  cd works/AdLemModel/build/
+  475  matlab&
+  476  matlab
+  477  exit
+  478  ssh nef-devel
+  479  cd works/AdLemModel/build/
+  480  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical4/step1* ../results/patients/002_S_0938AtrophySpherical4/
+  481  history | grep WarpImage
+  482  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha
+  483  src/WarpImage -h
+  484  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha -scaleValue 3
+  485  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 3
+  486  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 3 --invert true
+  487  ImageMath
+  488  src/WarpImage --inImage ~/data/patients/002_S_0938/002_S_0938_T0_W1_MNI.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest1.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 3 --invert true
+  489  src/WarpImage --inImage ~/data/patients/002_S_0938/002_S_0938_T0_W1_MNI.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest1.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 5 --invert true
+  490  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 5 --invert true
+  491  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTest.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 2 --invert true
+  492  src/WarpImage -h
+  493  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTestNN.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 2 --invert true --interpolator nearestneighbor
+  494  src/WarpImage --inImage ../results/patients/002_S_0938AtrophySpherical4/bMask.nii.gz --outImage ../results/patients/002_S_0938AtrophySpherical4/warpedTestNN.nii.gz --displacementImage ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha --scaleValue 1 --invert true --interpolator nearestneighbor
+  495  scp ../src/PetscAdLem3D.cxx /epi/asclepios2/bkhanal/works/AdLemModel/src/
+  496  scp ../src/PetscAdLem3D.cxx nef:/epi/asclepios2/bkhanal/works/AdLemModel/src/
+  497  scp ../src/includes/PetscAdLem3D.hxx  nef:/epi/asclepios2/bkhanal/works/AdLemModel/src/includes/
+  498  scp ../src/AdLem3D.cxx nef:/epi/asclepios2/bkhanal/works/AdLemModel/src/
+  499  scp ../src/includes/AdLem3D.hxx nef:/epi/asclepios2/bkhanal/works/AdLemModel/src/includes/
+  500  ls ../results/patients/miccai2014/test1/
+  501  ../scripts/runAdLemModel.py -p miccai2014/test1 -a atrophy.mha -m bMask.mha -s 1
+  502  history | grep modifyAtrophy
+  503  mkdir ../results/patients/002_S_0938SubSampled2AtrophySpherical1
+  504  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical1/bMask.nii.gz
+  505  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical1/atrophy.nii.gz -m false -c 29.5382,10.4763,32 -r 5 -v 0.5
+  506  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical1/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 8 -v 3
+  507  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical1/atrophy.nii.gz -m false -c 29.5382,10.4763,32 -r 10 -v 0.5
+  508  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical1/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 12 -v 3
+  509  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical1/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 14 -v 3
+  510  mkdir ../results/patients/002_S_0938SubSampled2AtrophySpherical2
+  511  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 14 -v 1
+  512  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 12 -v 3
+  513  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 14 -v 1
+  514  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 12 -v 3
+  515  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 12 -v 3
+  516  mkdir ../results/patients/002_S_0938SubSampled2AtrophySpherical3
+  517  cp ../results/patients/002_S_0938SubSampled2AtrophySpherical2/bMask.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical3/
+  518  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2AtrophySpherical3/bMask.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical3/bMask1.nii.gz -m true -c 15.5382,10.4763,32 -r 12 -v 3
+  519  mv ../results/patients/002_S_0938SubSampled2AtrophySpherical3/bMask1.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical3/bMask.nii.gz
+  520  cp ../results/patients/002_S_0938SubSampled2AtrophySpherical1/atrophy.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical2/
+  521  cp ../results/patients/002_S_0938SubSampled2AtrophySpherical1/atrophy.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical3/
+  522  scp ../results/patients/002_S_0938SubSampled2AtrophySpherical1/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical1/
+  523  scp ../results/patients/002_S_0938SubSampled2AtrophySpherical2/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical2/
+  524  scp ../results/patients/002_S_0938SubSampled2AtrophySpherical3/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical3/
+  525  ImageWarp
+  526  ImageMath
+  527  ls ~/Documents/softwares/Ant/bin/
+  528  CreateWarpedGridImage
+  529  CreateWarpedGridImage 3 ../results/patients/002_S_0938AtrophySpherical4/step1vel.mha tstImage.mha
+  530  exit
+  531  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  532  ./medInria.sh 
+  533  exit
+  534  ssh nef-devel
+  535  /opt/cisco/vpn/bin/vpn connect vpn.inria.fr
+  536  ssh nef-devel.fr
+  537  ssh nef-devel.inria.fr
+  538  cd ~/works/AdLemModel/build/
+  539  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical1/*.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/
+  540  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical1/*.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/
+  541  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical2/*.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical2/
+  542  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical3/*.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical3/
+  543  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha tstImage.mha
+  544  exit
+  545  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  546  ./medInria.sh 
+  547  exit
+  548  pdflatex Khanal2014llncs.tex
+  549  gnome-open Khanal2014llncs.pdf 
+  550  pdflatex Khanal2014llncs.tex
+  551  bibtex Khanal2014llncs
+  552  pdflatex Khanal2014llncs.tex
+  553  gnome-open Khanal2014llncs.pdf 
+  554  pdflatex Khanal2014llncs.tex
+  555  exit
+  556  ssh bkhanal@dausset
+  557  exit
+  558  ssh nef-devel.inria.fr
+  559  emacs ~/.bashrc
+  560  cat ~/.bashrc
+  561  exit
+  562  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  563  ./medInria.sh 
+  564  exit
+  565  cd ~/works/AdLemModel/build/
+  566  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha
+  567  CreateWarpedGridImage
+  568  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 0.2
+  569  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 1
+  570  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 0.1,0.1,0.1
+  571  CreateWarpedGridImage 2 ~/Documents/softwares/Ant/lib/
+  572  clear
+  573  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 222
+  574  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 2,2,2
+  575  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 0.2x0.2x0.2
+  576  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 1x1x1
+  577  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 2x2x2
+  578  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0 10x10x10
+  579  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x1x1 10x10x10
+  580  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x1x1 0.01x0.01x0.01
+  581  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x1x1 0.04x0.04x0.04
+  582  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x1x1 20x20x20
+  583  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha
+  584  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x0
+  585  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x1x0
+  586  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 1x0x1
+  587  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 0x1x1
+  588  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha -vm ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha 4
+  589  ImageMath
+  590  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha vm ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha 4
+  591  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 0x1x1
+  592  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha vm ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1vel.mha 2
+  593  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha
+  594  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid.mha 0x1x1
+  595  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid1.mha 1x0x1
+  596  CreateWarpedGridImage 3 ../results/patients/002_S_0938SubSampled2AtrophySpherical1/step1velScaled.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical1/warpedGrid2.mha 1x1x0
+  597  mkdir ../results/patients/002_S_0938SubSampled2AtrophySpherical4
+  598  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical4/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 18 -v 1
+  599  src/ModifyAtrophy -i ../results/patients/002_S_0938SubSampled2AtrophySpherical4/bMask.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophySpherical4/bMask.nii.gz -m true -c 29.5382,10.4763,32 -r 12 -v 3
+  600  cp ../results/patients/002_S_0938SubSampled2AtrophySpherical1/atrophy.nii.gz ../results/patients/002_S_0938SubSampled2AtrophySpherical4/
+  601  scp ../results/patients/002_S_0938SubSampled2AtrophySpherical4/*.nii.gz nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical4/
+  602  ImageMath 
+  603  ImageMath 3 tstImage.nii.gz TruncateImageIntensity ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz 0.75 0.95 2
+  604  ImageMath 3 tstImage1.nii.gz ThresholdAtMean tstImage.nii.gz 
+  605  mkdir ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1
+  606  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/atrophy.nii.gz m tstImage1.nii.gz 0.1
+  607  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/bMask.nii.gz
+  608  mkdir /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInWM1
+  609  scp ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/* nef-devel-inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/
+  610  scp ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/
+  611  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophySpherical4/*.mha ../results/patients/002_S_0938SubSampled2AtrophySpherical4/
+  612  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/*.mha ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/
+  613  src/WarpImage --inImage ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz --outImage ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped1.nii.gz --displacementImage ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha --scaleValue 1 --invert true
+  614  src/WarpImage --inImage ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz --outImage ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped2.nii.gz --displacementImage ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha --scaleValue 2 --invert true
+  615  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/diffImage.nii.gz - ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped1.nii.gz
+  616  emacs ../scripts/warpAtDifferentScales.py 
+  617  ../scripts/warpAtDifferentScales.py -h
+  618  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped4d.mha -v true -n 5 -f 0 -s 1 -c r
+  619  ls
+  620  emacs ../scripts/warpAtDifferentScales.py 
+  621  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped4d.mha -v true -n 5 -f 0 -s 1 -c r
+  622  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped4d.mha -v true -n 5 -f 0 -s 1
+  623  emacs ../scripts/warpAtDifferentScales.py 
+  624  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped4d.mha -v true -n 5 -f 0 -s 1
+  625  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/step1vel.mha -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/brainWarped4d.mha -v true -n 10 -f 0 -s 1
+  626  ls
+  627  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInWM1/diffImage4.nii.gz - ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz warpedByDisp4.mha 
+  628  mkdir ../results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1
+  629  ImageMath 3 tstImage.nii.gz TruncateImageIntensity ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz 0.5 0.6 2
+  630  ImageMath
+  631  ImageMath 3 tstImage.nii.gz ThresholdAtMean ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz
+  632  ImageMath 3 tstImage.nii.gz TruncateImageIntensity ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz 0.2 0.6 2
+  633  ImageMath 3 tstImage1.nii.gz ThresholdAtMean tstImage.nii.gz 
+  634  ImageMath 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/atrophy.nii.gz m tstImage1.nii.gz 0.1
+  635  mkdir /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1
+  636  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/bMask.nii.gz
+  637  scp ../results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/
+  638  history | grep ./configure
+  639  ssh nef-devel
+  640  emacs /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938AtrophySpherical4/AdLemModel002_S_0938AtrophySpherical4.o9401225 
+  641  exit
+  642  /opt/cisco/vpn/bin/vpn connect vpn.inria.fr
+  643  matlab
+  644  exit
+  645  ssh bkhanal@minot
+  646  clear
+  647  pwd
+  648  top
+  649  ../scripts/warpAtDifferentScales.py -h
+  650  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/step1vel.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/brainWarped4d.mha -v true -n 10 -f 0 -s 0.2
+  651  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz -d ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/step1vel.nii.gz -o ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/brainWarped4d.mha -v true -n 10 -f 0 -s 0.5
+  652  exit
+  653  ssh minot@bkhanal
+  654  ssh bkhanal@minot
+  655  exit
+  656  ssh bkhanal@dausset
+  657  exit
+  658  history | grep dausset
+  659  ssh bkhanal@dausset
+  660  exit
+  661  ImageMath
+  662  ls ~/Documents/softwares/Ant/bin/
+  663  ExtractRegionFromImage
+  664  ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz tstImage.nii.gz 2
+  665  ThresholdImage
+  666  ThresholdImage 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/atrophy.nii.gz 1.5 2.5 0.5 0 
+  667  ThresholdImage 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/atrophy.nii.gz 1.5 2.5 0.5 0 
+  668  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/*.mha ../results/patients/002_S_0938SubSampled2AtrophyUniformInGMWM1/
+  669  mkdir /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGM1
+  670  scp ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/
+  671  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/*.mha ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/
+  672  ThresholdImage 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/atrophy.nii.gz 1.5 2.5 0.1 0
+  673  ThresholdImage 3 ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/atrophy.nii.gz 1.5 2.5 0.1 0
+  674  scp ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/
+  675  rm ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/*.mha
+  676  ImageMath 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskDilated.nii.gz MD ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMask.nii.gz 2
+  677  ImageMath 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskDilated.nii.gz MD ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMask.nii.gz 1
+  678  ImageMath 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskPadCSFMask.nii.gz - /data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskDilated.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMask.nii.gz
+  679  ImageMath 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskPadCSFMask.nii.gz - ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskDilated.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMask.nii.gz
+  680  ImageMath 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPadded.nii.gz + ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_StrippedMaskPadCSFMask.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz
+  681  ExtractRegionFromImage
+  682  ExtractRegionFromImage 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPadded.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPaddedConvexHull.nii.gz 1
+  683  ExtractRegionFromImage 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_ConvexHull.nii.gz 17x16x6 164x203x157
+  684  ExtractRegionFromImage 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_ConvexHull.nii.gz 17x16x6 163x202x156
+  685  emacs ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py
+  686  gcc --version
+  687  exit
+  688  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  689  ./medInria.sh 
+  690  exit
+  691  cd works/AdLemModel/build/
+  692  mkdir ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1
+  693  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz ../results/patients/002_S_0938SubSampled2AtrophyUniformInGM1/bMask.nii.gz
+  694  ImageMath 3 tstImage.nii.gz TruncateImageIntensity ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz 0.5 0.6 2
+  695  ExtractRegionFromImage 3 ../results/patients/002_S_0938AtrophySpherical1/002_S_0938_T0_W1_MNI_Stripped_seg.nii.gz tstImage.nii.gz 1
+  696  mkdir ../results/patients/002_S_0938ConvexHull
+  697  cp ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_ConvexHull.nii.gz ../results/patients/002_S_0938ConvexHull/
+  698  cp ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPaddedConvexHull.nii.gz ../results/patients/002_S_0938ConvexHull/
+  699  mkdir ../results/patients/002_S_0938ConvexHullAtrophy1
+  700  cp ../results/patients/002_S_0938ConvexHull/002_S_0938_T0_W1_MNI_Stripped_segCsfPaddedConvexHull.nii.gz ../results/patients/002_S_0938ConvexHullAtrophy1/bMask.nii.gz
+  703  src/ModifyAtrophy -i ../results/patients/002_S_0938ConvexHullAtrophy1/bMask.nii.gz -o ../results/patients/002_S_0938ConvexHullAtrophy1/atrophy.nii.gz -m false -c 29.5382,10.47382,32 -r 5 -v 0.2
+  704  exit
+  710  ssh nef-devel
+  711  emacs ~/.bashrc
+  712  ssh nef-devel
+  713  emacs ~/.bashrc
+  714  ssh nef-devel
+  715  ImageMath
+  716  ls ~/Documents/softwares/Ant/bin/
+  717  exit
+  718  pdflatex Khanal2014llncs.pdf 
+  719  pdflatex Khanal2014llncs.tex
+  720  gnome-open pdflatex Khanal2014llncs.pdf 
+  721  gnome-open Khanal2014llncs.pdf 
+  722  pdflatex Khanal2014llncs.tex
+  723  gnome-open Khanal2014llncs.pdf 
+  724  pdflatex Khanal2014llncs.tex
+  725  gnome-open Khanal2014llncs.pdf 
+  726  pdflatex Khanal2014llncs.tex
+  727  gnome-open Khanal2014llncs.pdf 
+  728  pdflatex Khanal2014llncs.tex
+  729  gnome-open Khanal2014llncs.pdf 
+  730  pdflatex Khanal2014llncs.tex
+  731  gnome-open Khanal2014llncs.pdf 
+  732  pdflatex Khanal2014llncs.tex
+  733  gnome-open Khanal2014llncs.pdf 
+  734  pdflatex Khanal2014llncs.tex
+  735  gnome-open Khanal2014llncs.pdf 
+  736  pdflatex Khanal2014llncs.tex
+  737  gnome-open Khanal2014llncs.pdf 
+  738  exit
+  739  ssh bkhanal@dausset
+  740  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  741  ./medInria.s
+  742  ./medInria.sh 
+  743  exit
+  744  matlab
+  745  exit
+  746  ssh bkhanal@minot
+  747  ssh nef-devel
+  748  exit
+  749  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  750  ./medInria.sh 
+  751  fslview &
+  752  ls ~/Documents/softwares/fslbuild/fsl/bin/
+  753  cd ~/Documents/softwares/fslbuild/fsl/
+  754  ls
+  755  emacs README 
+  756  ls doc/utils/
+  757  ls doc/bet2/
+  758  cd ..
+  759  ls
+  760  cd fslbuild/
+  761  ls
+  762  cd fsl
+  763  ls
+  764  ls src/fslview/
+  765  exit
+  766  gnome-open Documents/softwares/Ant/ants.pdf 
+  767  ls Documents/softwares/Ant/bin/
+  768  ImageMath
+  769  ls Documents/softwares/fslbuild/fsl/bin/
+  770  immv
+  771  invwarp
+  772  possum
+  773  fslmaths
+  774  ls Documents/softwares/fslbuild/fsl/bin/
+  779  fslstats tstMask.nii.gz -V
+  783  fslmaths -dt int tstMask.nii.gz -thr 3 tstMaskWM.nii.gz
+  785  fslmaths -dt int tstMask.nii.gz -uthr 2 tstmaskGmTmp.nii.gz
+  797  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask_Dilated.nii.gz MD ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask.nii.gz 1 
+  798  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask_CsfPad.nii.gz - ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask_Dilated.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask.nii.gz
+  799  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_CsfPadded.nii.gz + ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStrip_Mask_CsfPad.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz 
+  800  ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_CsfPadded.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_CsfPadded_ConvexHull.nii.gz 1
+  801  ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz 8x8x3 82x101x78
+  802  ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_ConvexHull.nii.gz 8x8x3 82x101x78
+  803  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_CsfPadded_ConvexHull.nii.gz /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/bMask.nii.gz
+  804  ls
+  805  rm *.nii.gz
+  806  rm *.mha
+  807  cp ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_SStripped_seg_CsfPadded_ConvexHull.nii.gz ./currentMask.nii.gz
+  808  fslmaths -dt int currentMask.nii.gz -thr 3 currentMaskWM.nii.gz
+  809  fslmaths -dt int currentMask.nii.gz -uthr 2 currentMaskGmTmp.nii.gz
+  810  fslmaths -dt int currentMaskGmTmp.nii.gz -thr 2 currentMaskGM.nii.gz
+  811  fslstats currentMaskGM.nii.gz -V
+  812  fslstats currentMaskWM.nii.gz -V
+  813  fslmaths -dt double currentMaskGM.nii.gz -mul 0.037115208 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/atrophy.nii.gz
+  814  fslmaths -dt int currentMaskGM.nii.gz -div 2 currentMaskGM.nii.gz
+  815  fslmaths -dt int currentMaskWM.nii.gz -div 3 currentMaskWM.nii.gz
+  816  fslmaths -dt double currentMaskGM.nii.gz -mul 0.037115208 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/atrophy.nii.gz
+  817  mkdir /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P
+  818  cp currentMask.nii.gz /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/bMask.nii.gz
+  819  fslmaths -dt double currentMaskGM.nii.gz -mul 0.043371027 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/atrophy.nii.gz
+  820  fslmaths -dt double currentMaskWM.nii.gz -mul 0.043371027 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/atrophy.nii.gz
+  821  scp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/
+  822  scp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/
+  823  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/
+  824  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/
+  825  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/brainWarped4d.mha -v true -n 10 -f 0 -s 1
+  826  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/brainWarped4d.mha -v true -n 10 -f 0 -s 1
+  827  ImageMath 3 velDiff.mha v- /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/step1vel.mha /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/step1vel.mha 
+  828  ls
+  829  ImageMath
+  830  ../scripts/warpAtDifferentScales.py -h
+  831  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d velDiff.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/brainWarped4d.mha -v true -n 10 -f -5 -s 1 5 
+  832  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d velDiff.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/brainWarped4dDiff.mha -v true -n 10 -f -5 -s 1  
+  833  cp /proj/asclepios/cluster/asclepios2/mlorenzi/PATIENTS/Template1/002_S_0938/output_stationary_velocity_field.mha ../results/patients/002_S_0938/
+  834  ls ../results/patients/002_S_0938/
+  835  src/WarpImage -h
+  836  ../scripts/warpAtDifferentScales.py -h
+  837  emacs ../scripts/warpAtDifferentScales.py 
+  838  emacs ../scripts/warpAtDifferentScales.py &
+  839  ~/works/tools/svfExponential/SVFExponential 
+  840  ~/works/tools/svfExponential/SVFExponential -s 1 -i ../results/patients/002_S_0938/output_stationary_velocity_field.mha -o ../results/patients/002_S_0938/output_displacement_field.mha
+  841  src/WarpImage --inImage ../results/patients/002_S_0938/Cereb.nii.gz --outImage ../results/patients/002_S_0938/002_S_0938_Cereb.nii.gz ../results/patients/002_S_0938/output_displacement_field.mha --interpolator nearestneibhbor --invert true
+  842  src/WarpImage --inImage ../results/patients/002_S_0938/Cereb.nii.gz --outImage ../results/patients/002_S_0938/002_S_0938_Cereb.nii.gz --displacementImage ../results/patients/002_S_0938/output_displacement_field.mha --interpolator nearestneibhbor --invert true
+  843  src/WarpImage --inImage ../results/patients/002_S_0938/Cereb.nii.gz --outImage ../results/patients/002_S_0938/002_S_0938_Cereb.nii.gz --displacementImage ../results/patients/002_S_0938/output_displacement_field.mha --interpolator nearestneighbor --invert true
+  844  ls ~/Documents/softwares/fslbuild/fsl/bin/
+  845  fslmaths
+  846  fslmaths -dt int ../results/patients/002_S_0938/002_S_0938_Cereb.nii.gz -subsamp2 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -odt int
+  847  fslmaths ../results/patients/002_S_0938/002_S_0938_Cereb.nii.gz -subsamp2 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  848  fslmaths ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -thr ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  849  fslmaths ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -thr 0.5 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  850  fslmaths ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -sub 1 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  851  fslmaths ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -abs ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  852  fslmaths ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz -thr 0.9 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz
+  853  ls
+  854  ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull.nii.gz 8x8x3 82x101x78
+  855  ImageMath
+  856  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull_Closed.nii.gz MC ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull.nii.gz 
+  857  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull_Closed.nii.gz MD ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull.nii.gz 1
+  858  ImageMath 3 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull_Closed.nii.gz MD ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull.nii.gz 2
+  859  ImageMath 3 currentMaskWM_NoCerebellum.nii.gz + currentMaskWM.nii.gz 1
+  860  fslmaths currentMaskWM_NoCerebellum.nii.gz -uthr 1.5 currentMaskWM_NoCerebellum.nii.gz 
+  861  ImageMath 3 currentMaskWM_NoCerebellum.nii.gz - currentMaskWM.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull_Closed.nii.gz 
+  862  fslmaths currentMaskWM_NoCerebellum.nii.gz -thr 0 currentMaskWM_NoCerebellum.nii.gz 
+  863  ImageMath 3 currentMaskGM_NoCerebellum.nii.gz - currentMaskGM.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull_Closed.nii.gz
+  864  fslmaths currentMaskGM_NoCerebellum.nii.gz -thr 0 currentMaskGM_NoCerebellum.nii.gz 
+  865  mv currentMaskGM_NoCerebellum.nii.gz ./currentMaskGM_NoCerebellumClosed.nii.gz 
+  866  mv currentMaskWM_NoCerebellum.nii.gz ./currentMaskWM_NoCerebellumClosed.nii.gz 
+  867  mkdir /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed
+  868  mkdir /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed
+  869  cp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/bMask.nii.gz /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/
+  870  cp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/bMask.nii.gz /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/
+  871  fslstats currentMaskGM_NoCerebellumClosed.nii.gz -V
+  872  fslstats currentMaskWM_NoCerebellumClosed.nii.gz -V
+  873  fslmaths -dt double currentMaskGM_NoCerebellumClosed.nii.gz -mul 0.0398802987 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/atrophy.nii.gz
+  874  fslmaths -dt double currentMaskWM_NoCerebellumClosed.nii.gz -mul 0.0401204221 /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/atrophy.nii.gz
+  875  scp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/
+  876  scp /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/* nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/
+  877  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/
+  878  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P_NoCerebellumClosed/brainWarped4d_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+  879  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/brainWarped4d_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+  880  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_M100P/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_GM100P/brainWarped4d_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+  881  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P/brainWarped4d_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+  882  scp nef:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/
+  883  ../scripts/warpAtDifferentScales.py -i ../results/patients/002_S_0938SubSampled2/002_S_0938_T0_W1_MNI_SubSampled2_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/002_S_0938SubSampled2AtrophyUniform_G2P_WM100P_NoCerebellumClosed/brainWarped4d_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+  884  ls ~/Documents/softwares/fslbuild/fsl
+  885  exit
+  886  cd ~/works/AdLemModel/build/
+  887  mkdir ../results/patients/atlas
+  888  mkdir ../results/patients/atlasOasis30
+  889  rm -r ../results/patients/atlas
+  890  emacs readme.txt
+  891  emacs ~/Documents/softwares/ROBEX/readme.txt 
+  892  ~/Documents/softwares/ROBEX/runROBEX.sh ~/data/atlas/OASIS-30_Atropos_template/T_template0.nii.gz ../results/patients/atlasOasis30/template_SStripped.nii.gz ../results/patients/atlasOasis30/template_SStrippedMask.nii.gz
+  893  ls ~/Documents/softwares/Ant/bin/
+  894  jointfusion
+  895  antsaffine.sh
+  896  antsAffineInitializer
+  897  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI.nii.gz  -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt 
+  898  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0_glm_4labelsJointFusion.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI_4labels.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt
+  899  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0_glm_4labelsJointFusion.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI_4labels.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152.nii.gz -use-NN ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt
+  900  WarpImageMultiTransform
+  901  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0_glm_4labelsJointFusion.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI_4labels.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt --use-NN
+  902  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0_glm_6labelsJointFusion.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI_6labels.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt --use-NN
+  903  ~/Documents/softwares/ROBEX/runROBEX.sh ~/works/AdLemModel/results/patients/atlasOasis30/templateMNI.nii.gz ../results/patients/atlasOasis30/template_SStripped.nii.gz ../results/patients/atlasOasis30/template_SStrippedMask.nii.gz
+  904  ImageMath
+  905  chmod +x ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py
+  906  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -h
+  907  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/atlasOasis30/template_SStripped.nii.gz -m ../results/patients/atlasOasis30/template_SStrippedMask.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_CsfPadded1_ConvexHull.nii.gz -w 1
+  908  emacs ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py
+  909  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/atlasOasis30/template_SStripped.nii.gz -m ../results/patients/atlasOasis30/template_SStrippedMask.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_CsfPadded1_ConvexHull.nii.gz -w 1
+  910  rm ../results/patients/atlasOasis30/template_SStripped_CsfPadded1_ConvexHull.nii.gz 
+  911  Atropos
+  912  fast
+  913  history | grep fast
+  914  fast ../results/patients/atlasOasis30/template_SStripped.nii.gz 
+  915  ls ../results/patients/atlasOasis30/
+  916  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/atlasOasis30/template_SStripped_seg.nii.gz -m ../results/patients/atlasOasis30/template_SStrippedMask.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -w 1
+  917  ExtractRegionFromImage 3 ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz ../results/patients/atlasOasis30/template_SStripped_CsfPadded1_ConvexHull.nii.gz 16x17x1 162x202x155
+  918  ExtractRegionFromImage 3 ../results/patients/atlasOasis30/template_SStripped.nii.gz ../results/patients/atlasOasis30/template_SStripped_CsfPadded1_ConvexHull.nii.gz 16x17x1 162x202x155
+  919  ExtractRegionFromImage 3 ../results/patients/atlasOasis30/templateMNI_6labels.nii.gz ../results/patients/atlasOasis30/templateMNI_6labels_CsfPadded1_ConvexHull.nii.gz 16x17x1 162x202x155
+  920  fslmaths
+  921  fslmaths -dt int ../results/patients/atlasOasis30/templateMNI_6labels_CsfPadded1_ConvexHull.nii.gz -thr 4.5 ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz
+  922  fslmaths -dt int ../results/patients/atlasOasis30/templateMNI_6labels_CsfPadded1_ConvexHull.nii.gz -thr 5 ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz
+  923  ImageMath 3 ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz + ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz 1
+  924  fslmaths -dt int ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz -uthr 5 ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz
+  925  ImageMath
+  926  src/BinarizeThreshold -h
+  927  /opt/cisco/vpn/bin/vpn connect vpn.inria.fr
+  928  ssh nef-devel.inria.fr
+  929  exit
+  930  emacs ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py
+  931  src/BinarizeThreshold -h
+  932  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segGM_CsfPadded1_ConvexHull.nii.gz -l 1.5 -u 2.5
+  933  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segWM_CsfPadded1_ConvexHull.nii.gz -l 2.5 -u 3.5
+  934  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segGM_CsfPadded1_ConvexHull.nii.gz -l 1.5 -u 2.5
+  935  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segWM_CsfPadded1_ConvexHull.nii.gz -l 2.5 -u 3.5
+  936  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segGM_CsfPadded1_ConvexHull.nii.gz -l 1.5 -u 2.5
+  937  src/BinarizeThreshold -i ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -o ../results/patients/atlasOasis30/template_SStripped_segWM_CsfPadded1_ConvexHull.nii.gz -l 2.5 -u 3.5
+  938  ImageMath 3 ../results/patients/atlasOasis30/template_SStripped_segGM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz m ../results/patients/atlasOasis30/template_SStripped_segWM_CsfPadded1_ConvexHull.nii.gz ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz 
+  939  ImageMath 3 ../results/patients/atlasOasis30/template_SStripped_segGM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz m ../results/patients/atlasOasis30/template_SStripped_segGM_CsfPadded1_ConvexHull.nii.gz ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz 
+  940  ImageMath 3 ../results/patients/atlasOasis30/template_SStripped_segWM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz m ../results/patients/atlasOasis30/template_SStripped_segWM_CsfPadded1_ConvexHull.nii.gz ../results/patients/atlasOasis30/template_CerebStem_CsfPadded_ConvexHull.nii.gz 
+  941  fslstats
+  942  fslstats ../results/patients/atlasOasis30/template_SStripped_segGM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz -V
+  943  fslstats ../results/patients/atlasOasis30/template_SStripped_segWM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz -V
+  944  mkdir ../results/patients/templateAtrophyUniform_G2p_GM100p_NoCerebStem
+  945  ImageMath 3 ../results/patients/templateAtrophyUniform_G2p_GM100p_NoCerebStem/atrophy.nii.gz m ../results/patients/atlasOasis30/template_SStripped_segGM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz 0.035086861
+  946  mkdir ../results/patients/templateAtrophyUniform_G2p_WM100p_NoCerebStem
+  947  ImageMath 3 ../results/patients/templateAtrophyUniform_G2p_WM100p_NoCerebStem/atrophy.nii.gz m ../results/patients/atlasOasis30/template_SStripped_segWM_NoCerebStem_CsfPadded1_ConvexHull.nii.gz 0.046513136
+  948  cp ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz ../results/patients/templateAtrophyUniform_G2p_GM100p_NoCerebStem/bMask.nii.gz
+  949  cp ../results/patients/atlasOasis30/template_SStripped_seg_CsfPadded1_ConvexHull.nii.gz ../results/patients/templateAtrophyUniform_G2p_WM100p_NoCerebStem/bMask.nii.gz
+  950  scp ../results/patients/templateAtrophyUniform_G2p_GM100p_NoCerebStem/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/templateAtrophyUniform_G2p_GM100p_NoCerebStem/
+  951  scp ../results/patients/templateAtrophyUniform_G2p_WM100p_NoCerebStem/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/templateAtrophyUniform_G2p_WM100p_NoCerebStem/
+  952  exit
+  953  matlab
+  954  exit
+  955  cd Documents/softwares/medInria/medinria-superproject/build/
+  956  ./medInria.sh 
+  957  exit
+  958  cd ~
+  959  matlab
+  960  octave
+  961  exit
+  962  ssh nef-devel.inria.fr
+  963  exit
+  964  cd ~/Documents/softwares/medInria/medinria-superproject/build/
+  965  ./medInria.sh 
+  966  exit
+  967  cd ~/works/AdLemModel/build/
+  968  ls ../results/patients/atlasOasis30/
+  969  mkdir ../results/patients/atlasOasis30SubSampled
+  970  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30SubSampled/template2mm.nii.gz  -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152_2mm.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt
+  971  WarpImageMultiTransform 3 ~/data/atlas/OASIS-30_Atropos_template/T_template0_glm_6labelsJointFusion.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30SubSampled/template2mm_6labels.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152_2mm.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt --use-NN
+  972  WarpImageMultiTransform 3 ~/works/AdLemModel/results/patients/atlasOasis30/template_SStripped_seg.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152_2mm.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt --use-NN
+  973  WarpImageMultiTransform 3 ~/works/AdLemModel/results/patients/atlasOasis30/template_SStripped_seg.nii.gz ~/works/AdLemModel/results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -R ~/data/atlas/OASIS-30_Atropos_template_in_MNI152_2mm.nii.gz ~/data/atlas/OASIS-30_Atropos_template_to_MNI152_affine.txt --use-NN
+  974  ~/Documents/softwares/ROBEX/runROBEX.sh ../results/patients/atlasOasis30SubSampled/template2mm.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_SStripped.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_SStrippedMask.nii.gz
+  975  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -m ../results/patients/atlasOasis30SubSampled/template2mm_SStrippedMask.nii.gz -o ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg_CsfPadded1_ConvexHull.nii.gz -w 1
+  976  rm ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg*
+  977  fast ../results/patients/atlasOasis30SubSampled/template2mm_SStripped.nii.gz 
+  978  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -m ../results/patients/atlasOasis30SubSampled/template2mm_SStrippedMask.nii.gz -o ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -w 1
+  979  ExtractRegionFromImage 3 ../results/patients/atlasOasis30SubSampled/template2mm_SStripped.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_ConvexHull.nii.gz 8x8x0 81x101x79
+  980  ExtractRegionFromImage 3 ../results/patients/atlasOasis30SubSampled/template2mm_6labels.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_6labels_ConvexHull.nii.gz 8x8x0 81x101x79
+  981  ExtractRegionFromImage 3 ../results/patients/atlasOasis30SubSampled/template2mm_SStripped.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_ConvexHull.nii.gz 8x8x0 81x101x78
+  982  ExtractRegionFromImage 3 ../results/patients/atlasOasis30SubSampled/template2mm_6labels.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_6labels_ConvexHull.nii.gz 8x8x0 81x101x78
+  983  fslmaths -dt int ../results/patients/atlasOasis30SubSampled/template2mm_6labels_ConvexHull.nii.gz -thr 5 ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz
+  984  ImageMath 3 ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz + ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz 1
+  985  fslmaths -dt int ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz -uthr 5 ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz 
+  986  src/BinarizeThreshold -i ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -o ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segGM.nii.gz -l 1.5 -u 2.5
+  987  src/BinarizeThreshold -i ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz -o ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segWM.nii.gz -l 2.5 -u 3.5
+  988  ImageMath 3 ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segGM_NoCerebStem.nii.gz m ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segGM.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz 
+  989  ImageMath 3 ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segWM_NoCerebStem.nii.gz m ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segWM.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_CerebStem_ConvexHull.nii.gz 
+  990  mkdir ../results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem
+  991  mkdir ../results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem
+  992  cp ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz ../results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/bMask.nii.gz
+  993  cp ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_seg.nii.gz ../results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/bMask.nii.gz
+  994  fslstats ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segGM_NoCerebStem.nii.gz -V
+  995  fslstats ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segWM_NoCerebStem.nii.gz -V
+  996  ImageMath 3 ../results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/atrophy.nii.gz m ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segGM_NoCerebStem.nii.gz 3.46386753536259e-02
+  997  ImageMath 3 ../results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/atrophy.nii.gz m ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_segWM_NoCerebStem.nii.gz 4.73248767622217e-02
+  998  scp ../results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/
+  999  scp ../results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/* nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/
+ 1000  exit
+ 1001  cd ~/works/AdLemModel/build/
+ 1002  mkdir /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem
+ 1003  mkdir /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem
+ 1004  cp ../results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/* /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/
+ 1005  cp ../results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/* /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/
+ 1006  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/
+ 1007  scp nef-devel.inria.fr:/epi/asclepios2/bkhanal/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/step1* /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/
+ 1008  ../scripts/warpAtDifferentScales.py -i ../results/patients/atlasOasis30SubSampled/template2mm_SStripped_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/brainWarped_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+ 1009  ExtractRegionFromImage 3 ../results/patients/atlasOasis30SubSampled/template2mm.nii.gz ../results/patients/atlasOasis30SubSampled/template2mm_ConvexHull.nii.gz 8x8x0 81x101x78
+ 1010  ../scripts/warpAtDifferentScales.py -i ../results/patients/atlasOasis30SubSampled/template2mm_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/brainWarped_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+ 1011  ../scripts/warpAtDifferentScales.py -i ../results/patients/atlasOasis30SubSampled/template2mm_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/step1vel.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/brainWarped_n10_f0_s1.mha -v true -n 10 -f 0 -s 1
+ 1012  ImageMath 3 /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/velDiff.mha - /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/step1vel.mha /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1vel.mha 
+ 1013  ImageMath 3 /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/velDiff.mha v- /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/step1vel.mha /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1vel.mha 
+ 1014  ImageMath 3 /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/velSum.mha v+ /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/step1vel.mha /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_GM100p_NoCerebStem/step1vel.mha 
+ 1015  ../scripts/warpAtDifferentScales.py -i ../results/patients/atlasOasis30SubSampled/template2mm_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/velSum.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/brainWarpedMean_n10_f0_s0_5.mha -v true -n 10 -f 0 -s 0.5
+ 1016  ../scripts/warpAtDifferentScales.py -i ../results/patients/atlasOasis30SubSampled/template2mm_ConvexHull.nii.gz -d /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/velDiff.mha -o /user/bkhanal/nas/home/works/AdLemModel/results/patients/template2mmAtrophyUniform_G2p_WM100p_NoCerebStem/brainWarpedDiff_n10_fminus5_s1.mha -v true -n 10 -f -5 -s 1
