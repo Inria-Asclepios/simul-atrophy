@@ -38,7 +38,7 @@ public:
     static PetscErrorCode computeMatrixTaras3dConstantMu(KSP, Mat, Mat, MatStructure*, void*);
     static PetscErrorCode computeRHSTaras3dConstantMu(KSP, Vec, void*);
 
-    PetscInt bMaskAt(PetscInt x, PetscInt y, PetscInt z);
+    PetscReal bMaskAt(PetscInt x, PetscInt y, PetscInt z);
 
 protected:
     PetscBool           mParaVecsCreated; //by default false but,

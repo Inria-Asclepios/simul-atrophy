@@ -126,7 +126,7 @@ int main(int argc, char **argv)
 
         typedef itk::ImageFileWriter<DisplacementImageType> WriterType;
         WriterType::Pointer writer = WriterType::New();
-        writer->SetFileName("displacementFieldInverted.mha");
+        writer->SetFileName("displacementFieldInverted.nii.gz");
         writer->SetInput(warperField);
         writer->Update();
     }

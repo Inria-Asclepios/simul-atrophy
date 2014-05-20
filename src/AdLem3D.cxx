@@ -54,7 +54,7 @@ void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
 void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
 {
 
-    IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
+    ScalarImageReaderType::Pointer   imageReader = ScalarImageReaderType::New();
     imageReader->SetFileName(maskImageFile);
     imageReader->Update();
     setBrainMask(imageReader->GetOutput(),relaxIcLabel,relaxIcPressureCoeff, setSkullVelToZero, skullLabel);
@@ -62,7 +62,7 @@ void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int rela
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
+void AdLem3D::setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
 {
     mBrainMask = brainMask;
     mRelaxIcLabel = relaxIcLabel;
@@ -174,7 +174,7 @@ double AdLem3D::aAt(int x, int y, int z) const
 
 #undef __FUNCT__
 #define __FUNCT__ "brainMaskAt"
-int AdLem3D::brainMaskAt(int x, int y, int z) const
+double AdLem3D::brainMaskAt(int x, int y, int z) const
 {
     ScalarImageType::IndexType pos;
     pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
@@ -246,7 +246,7 @@ void AdLem3D::solveModel()
 #define __FUNCT__ "setAtrophy"
 void AdLem3D::setAtrophy(std::string atrophyImageFile)
 {
-    ScalarReaderType::Pointer   scalarReader = ScalarReaderType::New();
+    ScalarImageReaderType::Pointer   scalarReader = ScalarImageReaderType::New();
     scalarReader->SetFileName(atrophyImageFile);
     scalarReader->Update();
     setAtrophy(scalarReader->GetOutput());
@@ -371,7 +371,7 @@ bool AdLem3D::isAtrophyValid(double sumMaxValue) {
 #define __FUNCT__ "modifyAtrophy"
 void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
     if(!makeSumZero) {
-        typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType,
+        typedef itk::MaskImageFilter< ScalarImageType, ScalarImageType,
                 ScalarImageType> MaskFilterType;
         MaskFilterType::Pointer maskFilter = MaskFilterType::New();
         maskFilter->SetInput(mAtrophy);
@@ -429,7 +429,7 @@ AdLem3D::ScalarImageType::Pointer AdLem3D::getAtrophyImage()
 #undef __FUNCT__
 #define __FUNCT__ "writeAtrophyToFile"
 void AdLem3D::writeAtrophyToFile(std::string fileName) {
-    ScalarWriterType::Pointer writer = ScalarWriterType::New();
+    ScalarImageWriterType::Pointer writer = ScalarImageWriterType::New();
     writer->SetFileName(fileName);
     writer->SetInput(mAtrophy);
     writer->Update();
@@ -472,17 +472,17 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
     std::string pressureFileName(resultsPath+"press.nii.gz");
     std::string divergenceFileName(resultsPath+"div.nii.gz");
 
-    VectorWriterType::Pointer   vectorWriter = VectorWriterType::New();
+    VectorImageWriterType::Pointer   vectorWriter = VectorImageWriterType::New();
     vectorWriter->SetFileName(velocityFileName);
     vectorWriter->SetInput(mVelocity);
     vectorWriter->Update();
 
-    ScalarWriterType::Pointer   scalarWriter = ScalarWriterType::New();
+    ScalarImageWriterType::Pointer   scalarWriter = ScalarImageWriterType::New();
     scalarWriter->SetFileName(pressureFileName);
     scalarWriter->SetInput(mPressure);
     scalarWriter->Update();
 
-    ScalarWriterType::Pointer divWriter = ScalarWriterType::New();
+    ScalarImageWriterType::Pointer divWriter = ScalarImageWriterType::New();
     divWriter->SetFileName(divergenceFileName);
     divWriter->SetInput(mDivergence);
     divWriter->Update();

@@ -392,7 +392,7 @@ PetscReal PetscAdLemTaras3D::dataCenterAt(std::string dType, PetscInt x, PetscIn
     return this->getProblemModel()->dataAt(dType,x,y,z);
 }
 
-PetscInt PetscAdLemTaras3D::bMaskAt(PetscInt x, PetscInt y, PetscInt z)
+PetscReal PetscAdLemTaras3D::bMaskAt(PetscInt x, PetscInt y, PetscInt z)
 {
     if(x != 0)
         --x;
@@ -1210,12 +1210,16 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 
                     //Cannot use member mPressureNullspacePresent here because, this is a static function!!
                     if((user->getProblemModel()->getRelaxIcPressureCoeff() > 0) &&
-                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
+                            //(user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
+                            (   (user->bMaskAt(i,j,k) >= user->getProblemModel()->getRelaxIcLabel()) &&
+                                user->bMaskAt(i,j,k) < 2)
+                            ) {
                         //Relax compressibility at certain points by putting diagonal term for pressure.
                         //points obtained from Mask:
                         col[6].c = 3;
                         col[6].i = i;   col[6].j = j;   col[6].k = k;
-                        v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+                        //v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+                        v[6] = 2-user->bMaskAt(i,j,k);
                         ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else{
                         ierr=MatSetValuesStencil(jac,1,&row,6,col,v,INSERT_VALUES);CHKERRQ(ierr);

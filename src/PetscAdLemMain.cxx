@@ -82,7 +82,7 @@ int main(int argc,char **argv)
 
         std::stringstream fileIndex;
         fileIndex << stepIndex;
-        AdLemModel.writeAtrophyToFile(resultsPath + "step" + fileIndex.str() + "AtrophyModified.mha");
+        AdLemModel.writeAtrophyToFile(resultsPath + "step" + fileIndex.str() + "AtrophyModified.nii.gz");
         AdLemModel.solveModel();
         AdLemModel.writeSolution(resultsPath + "step" + fileIndex.str());
         //        AdLemModel.writeSolution(resultsPath,true,true);

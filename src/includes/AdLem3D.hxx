@@ -36,9 +36,9 @@ public:
     typedef typename itk::Image<itk::Vector<double,3>, 3>   VectorImageType;
 
     typedef typename itk::ImageFileReader<IntegerImageType>  IntegerImageReaderType;
-    typedef typename itk::ImageFileReader<ScalarImageType>  ScalarReaderType;
-    typedef typename itk::ImageFileWriter<ScalarImageType>  ScalarWriterType;
-    typedef typename itk::ImageFileWriter<VectorImageType>  VectorWriterType;
+    typedef typename itk::ImageFileReader<ScalarImageType>  ScalarImageReaderType;
+    typedef typename itk::ImageFileWriter<ScalarImageType>  ScalarImageWriterType;
+    typedef typename itk::ImageFileWriter<VectorImageType>  VectorImageWriterType;
 
     AdLem3D();
     ~AdLem3D();
@@ -58,12 +58,12 @@ public:
                            double muRatio = 1, double lambdaRatio = 1);
     bool isMuConstant() const;
     void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
-    void setBrainMask(IntegerImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
+    void setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
     int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy"
     double dataAt(std::string dType, int x, int y, int z);
-    int brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
+    double brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
     int getRelaxIcLabel() const;  //Return the label present in BrainMask where the IC is to be relaxed.
     //Relaxes IC on those region where maskImageFile has values relaxIcLabel.
     //Normally, relaxIcPressureCoeff should be non-zero.
@@ -103,7 +103,7 @@ public:
     void writeAtrophyToFile(std::string fileName);
 
 protected:
-    IntegerImageType::Pointer   mBrainMask;         //Input segmentation.
+    ScalarImageType::Pointer   mBrainMask;         //Input segmentation.
     bool                        mIsBrainMaskSet;
     //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
     //big number => release IC and allow pressure to vary.
