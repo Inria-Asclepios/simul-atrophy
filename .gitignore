@@ -1,7 +1,6 @@
 /CMakeLists.txt.user
-
 *.*~
 *.vtk
-/src/matlab/*
-/results/*
-/build/*
+src/matlab/*
+results/*
+build/*
