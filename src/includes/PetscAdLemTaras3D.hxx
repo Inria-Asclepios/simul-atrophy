@@ -24,7 +24,14 @@ public:
     PetscReal muXz(PetscInt x, PetscInt y, PetscInt z);
     PetscReal muYz(PetscInt x, PetscInt y, PetscInt z);
 
-    PetscReal lambdaC(PetscInt x, PetscInt y, PetscInt z);
+    // Support for lambda as a tensor and hence. (Mi,Mj) element position in the matrix.
+    // Top left element is (0,0).
+    PetscReal lambdaC(PetscInt x, PetscInt y, PetscInt z, PetscInt Mi, PetscInt Mj);
+    // TODO: Current support for lambda as tensor is only for
+    // the center of the cell.
+    // Must define how to interpolate tensor to get the values
+    // at the faces of the cell. Thus currently it is not
+    // implemented.
     PetscReal lambdaXy(PetscInt x, PetscInt y, PetscInt z);
     PetscReal lambdaXz(PetscInt x, PetscInt y, PetscInt z);
     PetscReal lambdaYz(PetscInt x, PetscInt y, PetscInt z);
@@ -65,7 +72,9 @@ protected:
     PetscErrorCode  createParaVectors();
     void            createPcForSc();        //Preconditioner for Schur Complement.
 
-    PetscReal dataCenterAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);
+    // Mi, Mj arguments added for matrix position for the dType that supports tensor.
+    // Currently it is only supported for "lambda" dType. For others (Mi,Mj) value is not used.
+    PetscReal dataCenterAt(std::string dType, PetscInt x, PetscInt y, PetscInt z, PetscInt Mi = 0, PetscInt Mj = 0);
     PetscReal dataXyAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);
     PetscReal dataXzAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);
     PetscReal dataYzAt(std::string dType, PetscInt x, PetscInt y, PetscInt z);

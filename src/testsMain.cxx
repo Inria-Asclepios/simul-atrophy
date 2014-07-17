@@ -53,7 +53,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    //Parse the sphereCenter into number from teh string:
+    //Parse the sphereCenter into number from the string:
     std::vector< double > sphereCenter;
     {
         std::stringstream ss(sphereCenterString);

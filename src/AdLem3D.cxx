@@ -32,22 +32,38 @@ void AdLem3D::setWallVelocities(std::vector<double>& wallVelocities) {
 
 #undef __FUNCT__
 #define __FUNCT__ "setLameParameters"
-void AdLem3D::setLameParameters(double muCsf, double lambdaCsf,
-                                bool isMuConstant,
-                                double muRatio, double lambdaRatio)
+void AdLem3D::setLameParameters(bool isMuConstant, bool useTensorLambda,
+                                double muCsf, double muRatio,
+                                double lambdaCsf, double lambdaRatio, std::string lambdaImageFile)
 {
+    mIsMuConstant = isMuConstant;
+    mUseTensorLambda = useTensorLambda;
     mMuCsf = muCsf;
     mLambdaCsf = lambdaCsf;
-    if(!isMuConstant) {
-        mIsMuConstant = false;
-        mMuGm = muCsf*muRatio;      mMuWm = muCsf*muRatio;
-        mLambdaGm = lambdaCsf*lambdaRatio;      mLambdaWm = lambdaCsf*lambdaRatio;
+    if(isMuConstant) {
+        mMuGm = muCsf;
     } else {
-        mIsMuConstant = true;
-        mMuGm = muCsf;          mMuWm = muCsf;
-        mLambdaGm = lambdaCsf;   mLambdaWm = lambdaCsf;
+        mMuGm = muCsf*muRatio;
+    }
+    mMuWm = mMuGm;
+    if(useTensorLambda) {
+        TensorImageReaderType::Pointer   tensorImageReader = TensorImageReaderType::New();
+        tensorImageReader->SetFileName(lambdaImageFile);
+        tensorImageReader->Update();
+        setLambda(tensorImageReader->GetOutput());
+    } else {
+        mLambdaGm = lambdaCsf*lambdaRatio;
+        mLambdaWm = lambdaCsf*lambdaRatio;
     }
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "setLambda"
+void AdLem3D::setLambda(TensorImageType::Pointer inputLambda)
+{
+    mLambda = inputLambda;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
@@ -101,10 +117,20 @@ void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[])
 #define __FUNCT__ "getBcType"
 AdLem3D::bcType AdLem3D::getBcType() const { return mBc; }
 
+#undef __FUNCT__
+#define __FUNCT__ "isMuConstant"
 bool AdLem3D::isMuConstant() const
 {
     return mIsMuConstant;
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "isLambdaTensor"
+bool AdLem3D::isLambdaTensor() const
+{
+    return mUseTensorLambda;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "getWallVelocities"
@@ -148,15 +174,23 @@ double AdLem3D::muAt(int x, int y, int z) const
 
 #undef __FUNCT__
 #define __FUNCT__ "lambdaAt"
-double AdLem3D::lambdaAt(int x, int y, int z) const
+double AdLem3D::lambdaAt(int x, int y, int z,
+                         unsigned int Li, unsigned int Lj) const
 {
-    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
-         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
-         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
-        return mLambdaGm;
+    if (mUseTensorLambda) {
+        TensorImageType::IndexType pos;
+        pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
+        pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
+        pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+        return (mLambda->GetPixel(pos)(Li,Lj));
     }
-    return mLambdaCsf;*/
-    return mLambdaCsf;
+    // If the model is initialized for scalar lambda then it is same as
+    // lamda times identity matrix. So all non-diagonal elements are zero
+    // while diagonal elements are the scalar value.
+    if (Li == Lj)
+        return mLambdaCsf;
+    else
+        return 0.0;
 }
 
 #undef __FUNCT__
@@ -194,16 +228,16 @@ int AdLem3D::getRelaxIcLabel() const
 
 #undef __FUNCT__
 #define __FUNCT__ "dataAt"
-double AdLem3D::dataAt(std::string dType, int x, int y, int z)
+double AdLem3D::dataAt(std::string dType, int x, int y, int z, unsigned int Mi, unsigned int Mj)
 {
     if (dType.compare("mu") == 0)
         return muAt(x,y,z);
     else if (dType.compare("lambda") == 0)
-        return lambdaAt(x,y,z);
+        return lambdaAt(x,y,z,Mi,Mj);
     else if (dType.compare("atrophy") == 0)
         return aAt(x,y,z);
     else
-        std::cout<<"invalid option: "<<dType<<" : for funciton dataAt"<<std::endl;
+        std::cout<<"invalid option: "<<dType<<" : for function dataAt"<<std::endl;
     return 0;
 }
 

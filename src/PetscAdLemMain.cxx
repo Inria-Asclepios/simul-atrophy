@@ -17,7 +17,7 @@ static char help[] = "Solves AdLem model.\n\n";
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
-    std::string atrophyFileName, maskFileName;
+    std::string atrophyFileName, maskFileName, lambdaFileName;
     std::string resultsPath;
     int stepIndex;
 
@@ -39,6 +39,8 @@ int main(int argc,char **argv)
         char optionString[PETSC_MAX_PATH_LEN];
         ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) atrophyFileName = optionString;
+        ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(optionFlag) lambdaFileName = optionString;
         ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) maskFileName = optionString;
         ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -61,8 +63,8 @@ int main(int argc,char **argv)
         //------------------------*** Set up the model parameters ***-----------------------//
         AdLem3D AdLemModel; //xn,yn,zn,1,1,1,1);
         AdLemModel.setWallVelocities(wallVelocities);
-        AdLemModel.setLameParameters(1,1);
-        //        AdLemModel.setLameParameters(1,1,false,10,20);
+//        AdLemModel.setLameParameters(true,false);
+        AdLemModel.setLameParameters(true,true,1,1,1,1,lambdaFileName);
 
         AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,true,constants::NBR_LABEL); //1 coeff for p dof.
 //        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,false,constants::NBR_LABEL); //1 coeff for p dof.

@@ -71,3 +71,10 @@ target_link_libraries(composeDisplacementFields ${ITK_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
+add_executable(createDiffusionTensorImage
+    createDiffusionTensorImage.cxx
+)
+target_link_libraries(createDiffusionTensorImage ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)

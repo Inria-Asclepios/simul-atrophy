@@ -12,7 +12,7 @@ parser = optparse.OptionParser()
 parser.add_option('-p', '--patientID', dest='patient', help='patient ID name which is also a valid directory containing the div/atrophy map')
 parser.add_option('-a', '--atrophyFile', dest='atrophyFile',help='valid atrophy filename with extension present in patientID directory')
 parser.add_option('-m', '--maskFile', dest='maskFile', help='valid brain Mask/segmentation filename with extension present in patientID data directory')
-
+parser.add_option('-l', '--lambdaFile', dest='lambdaFile', help='valid tensor image filename with extension present in patientID directory.')
 parser.add_option('-s', '--stepIndex', dest='stepIndex', help='integer index to denote which iteration step is run for the model')
 
 (options, args) = parser.parse_args()
@@ -24,6 +24,8 @@ if options.maskFile is None:
     options.maskFile = raw_input('Enter a valid mask/segmented image filename')
 if options.stepIndex is None:
     options.stepIndex = int(raw_input('Enter a valid iteration step index, 1 if it is the first one'))
+if options.lambdaFile is None:
+    options.lambdaFile = raw_input('Enter a valid tensor image filename, or simply put a random string if you are not using tensor image by internally changing the PetscAdLemMain.cxx file')
 
 
 #Data and Results Directory:
@@ -34,6 +36,7 @@ resultsDir = workDir + "results/patients/" + options.patient + "/"
 #Input Selection:
 atrophyFile = resultsDir + options.atrophyFile
 maskFile = resultsDir +  options.maskFile
+lambdaFile = resultsDir + options.lambdaFile
 
 #Petsc options:
 petscOptions = " -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_precondition self -pc_fieldsplit_dm_splits 0 -pc_fieldsplit_0_fields 0,1,2 -pc_fieldsplit_1_fields 3 "
@@ -48,7 +51,7 @@ petscOptions += "-fieldsplit_1_ksp_converged_reason -ksp_converged_reason "
 petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual" # -log_summary" # -ksp_view"
 
 
-petscCommand += target + " -atrophyFile " + atrophyFile + " -maskFile " + maskFile + " -resPath " + resultsDir + " -stepIndex " + options.stepIndex + petscOptions
+petscCommand += target + " -atrophyFile " + atrophyFile + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -resPath " + resultsDir + " -stepIndex " + options.stepIndex + petscOptions
 
 print "given command:\n" + petscCommand + "\n"
 subprocess.call(petscCommand, shell=True)

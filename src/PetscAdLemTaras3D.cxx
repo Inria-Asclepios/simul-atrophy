@@ -381,7 +381,9 @@ direction in Taras method. Hence, change the co-ordinate to get proper value
 of the data at the cell center.*/
 /*This is equivalent to increase the dimension of the image by one by copying the
   value of the faces sharing the origin to it's new neigbhouring face*/
-PetscReal PetscAdLemTaras3D::dataCenterAt(std::string dType, PetscInt x, PetscInt y, PetscInt z)
+PetscReal PetscAdLemTaras3D::dataCenterAt(std::string dType,
+                                          PetscInt x, PetscInt y, PetscInt z,
+                                          PetscInt Mi, PetscInt Mj)
 {
     if(x != 0)
         --x;
@@ -389,7 +391,7 @@ PetscReal PetscAdLemTaras3D::dataCenterAt(std::string dType, PetscInt x, PetscIn
         --y;
     if(z != 0)
         --z;
-    return this->getProblemModel()->dataAt(dType,x,y,z);
+    return this->getProblemModel()->dataAt(dType,x,y,z,Mi,Mj);
 }
 
 PetscReal PetscAdLemTaras3D::bMaskAt(PetscInt x, PetscInt y, PetscInt z)
@@ -491,9 +493,10 @@ PetscReal PetscAdLemTaras3D::muC(PetscInt x, PetscInt y, PetscInt z)
 
 #undef __FUNCT__
 #define __FUNCT__ "lambdaC"
-PetscReal PetscAdLemTaras3D::lambdaC(PetscInt x, PetscInt y, PetscInt z)
+PetscReal PetscAdLemTaras3D::lambdaC(PetscInt x, PetscInt y, PetscInt z,
+                                     PetscInt Mi, PetscInt Mj)
 {
-    return dataCenterAt("lambda",x,y,z);
+    return dataCenterAt("lambda",x,y,z,Mi,Mj);
 }
 
 #undef __FUNCT__
@@ -921,7 +924,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3d(KSP ksp, Vec b, void *ctx)
                     rhs[k][j][i].vx = 0;
                 } else { //interior points, x-momentum equation
                     rhs[k][j][i].vx = Hy*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i,j+1,k+1)
+                                             +user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i,j+1,k+1,0,0)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i,j+1,k+1))/2.0;
                 }
                 // *********************** y-momentum equation *******************
@@ -930,7 +933,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3d(KSP ksp, Vec b, void *ctx)
                     rhs[k][j][i].vy = 0;
                 } else { //interior points, y-momentum equation
                     rhs[k][j][i].vy = Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j,k+1)
+                                             +user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j,k+1))/2.0;
                 }
 
@@ -940,7 +943,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3d(KSP ksp, Vec b, void *ctx)
                     rhs[k][j][i].vz = 0;
                 } else { //interior points, z-momentum equation
                     rhs[k][j][i].vz = Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j+1,k)
+                                             +user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
                                              )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j+1,k))/2.0;
                 }
 
@@ -1210,16 +1213,31 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 
                     //Cannot use member mPressureNullspacePresent here because, this is a static function!!
                     if((user->getProblemModel()->getRelaxIcPressureCoeff() > 0) &&
-                            //(user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
-                            (   (user->bMaskAt(i,j,k) >= user->getProblemModel()->getRelaxIcLabel()) &&
-                                user->bMaskAt(i,j,k) < 2)
-                            ) {
+                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
+                            //(   (user->bMaskAt(i,j,k) >= user->getProblemModel()->getRelaxIcLabel()) &&
+                            //    user->bMaskAt(i,j,k) < 2)
+                            //) { TODO: Need to recheck why exactly this did not give the desired effect.
+                        // This <2 condition was a test for non-integer type brainMask to allow
+                        // different compressibilty value to the partial volumes of CSF and tissue.
+                        // Because when the mask is warped with small displacement fields obtained from the
+                        //first step, we must use interpolation other than nearest neigbhour if we do not
+                        // want to end up with the same original mask (since the maximum magnitude of the field
+                        // was less than one voxel). So when using for e.g. bilinear interpolation, the resulting
+                        // brain mask for the second step would have non-integer values signifying partial volumes.
+                        // Now the above commented condition is to select those volumes which are CSF or contain
+                        // CSF partially.
+
                         //Relax compressibility at certain points by putting diagonal term for pressure.
                         //points obtained from Mask:
                         col[6].c = 3;
                         col[6].i = i;   col[6].j = j;   col[6].k = k;
-                        //v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
-                        v[6] = 2-user->bMaskAt(i,j,k);
+                        v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+                        // The following line is commented in sync with the comment above for partial volume case.
+                        // The test was to allow coefficient fo the pressure variable to depend on the amount of
+                        // partial volume present in the given voxel. This way we thought we could make any voxel
+                        // compressibility proportional to the partial volume of CSF present in that volume.
+                        // TODO: Need to recheck why exactly this did not give the desired result!!
+//                        v[6] = 2-user->bMaskAt(i,j,k);
                         ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else{
                         ierr=MatSetValuesStencil(jac,1,&row,6,col,v,INSERT_VALUES);CHKERRQ(ierr);
@@ -1259,6 +1277,10 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     Hy   = 1;//1.0 / (PetscReal)(my-1);
     Hz   = 1;//1.0 / (PetscReal)(mz-1);
 
+    //Gradient of A.
+    PetscReal gradAx;
+    PetscReal gradAy;
+    PetscReal gradAz;
     //TEST:
     //Diagonal components of a diagonal tensor that multiplies force in the momentum equation to create the
     //effect of anisotropy.
@@ -1275,6 +1297,12 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     for (k=zs; k<zs+zm; ++k) {
         for (j=ys; j<ys+ym; ++j) {
             for (i=xs; i<xs+xm; ++i) {
+                //---*********** Compute gradient ----*************************//
+                if (i<mx-1 && j<my-1 && k<mz-1) {
+                    gradAx = (user->aC(i+1,j+1,k+1) - user->aC(i,j+1,k+1));
+                    gradAy = (user->aC(i+1,j+1,k+1) - user->aC(i+1,j,k+1));
+                    gradAz = (user->aC(i+1,j+1,k+1) - user->aC(i+1,j+1,k));
+                }
                 //---****************** x-momentum equation ********************---//
                 if(j==my-1 || k==mz-1) {     //back and north wall ghost nodes:
                     rhs[k][j][i].vx = 0;
@@ -1298,9 +1326,19 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 
                 }
                 else { //interior points, x-momentum equation
-                    rhs[k][j][i].vx = diagXX*Hy*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i,j+1,k+1)
-                                             )*(user->aC(i+1,j+1,k+1) - user->aC(i,j+1,k+1))/2.0;
+                    if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vx = Hy*Hz*(
+                                    (user->lambdaC(i,j,k,0,0)*gradAx) +
+                                    (user->lambdaC(i,j,k,0,1)*gradAy) +
+                                    (user->lambdaC(i,j,k,0,2)*gradAz)
+                                    );
+                    } else {
+                        rhs[k][j][i].vx = diagXX*Hy*Hz*(
+                                    user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
+                                    user->lambdaC(i+1,j+1,k+1,0,0) +
+                                    user->lambdaC(i,j+1,k+1,0,0)
+                                    ) * gradAx / 2.0;
+                    }
                 }
 
                 //---*********************** y-momentum equation *******************---//
@@ -1325,9 +1363,17 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vy = 0;
                 }
                 else { //interior points, y-momentum equation
-                    rhs[k][j][i].vy = diagYY*Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j,k+1)
-                                             )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j,k+1))/2.0;
+                    if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vy = Hx*Hz*(
+                                    (user->lambdaC(i,j,k,1,0)*gradAx) +
+                                    (user->lambdaC(i,j,k,1,1)*gradAy) +
+                                    (user->lambdaC(i,j,k,1,2)*gradAz)
+                                    );
+                    }else {
+                        rhs[k][j][i].vy = diagYY*Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
+                                             + user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
+                                             )*gradAy/2.0;
+                    }
                 }
 
                 //--*********************** z-momentum equation *******************--//
@@ -1353,9 +1399,17 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vz = 0;
                 }
                 else { //interior points, z-momentum equation
-                    rhs[k][j][i].vz = diagZZ*Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
-                                             +user->lambdaC(i+1,j+1,k+1) + user->lambdaC(i+1,j+1,k)
-                                             )*(user->aC(i+1,j+1,k+1) - user->aC(i+1,j+1,k))/2.0;
+                    if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vz = Hx*Hy*(
+                                    (user->lambdaC(i,j,k,2,0)*gradAx) +
+                                    (user->lambdaC(i,j,k,2,1)*gradAy) +
+                                    (user->lambdaC(i,j,k,2,2)*gradAz)
+                                    );
+                    } else {
+                        rhs[k][j][i].vz = diagZZ*Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
+                                             +user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
+                                             )*gradAz/2.0;
+                    }
                 }
 
                 //  ********************** continuity equation *********************
