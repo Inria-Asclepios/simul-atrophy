@@ -18,8 +18,9 @@ static char help[] = "Solves AdLem model.\n\n";
 int main(int argc,char **argv)
 {
     std::string atrophyFileName, maskFileName, lambdaFileName;
-    std::string resultsPath;
-    int stepIndex;
+    std::string resultsPath;            // Directory where all the results will be stored.
+    std::string resultsFilenamesPrefix;           // Prefix for all the filenames of the results to be stored in the resultsPath.
+    bool        useTensorLambda;
 
     std::vector<double> wallVelocities(18);
     /*0,1,2,     //south wall
@@ -37,12 +38,32 @@ int main(int argc,char **argv)
         PetscErrorCode ierr;
         PetscBool optionFlag = PETSC_FALSE;
         char optionString[PETSC_MAX_PATH_LEN];
+
         ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) atrophyFileName = optionString;
-        ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) lambdaFileName = optionString;
+
         ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) maskFileName = optionString;
+
+        ierr = PetscOptionsGetString(NULL,"-useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag) {
+            std::cerr<<"Must provide true or false for the option -useTensorLambda\n";
+            return(EXIT_FAILURE);
+        } else {
+            if(strcmp(optionString,"true")==0)  useTensorLambda = true;
+            else useTensorLambda = false;
+        }
+
+        if (useTensorLambda) {
+            ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+            if(!optionFlag) {
+                std::cerr<<"Must provide true or false for the option -useTensorLambda\n";
+                return(EXIT_FAILURE);
+            } else {
+                lambdaFileName = optionString;
+            }
+        }
+
         ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(!optionFlag) {
             std::cout<<"Must provide a valid path with -resPath option: e.g. -resPath ~/results"<<std::endl;
@@ -50,10 +71,13 @@ int main(int argc,char **argv)
         } else {
             resultsPath = optionString;
         }
-        ierr = PetscOptionsGetInt(NULL,"-stepIndex",&stepIndex,&optionFlag);CHKERRQ(ierr);
+
+        ierr = PetscOptionsGetString(NULL,"-resultsFilenamesPrefix",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(!optionFlag) {
-            std::cerr<<"MUST provide a valid step index option: e.g. -stepIndex 1"<<std::endl;
+            std::cerr<<"MUST provide a valid prefix for output results filenames: e.g. -resultsFilenamesPrefix step1"<<std::endl;
             return(EXIT_FAILURE);
+        } else {
+            resultsFilenamesPrefix = optionString;
         }
 
         /*std::cout<<"atrophy file: "<<atrophyFileName<<std::endl;
@@ -63,8 +87,14 @@ int main(int argc,char **argv)
         //------------------------*** Set up the model parameters ***-----------------------//
         AdLem3D AdLemModel; //xn,yn,zn,1,1,1,1);
         AdLemModel.setWallVelocities(wallVelocities);
-//        AdLemModel.setLameParameters(true,false);
-        AdLemModel.setLameParameters(true,true,1,1,1,1,lambdaFileName);
+        if(useTensorLambda) {
+            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using tensor image to get lambda\n");
+            AdLemModel.setLameParameters(true,true,1,1,1,1,lambdaFileName);
+        }
+        else {
+            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using scalar lambda\n");
+            AdLemModel.setLameParameters(true,false);
+        }
 
         AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,true,constants::NBR_LABEL); //1 coeff for p dof.
 //        AdLemModel.setBrainMask(maskFileName,constants::CSF_LABEL,1,false,constants::NBR_LABEL); //1 coeff for p dof.
@@ -82,13 +112,11 @@ int main(int argc,char **argv)
         AdLemModel.modifyAtrophy(constants::CSF_LABEL,0);  //CSF region, set zero atrophy
         AdLemModel.modifyAtrophy(constants::NBR_LABEL,0);  //non-brain region, set zero atrophy
 
-        std::stringstream fileIndex;
-        fileIndex << stepIndex;
-        AdLemModel.writeAtrophyToFile(resultsPath + "step" + fileIndex.str() + "AtrophyModified.nii.gz");
+        AdLemModel.writeAtrophyToFile(resultsPath + resultsFilenamesPrefix + "AtrophyModified.nii.gz");
         AdLemModel.solveModel();
-        AdLemModel.writeSolution(resultsPath + "step" + fileIndex.str());
+        AdLemModel.writeSolution(resultsPath + resultsFilenamesPrefix);
         //        AdLemModel.writeSolution(resultsPath,true,true);
-        AdLemModel.writeResidual(resultsPath + "step" + fileIndex.str());
+        AdLemModel.writeResidual(resultsPath + resultsFilenamesPrefix);
     }
     PetscErrorCode ierr;
     ierr = PetscFinalize();CHKERRQ(ierr);

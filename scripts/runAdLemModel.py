@@ -12,8 +12,9 @@ parser = optparse.OptionParser()
 parser.add_option('-p', '--patientID', dest='patient', help='patient ID name which is also a valid directory containing the div/atrophy map')
 parser.add_option('-a', '--atrophyFile', dest='atrophyFile',help='valid atrophy filename with extension present in patientID directory')
 parser.add_option('-m', '--maskFile', dest='maskFile', help='valid brain Mask/segmentation filename with extension present in patientID data directory')
+parser.add_option('-u', '--useTensorLambda', dest='useTensorLambda', help='provide true or false. If true given, must provide a valid lambdaFile with the option -l')
 parser.add_option('-l', '--lambdaFile', dest='lambdaFile', help='valid tensor image filename with extension present in patientID directory.')
-parser.add_option('-s', '--stepIndex', dest='stepIndex', help='integer index to denote which iteration step is run for the model')
+parser.add_option('-f', '--resultsFilenamesPrefix', dest='resultsFilenamesPrefix', help='prefix to be added to all the output filenames')
 
 (options, args) = parser.parse_args()
 if options.patient is None:
@@ -22,8 +23,10 @@ if options.atrophyFile is None:
     options.atrophyFile = raw_input('Enter a valid atrophy filename')
 if options.maskFile is None:
     options.maskFile = raw_input('Enter a valid mask/segmented image filename')
-if options.stepIndex is None:
-    options.stepIndex = int(raw_input('Enter a valid iteration step index, 1 if it is the first one'))
+if options.useTensorLambda is None:
+    options.useTensorLambda = raw_input('provide true or false depending on if you intend to use a lambda from a tensor image.')
+if options.resultsFilenamesPrefix is None:
+    options.resultsFilenamesPrefix = raw_input('Enter a prefix string that will be added to all the output filenames')
 if options.lambdaFile is None:
     options.lambdaFile = raw_input('Enter a valid tensor image filename, or simply put a random string if you are not using tensor image by internally changing the PetscAdLemMain.cxx file')
 
@@ -51,7 +54,7 @@ petscOptions += "-fieldsplit_1_ksp_converged_reason -ksp_converged_reason "
 petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual" # -log_summary" # -ksp_view"
 
 
-petscCommand += target + " -atrophyFile " + atrophyFile + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -resPath " + resultsDir + " -stepIndex " + options.stepIndex + petscOptions
+petscCommand += target + " -atrophyFile " + atrophyFile + " -useTensorLambda " + options.useTensorLambda + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -resPath " + resultsDir + " -resultsFilenamesPrefix " + options.resultsFilenamesPrefix + petscOptions
 
 print "given command:\n" + petscCommand + "\n"
 subprocess.call(petscCommand, shell=True)
