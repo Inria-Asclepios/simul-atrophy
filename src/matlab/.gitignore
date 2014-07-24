@@ -1,0 +1,8 @@
+# Ignore everything inside this directory recursively
+*
+# But don't ignore directories so we can recurse into them.
+!*/
+# Should of course never ignore .gitignore
+!.gitignore
+# And we want the .m files from here.
+!*.m
