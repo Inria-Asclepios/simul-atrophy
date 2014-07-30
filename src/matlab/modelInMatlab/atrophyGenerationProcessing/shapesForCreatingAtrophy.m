@@ -39,8 +39,10 @@ writemetaimagefile('cylinder.mha',cyl,[1 1 1]);
 %% Some atrophy maps:
 % Uniform in individual layers but different accross different layers.
 atrophy1 = cyl/10;
-writemetaimagefile('atrophy1.mha',atrophy1,[1 1 1]);
-
+writemetaimagefile('atrophyLayered.mha',atrophy1,[1 1 1]);
+% Uniform across all layers
+atrophy2 = 0.1*ones(size(atrophy1));
+writemetaimagefile('atrophyUniform.mha',atrophy2,[1 1 1]);
 %% Now let's convert one of the layers into CSF.
 % Case 1: Outermost layer as CSF:
 mask5asCsf = cyl;
