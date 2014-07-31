@@ -50,13 +50,13 @@ commandBase = './runAdLemModelCluster.py -p ' + options.patient + ' -j ' + optio
 for tensorOrScalar in inConfig['lambdaType']:
     if tensorOrScalar == 'scalar':
         for choices in scalarComb:
-            command = commandBase + ' -a ' + choices[0] + ' -m ' + choices[1] + ' - u false -l nofile -f ' + choices[0].split('.')[0]+'_'+choices[1].split('.')[0]+'_scalar_'
-            print command
-            #subprocess.call(command, shell=True)
+            command = commandBase + ' -a ' + choices[0] + ' -m ' + choices[1] + ' -u false -l nofile -f ' + choices[0].split('.')[0]+'_'+choices[1].split('.')[0]+'_scalar_'
+            #print command
+            subprocess.call(command, shell=True)
     elif tensorOrScalar == 'tensor':
         for choices in tensorComb:
-            command = commandBase + ' -a ' + choices[0] + ' -m ' + choices[1] + ' - u true -l ' + choices[2] + ' -f ' + choices[0].split('.')[0]+'_'+choices[1].split('.')[0]+'_'+choices[2].split('.')[0]+'_'
-            print command
-            #subprocess.call(command, shell=True)
+            command = commandBase + ' -a ' + choices[0] + ' -m ' + choices[1] + ' -u true -l ' + choices[2] + ' -f ' + choices[0].split('.')[0]+'_'+choices[1].split('.')[0]+'_'+choices[2].split('.')[0]+'_'
+            #print command
+            subprocess.call(command, shell=True)
 
 inFile.close()
