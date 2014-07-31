@@ -1,4 +1,4 @@
-atrophy atrophyLayered.mha atrophyUniform.mha
-mask mask2asCsf.mha mask3asCsf.mha mask5asCsf.mha
+atrophy aL.mha aU.mha aGX0Y0Z0S4.mha
+mask m2.mha m3.mha m5.mha mS2.mha
 lambdaType scalar tensor
-lambdaFile tensorUpwardsZ.nii tensorRadial.nii
+lambdaFile tFxL10L4L1.nii tRiL10L4L1.nii tUzL10L41L1.nii

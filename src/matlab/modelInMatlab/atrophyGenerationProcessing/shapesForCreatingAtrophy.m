@@ -34,43 +34,60 @@ end
 
 % Let's start with a single cylinder!!
 % imshow3D(cyl)
-writemetaimagefile('cylinder.mha',cyl,[1 1 1]);
+writemetaimagefile('cyl.mha',cyl,[1 1 1]);
 
-%% Some atrophy maps:
+%% Some piecewise uniform atrophy maps:
 % Uniform in individual layers but different accross different layers.
 atrophy1 = cyl/10;
-writemetaimagefile('atrophyLayered.mha',atrophy1,[1 1 1]);
+writemetaimagefile('aL.mha',atrophy1,[1 1 1]);
 % Uniform across all layers
 atrophy2 = 0.1*ones(size(atrophy1));
-writemetaimagefile('atrophyUniform.mha',atrophy2,[1 1 1]);
+writemetaimagefile('aU.mha',atrophy2,[1 1 1]);
+%% Gaussian atrophy maps:
+sigma = 4;
+max_atrophy = 0.4;
+center = [0 0 0];
+atrophy1 = max_atrophy*exp(-((x-center(1)).^2 + (y-center(2)).^2 + ...
+    (z-center(3)).^2)/(2*sigma*sigma));
+writemetaimagefile('aGX0Y0Z0S4.mha',atrophy1,[1 1 1]);
 %% Now let's convert one of the layers into CSF.
 % Case 1: Outermost layer as CSF:
 mask5asCsf = cyl;
 mask5asCsf(cyl==5) = 1;
 mask5asCsf(cyl==3 | cyl==4) = 2;
-writemetaimagefile('mask5asCsf.mha',mask5asCsf,[1 1 1]);
+writemetaimagefile('m5.mha',mask5asCsf,[1 1 1]);
 
 % Case 2: Innermost layer as CSF:
 mask2asCsf = cyl;
 mask2asCsf(cyl==2) = 1;
 mask2asCsf(cyl==3 | cyl==4 | cyl==5) = 2;
-writemetaimagefile('mask2asCsf.mha',mask2asCsf,[1 1 1]);
+writemetaimagefile('m2.mha',mask2asCsf,[1 1 1]);
 
 % Case 3: Second innermost layer as CSF:
 mask3asCsf = cyl;
 mask3asCsf(cyl==3) = 1;
 mask3asCsf(cyl==2 | cyl==4 | cyl==5) = 2;
-writemetaimagefile('mask3asCsf.mha',mask3asCsf,[1 1 1]);
+writemetaimagefile('m3.mha',mask3asCsf,[1 1 1]);
 
 %% Let's have isolated CSF spheres inside the cylinder.
-
-%% Eigen vectors
+r = (zn/4)-1;
+c1 = [0 0 zn/4];
+c2 = [0 0 -zn/4];
+disjointSpheres = zeros(xn,yn,zn);
+disjointSpheres = (((x-c1(1)).^2 + (y-c1(2)).^2 + (z-c1(3)).^2) < r^2) | ...
+    (((x-c2(1)).^2 + (y-c2(2)).^2 + (z-c2(3)).^2) < r^2) + disjointSpheres; 
+% imshow3D(disjointSpheres);
+writemetaimagefile('twoSpheres.mha',double(disjointSpheres),[1 1 1]);
+mask2SpheresAsCsf = cyl;
+mask2SpheresAsCsf(disjointSpheres==1) = 1;
+writemetaimagefile('mS2.mha',double(mask2SpheresAsCsf),[1 1 1]);
+%% Eigen vectors and then tensor images.
 u_field = zeros(xn,yn,zn,3);
 
 % Principle direction along the length of the cylinder: (pointing z-axis);
 u_field(:,:,:,1) = 0;   % for radial inwards -y;
-u_field(:,:,:,2) = 0;   % for radial inwards -x;
-u_field(:,:,:,3) = 1;
+u_field(:,:,:,2) = 1;   % for radial inwards -x;
+u_field(:,:,:,3) = 0;   % for radial inwards 0;
 u_field = permute(u_field,[4 1 2 3]); % to save it as vector field.
 %  Rotating vector fields as desired. 
 % u_rotated = rotate3dVectorField(u_field,pi/2,pi/2,pi,[1 2 3]);
@@ -78,15 +95,15 @@ u_field = permute(u_field,[4 1 2 3]); % to save it as vector field.
 
 % Get two orthogonal unit vector from the given input vector.
 u_unit = getUnitVectors(u_field);
-writemetaimagefile('vecUpwards.mha',u_unit,[1 1 1],[0 0 0],3);
+% writemetaimagefile('vecUpwards.mha',u_unit,[1 1 1],[0 0 0],3);
 
 %get two orthogonal unit vectors to the given input vector:
 [v w] = getTwoOrthogonalVectorFields(u_unit);
-writemetaimagefile('vec001v.mha',v,[1 1 1],[0 0 0],3);
-writemetaimagefile('vec001w.mha',w,[1 1 1],[0 0 0],3);
+% writemetaimagefile('vec001v.mha',v,[1 1 1],[0 0 0],3);
+% writemetaimagefile('vec001w.mha',w,[1 1 1],[0 0 0],3);
 
-%% create tensor images from three eigenvectors and three eigenvalues:
-tensorImage = getDiffusionImage(u_unit,v,w,10,7,5);
+% create tensor images from three eigenvectors and three eigenvalues:
+tensorImage = getDiffusionImage(u_unit,v,w,10,4,1);
 tensorImageForNii = zeros([size(tensorImage) 1]);
 % clear tensorImageForNii;
 tensorImageForNii(:,:,:,:,1) = tensorImage;
@@ -95,8 +112,9 @@ tensor_nii = make_nii(tensorImageForNii);
 tensor_nii.img = tensorImageForNii;
 tensor_nii.hdr.dime.dim = [5 size(tensorImageForNii) 1 1];
 tensor_nii.hdr.dime.intent_code = 1007;
-% save_nii(tensor_nii,'tensorRadialInwards.nii');
-save_nii(tensor_nii,'tensorUpwardsZ.nii');
+save_nii(tensor_nii,'tFxL10L4L1.nii');
+% save_nii(tensor_nii,'tRiL10L4L1.nii');
+% save_nii(tensor_nii,'tUzL10L4L1.nii');
 
 %% Vector field 
 % writemetaimagefile('tensorImage.mha',tensorImage,[1 1 1],[0 0 0],6);
