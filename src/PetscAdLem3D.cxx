@@ -7,6 +7,7 @@ PetscAdLem3D::PetscAdLem3D(AdLem3D *model, const std::string & description):
     mProblemModel(model), mContextDesc(description)
 {
     mSolAllocated = PETSC_FALSE;
+    mRhsAllocated = PETSC_FALSE;
     mIsMuConstant = (PetscBool)model->isMuConstant();
 
 }
@@ -19,6 +20,11 @@ PetscAdLem3D::~PetscAdLem3D()
         ierr = VecRestoreArray(mX,&mSolArray);CHKERRXX(ierr);
         ierr = VecScatterDestroy(&mScatterCtx);CHKERRXX(ierr);
         ierr = VecDestroy(&mXLocal);CHKERRXX(ierr);
+    }
+    if (mRhsAllocated) {
+        ierr = VecRestoreArray(mB,&mRhsArray);CHKERRXX(ierr);
+        ierr = VecScatterDestroy(&mScatterRhsCtx);CHKERRXX(ierr);
+        ierr = VecDestroy(&mBLocal);CHKERRXX(ierr);
     }
     ierr = KSPDestroy(&mKsp);CHKERRXX(ierr);
     ierr = DMDestroy(&mDa);CHKERRXX(ierr);
@@ -74,6 +80,51 @@ PetscErrorCode PetscAdLem3D::getSolutionArray()
     //    ierr = VecView(mXLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
     PetscFunctionReturn(0);
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "getRhsArray"
+PetscErrorCode PetscAdLem3D::getRhsArray()
+{
+    mRhsAllocated = PETSC_TRUE;
+    PetscErrorCode ierr;
+    Vec bNatural;
+    ierr = DMDACreateNaturalVector(mDa,&bNatural);CHKERRQ(ierr);
+    ierr = DMDAGlobalToNaturalBegin(mDa,mB,INSERT_VALUES,bNatural);CHKERRQ(ierr);
+    ierr = DMDAGlobalToNaturalEnd(mDa,mB,INSERT_VALUES,bNatural);CHKERRQ(ierr);
+    ierr = VecScatterCreateToAll(bNatural,&mScatterRhsCtx,&mBLocal);CHKERRQ(ierr);
+    ierr = VecScatterBegin(mScatterRhsCtx,bNatural,mBLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecScatterEnd(mScatterRhsCtx,bNatural,mBLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
+    ierr = VecGetArray(mBLocal,&mRhsArray);CHKERRQ(ierr);
+    ierr = VecDestroy(&bNatural);CHKERRQ(ierr);
+    //    ierr = VecView(mBLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    PetscFunctionReturn(0);
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getRhsAt"
+//The function expects pos[] to have valid position, that is within
+//the size that was originally used by the user to create the model.
+double PetscAdLem3D::getRhsAt(unsigned int pos[], unsigned int component)
+{
+    PetscFunctionBeginUser;
+    PetscInt x,y,z,xn,yn,zn;
+    x = pos[0]; y=pos[1];   z=pos[2];
+    //Adapt for the staggered grid DM which has one greater dimension.
+    xn = mProblemModel->getXnum()+1;
+    yn = mProblemModel->getYnum()+1;
+    zn = mProblemModel->getZnum()+1;
+
+    if(x<0 || x>=xn-1 || y<0 || y>=yn-1 || z<0 || z>=zn-1) //>=xn-1 because xn has one bigger size than the input size of the model!
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"out of range position asked for velocity solution.\n");
+
+    //Here we provide staggered grid values themselves as they were used in the momentum
+    //equations for each (i,j,k) cell centre.
+    if(component == 0 || component == 1 || component == 2 || component == 3) {
+        PetscFunctionReturn(mRhsArray[(x+ xn*y + xn*yn*z)*4 + component]);
+    } else
+        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"rhs component should be 0, 1, 2 or 3\n");
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "getSolVelocityAt"

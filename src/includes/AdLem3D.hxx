@@ -146,6 +146,8 @@ protected:
     AdLem3D::bcType             mBc;
     std::vector<double>         mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
 
+//    VectorImageType::Pointer    mAtrophyGradient;   //gradient of the atrophy computed within the solver
+    VectorImageType::Pointer    mForce;             //Force term computed i.e. lambda*grad(a)
     ScalarImageType::Pointer    mPressure;          //Output pressure-map.
     VectorImageType::Pointer    mVelocity;          //Output velocity field.
     ScalarImageType::Pointer    mDivergence;        //Divergence map of the solution (computed by the solver)

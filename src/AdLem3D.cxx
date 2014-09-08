@@ -502,19 +502,32 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
                 <<mDomainRegion.GetSize()[2]+1;
         size_file.close();
     }
+//    std::string atrophyGradientFileName(resultsPath+"atrophyGradient.nii.gz");
+    std::string forceFileName(resultsPath+"force.nii.gz");
     std::string velocityFileName(resultsPath+"vel.nii.gz");
     std::string pressureFileName(resultsPath+"press.nii.gz");
     std::string divergenceFileName(resultsPath+"div.nii.gz");
 
-    VectorImageWriterType::Pointer   vectorWriter = VectorImageWriterType::New();
-    vectorWriter->SetFileName(velocityFileName);
-    vectorWriter->SetInput(mVelocity);
-    vectorWriter->Update();
+//    VectorImageWriterType::Pointer   gradientWriter = VectorImageWriterType::New();
+//    gradientWriter->SetFileName(atrophyGradientFileName);
+//    gradientWriter->SetInput(mAtrophyGradient);
+//    gradientWriter->Update();
 
-    ScalarImageWriterType::Pointer   scalarWriter = ScalarImageWriterType::New();
-    scalarWriter->SetFileName(pressureFileName);
-    scalarWriter->SetInput(mPressure);
-    scalarWriter->Update();
+    VectorImageWriterType::Pointer   forceWriter = VectorImageWriterType::New();
+    forceWriter->SetFileName(forceFileName);
+    forceWriter->SetInput(mForce);
+    forceWriter->Update();
+
+
+    VectorImageWriterType::Pointer   velocityWriter = VectorImageWriterType::New();
+    velocityWriter->SetFileName(velocityFileName);
+    velocityWriter->SetInput(mVelocity);
+    velocityWriter->Update();
+
+    ScalarImageWriterType::Pointer   pressureWriter = ScalarImageWriterType::New();
+    pressureWriter->SetFileName(pressureFileName);
+    pressureWriter->SetInput(mPressure);
+    pressureWriter->Update();
 
     ScalarImageWriterType::Pointer divWriter = ScalarImageWriterType::New();
     divWriter->SetFileName(divergenceFileName);
@@ -538,6 +551,20 @@ void AdLem3D::createResultImages()
     for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
     domainRegion.SetSize(mDomainRegion.GetSize());
     domainRegion.SetIndex(outputImageStart);
+
+//    mAtrophyGradient = VectorImageType::New();
+//    mAtrophyGradient->SetRegions(domainRegion);
+//    mAtrophyGradient->SetOrigin(mAtrophy->GetOrigin());
+//    mAtrophyGradient->SetSpacing(mAtrophy->GetSpacing());
+//    mAtrophyGradient->SetDirection(mAtrophy->GetDirection());
+//    mAtrophyGradient->Allocate();
+
+    mForce = VectorImageType::New();
+    mForce->SetRegions(domainRegion);
+    mForce->SetOrigin(mAtrophy->GetOrigin());
+    mForce->SetSpacing(mAtrophy->GetSpacing());
+    mForce->SetDirection(mAtrophy->GetDirection());
+    mForce->Allocate();
 
     mVelocity = VectorImageType::New();
     mVelocity->SetRegions(domainRegion);
@@ -565,15 +592,21 @@ void AdLem3D::createResultImages()
     typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
     typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
 
+//    VectorIteratorType atrophyGradientIterator(mAtrophyGradient,mAtrophyGradient->GetLargestPossibleRegion());
+    VectorIteratorType forceIterator(mForce,mForce->GetLargestPossibleRegion());
     VectorIteratorType velocityIterator(mVelocity,mVelocity->GetLargestPossibleRegion());
     ScalarIteratorType pressureIterator(mPressure,mPressure->GetLargestPossibleRegion());
     ScalarIteratorType divergenceIterator(mDivergence,mDivergence->GetLargestPossibleRegion());
+//    VectorImageType::PixelType atrophyGradientPixel;
+    VectorImageType::PixelType forcePixel;
     VectorImageType::PixelType velocityPixel;
     ScalarImageType::PixelType pressurePixel;
     ScalarImageType::PixelType divergencePixel;
 
     unsigned int pos[3];
     unsigned int k = 0;
+//    atrophyGradientIterator.GoToBegin();
+    forceIterator.GoToBegin();
     velocityIterator.GoToBegin();
     pressureIterator.GoToBegin();
     divergenceIterator.GoToBegin();
@@ -586,8 +619,14 @@ void AdLem3D::createResultImages()
             while(i<mDomainRegion.GetSize()[0] && !velocityIterator.IsAtEnd()) {
                 pos[0] = i;
                 for(int cc = 0; cc<3; ++cc) {
+//                    atrophyGradientPixel[cc] = mPetscSolverTaras->getAtrophyGradientAt(pos,cc);
+                    forcePixel[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
                     velocityPixel[cc] = mPetscSolverTaras->getSolVelocityAt(pos,cc);
                 }
+//                atrophyGradientIterator.Set(atrophyGradientPixel);
+//                ++atrophyGradientIterator;
+                forceIterator.Set(forcePixel);
+                ++forceIterator;
                 velocityIterator.Set(velocityPixel);
                 ++velocityIterator;
                 pressurePixel = mPetscSolverTaras->getSolPressureAt(pos);

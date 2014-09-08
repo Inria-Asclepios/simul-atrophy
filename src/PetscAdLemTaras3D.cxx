@@ -270,6 +270,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel()
     ierr = KSPGetSolution(mKsp,&mX);CHKERRQ(ierr);
     ierr = KSPGetRhs(mKsp,&mB);CHKERRQ(ierr);
     ierr = getSolutionArray();CHKERRQ(ierr); //to get the local solution vector in each processor.
+    ierr = getRhsArray();CHKERRQ(ierr);
 
     PetscFunctionReturn(0);
 
@@ -1268,7 +1269,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     PetscScalar    Hx,Hy,Hz;
     PetscAdLemTaras3D::Field    ***rhs;
     DM             da;
-    PetscReal       kCont=1.0;
+    PetscReal      kCont=1.0;
 
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
