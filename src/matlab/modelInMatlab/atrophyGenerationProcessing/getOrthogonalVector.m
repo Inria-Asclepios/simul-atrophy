@@ -1,6 +1,6 @@
 
 function [out_v] = getOrthogonalVector(v)
-v = [0 0 1];
+
 if(norm(v) < eps)
     out_v = v;
     return

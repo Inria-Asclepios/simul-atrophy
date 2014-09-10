@@ -1,9 +1,9 @@
 % create tensor images from three eigenvectors and three eigenvalues:
 % Inputs:
-% three eigenvectors and correspondign eigenvalues.
+% three eigenvectors and corresponding eigenvalues.
 % Size elements will be stored along the first dimension of the resulting
-% image where elements are stored in lower triangular format i.e.
-% [a11 a21 a22 a31 a32 a33]
+% image where elements are stored in upper triangular format i.e.
+% [a11 a12 a13 a22 a23 a33]
 
 function tensorImage = getDiffusionImage(u,v,w,lambda1,lambda2,lambda3)
 tensorImage = zeros(6,size(u,2),size(u,3),size(u,4));
@@ -29,10 +29,10 @@ tensorImage(1,:,:,:) = lambda1*uSq(1,:,:,:) + lambda2*vSq(1,:,:,:) + ...
 
 tensorImage(2,:,:,:) = lambda1*u1u2 + lambda2*v1v2 + lambda3*w1w2;
 
-tensorImage(3,:,:,:) = lambda1*uSq(2,:,:,:) + lambda2*vSq(2,:,:,:) + ...
-    lambda3*wSq(2,:,:,:);
+tensorImage(3,:,:,:) = lambda1*u1u3 + lambda2*v1v3 + lambda3*w1w3;
 
-tensorImage(4,:,:,:) = lambda1*u1u3 + lambda2*v1v3 + lambda3*w1w3;
+tensorImage(4,:,:,:) = lambda1*uSq(2,:,:,:) + lambda2*vSq(2,:,:,:) + ...
+    lambda3*wSq(2,:,:,:);
 
 tensorImage(5,:,:,:) = lambda1*u2u3 + lambda2*v2v3 + lambda3*w2w3;
 

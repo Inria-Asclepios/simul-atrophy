@@ -91,6 +91,16 @@ int main(int argc, char **argv)
     // Fill the voxels with the input tensor value
     tensorImage->FillBuffer(D);
 
+    // Test how the values are stored:
+    std::cout<<"origin: "<<tensorImage->GetOrigin()<<std::endl;
+    std::cout<<"direction: "<<tensorImage->GetDirection()<<std::endl;
+    TensorImageType::IndexType posTensor;
+    for (unsigned int i = 0; i<3; ++i) posTensor.SetElement(i,10);
+    std::cout<<"Tensor value: "<<tensorImage->GetPixel(posTensor)<<std::endl;
+    std::cout<<"Tensor values again:\n"<<tensorImage->GetPixel(posTensor)(0,0)<<"\t"<<tensorImage->GetPixel(posTensor)(0,1)<<"\t"<<tensorImage->GetPixel(posTensor)(0,2)<<std::endl;
+    std::cout<<tensorImage->GetPixel(posTensor)(1,0)<<"\t"<<tensorImage->GetPixel(posTensor)(1,1)<<"\t"<<tensorImage->GetPixel(posTensor)(1,2)<<std::endl;
+    std::cout<<tensorImage->GetPixel(posTensor)(2,0)<<"\t"<<tensorImage->GetPixel(posTensor)(2,1)<<"\t"<<tensorImage->GetPixel(posTensor)(2,2)<<std::endl;
+
     //------------ Write output image -------------------------//
     typedef itk::ImageFileWriter<TensorImageType>       TensorImageWriterType;
     TensorImageWriterType::Pointer writer = TensorImageWriterType::New();

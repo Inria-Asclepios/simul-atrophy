@@ -1282,12 +1282,6 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     PetscReal gradAx;
     PetscReal gradAy;
     PetscReal gradAz;
-    //TEST:
-    //Diagonal components of a diagonal tensor that multiplies force in the momentum equation to create the
-    //effect of anisotropy.
-    PetscReal diagXX = 1.0;
-    PetscReal diagYY = 1.0;
-    PetscReal diagZZ = 1.0;
 
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da, b, &rhs);CHKERRQ(ierr);
@@ -1334,8 +1328,10 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                                     (user->lambdaC(i,j,k,0,2)*gradAz)
                                     );
                     } else {
-                        rhs[k][j][i].vx = diagXX*Hy*Hz*(
-                                    user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
+                        // Let's not use mu at all on the right hand side. Can be thought of as being included
+                        // in lamda when we are using constant mu!
+                        rhs[k][j][i].vx = Hy*Hz*(
+                                    // user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
                                     user->lambdaC(i+1,j+1,k+1,0,0) +
                                     user->lambdaC(i,j+1,k+1,0,0)
                                     ) * gradAx / 2.0;
@@ -1371,8 +1367,11 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                                     (user->lambdaC(i,j,k,1,2)*gradAz)
                                     );
                     }else {
-                        rhs[k][j][i].vy = diagYY*Hx*Hz*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)
-                                             + user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
+                        // Let's not use mu at all on the right hand side. Can be thought of as being included
+                        // in lamda when we are using constant mu!
+                        rhs[k][j][i].vy = Hx*Hz*(
+                                    //user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1) +
+                                    user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
                                              )*gradAy/2.0;
                     }
                 }
@@ -1407,9 +1406,12 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                                     (user->lambdaC(i,j,k,2,2)*gradAz)
                                     );
                     } else {
-                        rhs[k][j][i].vz = diagZZ*Hx*Hy*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)
-                                             +user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
-                                             )*gradAz/2.0;
+                        // Let's not use mu at all on the right hand side. Can be thought of as being included
+                        // in lamda when we are using constant mu!
+                        rhs[k][j][i].vz = Hx*Hy*(
+//                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k) +
+                                    user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
+                                                )*gradAz/2.0;
                     }
                 }
 

@@ -4,7 +4,8 @@
 
 #include <itkImage.h>
 #include <itkImageRegionIterator.h>
-//#include <itkImageAdaptor.h>
+#include <itkImageRegionConstIteratorWithIndex.hxx>
+#include <itkDiffusionTensor3D.hxx>
 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
@@ -17,7 +18,8 @@ namespace po = boost::program_options;
 #define __FUNCT__ "main"
 int main(int argc, char **argv)
 {
-    std::string inImgFile;
+    std::string workingDir("/user/bkhanal/home/works/AdLemModel/");
+    /*std::string inImgFile;
     std::string outImgFile;
     bool        modifyImage;
     std::string sphereCenterString;
@@ -117,5 +119,92 @@ int main(int argc, char **argv)
     writer->SetFileName(outImgFile);
     writer->SetInput(outImg);
     writer->Update();
+    */
+    //------- Test reading tensor images and multiply tensor by a vector ------
+
+    typedef typename itk::Image<double, 3>                              ScalarImageType;
+    typedef typename itk::Image<itk::DiffusionTensor3D< double >, 3>    TensorImageType;
+    typedef typename itk::Image<itk::Vector<double,3>, 3>               VectorImageType;
+
+    typedef typename itk::ImageFileReader<ScalarImageType>              ScalarImageReaderType;
+    typedef typename itk::ImageFileReader<TensorImageType>              TensorImageReaderType;
+    typedef typename itk::ImageFileReader<VectorImageType>              VectorImageReaderType;
+    typedef typename itk::ImageFileWriter<TensorImageType>              TensorImageWriterType;
+    typedef typename itk::ImageFileWriter<VectorImageType>              VectorImageWriterType;
+
+    ScalarImageReaderType::Pointer      scalarImageReader = ScalarImageReaderType::New();
+//    scalarImageReader->SetFileName(workingDir + "results/patients/test/t1.nii.gz");
+//    scalarImageReader->SetFileName("workingDir + "results/patients/test/cyl.mha");
+    scalarImageReader->SetFileName(workingDir + "results/patients/test/aL.mha");
+    scalarImageReader->Update();
+    ScalarImageType::Pointer            scalarImage = ScalarImageType::New();
+    scalarImage = scalarImageReader->GetOutput();
+
+    TensorImageReaderType::Pointer      tensorImageReader = TensorImageReaderType::New();
+//    tensorImageReader->SetFileName(workingDir + "results/patients/test/tFxL10L4L1.nii");
+//    tensorImageReader->SetFileName(workingDir + "results/patients/test/tUzL10L4L1.nii");
+//    tensorImageReader->SetFileName(workingDir + "results/patients/test/tFxL2L0_5L0_1Matlab.nii");
+    tensorImageReader->SetFileName(workingDir + "results/patients/test/tUzL2L0_5L0_1Matlab.nii");
+
+    tensorImageReader->Update();
+
+    TensorImageType::Pointer            tensorImage = TensorImageType::New();
+    tensorImage = tensorImageReader->GetOutput();
+
+    VectorImageReaderType::Pointer      vectorImageReader = VectorImageReaderType::New();
+    vectorImageReader->SetFileName(workingDir + "results/patients/test/aL_m3_scalar_force.nii");
+//        vectorImageReader->SetFileName(workingDir + "results/patients/test/aL_m3_tUzL10L4L1_force.nii.gz");
+
+    //    vectorImageReader->SetFileName(workingDir + "results/patients/test/vec001.nii");
+//        vectorImageReader->SetFileName(workingDir + "results/patients/test/vec100.nii");
+//        vectorImageReader->SetFileName(workingDir + "results/patients/test/vec010.nii");
+    vectorImageReader->Update();
+
+    VectorImageType::Pointer            vectorImage = VectorImageType::New();
+    vectorImage = vectorImageReader->GetOutput();
+
+    TensorImageType::IndexType posTensor;
+    for (unsigned int i = 0; i<3; ++i) posTensor.SetElement(i,10);
+    std::cout<<"Tensor value: "<<tensorImage->GetPixel(posTensor)<<std::endl;
+    std::cout<<"Tensor values again:\n"<<tensorImage->GetPixel(posTensor)(0,0)<<"\t"<<tensorImage->GetPixel(posTensor)(0,1)<<"\t"<<tensorImage->GetPixel(posTensor)(0,2)<<std::endl;
+    std::cout<<tensorImage->GetPixel(posTensor)(1,0)<<"\t"<<tensorImage->GetPixel(posTensor)(1,1)<<"\t"<<tensorImage->GetPixel(posTensor)(1,2)<<std::endl;
+    std::cout<<tensorImage->GetPixel(posTensor)(2,0)<<"\t"<<tensorImage->GetPixel(posTensor)(2,1)<<"\t"<<tensorImage->GetPixel(posTensor)(2,2)<<std::endl;
+//    std::cout<<"Vector value: "<<vectorImage->GetPixel(posTensor)<<std::endl;
+//    std::cout<<"origin of vector image: "<<vectorImage->GetOrigin()<<std::endl;
+//    std::cout<<"direction of vector image:\n "<<vectorImage->GetDirection()<<std::endl;
+//    std::cout<<"origin of scalar image: "<<scalarImage->GetOrigin()<<std::endl;
+//    std::cout<<"direction of scalar image:\n "<<scalarImage->GetDirection()<<std::endl;
+
+    typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
+//    typedef itk::ImageRegionConstIteratorWithIndex<VectorImageType> VectorIteratorType;
+
+    VectorIteratorType it(vectorImage,vectorImage->GetLargestPossibleRegion());
+
+
+    VectorImageType::PixelType vecPixel;
+    vecPixel[0] = 1;
+    vecPixel[1] = 1;
+    vecPixel[2] = 1;
+
+  /*  std::cout<<"vector value: "<<vectorImage->GetPixel(posTensor)<<std::endl;
+    it.GoToBegin();
+    while(!it.IsAtEnd()) {
+        if (it.Get()[0] != 0 || it.Get()[1] != 0 || it.Get()[2] != 0){
+            std::cout<<it.Get()<<std::endl;
+//        std::cout<<it.Value()<<std::endl;
+        }
+//        it.Set(vecPixel);
+        ++it;
+    }*/
+//    VectorImageWriterType::Pointer vectorImageWriter = VectorImageWriterType::New();
+//    vectorImageWriter->SetFileName(workingDir + "results/patients/test/vec100.nii");
+//    vectorImageWriter->SetFileName(workingDir + "results/patients/test/vec010.nii");
+//    vectorImageWriter->SetFileName(workingDir + "results/patients/test/vec001.nii");
+//    vectorImageWriter->SetFileName(workingDir + "results/patients/test/vec111.nii");
+//    vectorImageWriter->SetInput(vectorImage);
+//    vectorImageWriter->Update();
+
+
     return EXIT_SUCCESS;
+
 }
