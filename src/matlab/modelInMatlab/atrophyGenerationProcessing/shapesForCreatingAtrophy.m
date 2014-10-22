@@ -85,9 +85,9 @@ writemetaimagefile('mS2.mha',double(mask2SpheresAsCsf),[1 1 1]);
 u_field = zeros(xn,yn,zn,3);
 
 % Principle direction along the length of the cylinder: (pointing z-axis);
-u_field(:,:,:,1) = -x;   % for radial inwards -x;
-u_field(:,:,:,2) = -y;   % for radial inwards -y;
-u_field(:,:,:,3) = 0;   % for radial inwards 0;
+u_field(:,:,:,1) = 0;   % for radial inwards -x;
+u_field(:,:,:,2) = 0;   % for radial inwards -y;
+u_field(:,:,:,3) = 1;   % for radial inwards 0;
 u_field = permute(u_field,[4 1 2 3]); % to save it as vector field.
 %  Rotating vector fields as desired. 
 % u_rotated = rotate3dVectorField(u_field,pi/2,pi/2,pi,[1 2 3]);
@@ -103,7 +103,7 @@ u_unit = getUnitVectors(u_field);
 % writemetaimagefile('vec001w.mha',w,[1 1 1],[0 0 0],3);
 
 % create tensor images from three eigenvectors and three eigenvalues:
-tensorImage = getDiffusionImage(u_unit,v,w,2,0.5,0.1);
+tensorImage = getDiffusionImage(u_unit,v,w,5,0.5,0.05);
 tensorImageForNii = zeros([size(tensorImage) 1]);
 % clear tensorImageForNii;
 tensorImageForNii(:,:,:,:,1) = tensorImage;
@@ -112,7 +112,7 @@ tensor_nii = make_nii(tensorImageForNii);
 tensor_nii.img = tensorImageForNii;
 tensor_nii.hdr.dime.dim = [5 size(tensorImageForNii) 1 1];
 tensor_nii.hdr.dime.intent_code = 1007;
-save_nii(tensor_nii,'tUzL2L0_5L0_1Matlab.nii');
+save_nii(tensor_nii,'tUzL5L0_5L0_05Matlab.nii');
 % save_nii(tensor_nii,'tRiL10L4L1.nii');
 % save_nii(tensor_nii,'tUzL10L4L1.nii');
 

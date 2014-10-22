@@ -144,7 +144,8 @@ int main(int argc, char **argv)
 //    tensorImageReader->SetFileName(workingDir + "results/patients/test/tFxL10L4L1.nii");
 //    tensorImageReader->SetFileName(workingDir + "results/patients/test/tUzL10L4L1.nii");
 //    tensorImageReader->SetFileName(workingDir + "results/patients/test/tFxL2L0_5L0_1Matlab.nii");
-    tensorImageReader->SetFileName(workingDir + "results/patients/test/tUzL2L0_5L0_1Matlab.nii");
+//    tensorImageReader->SetFileName(workingDir + "results/patients/test/tUzL2L0_5L0_1Matlab.nii");
+    tensorImageReader->SetFileName(workingDir + argv[1]);
 
     tensorImageReader->Update();
 
