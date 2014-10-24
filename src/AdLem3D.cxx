@@ -89,6 +89,13 @@ void AdLem3D::setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel,
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "getBrainMaskImage"
+AdLem3D::ScalarImageType::Pointer AdLem3D::getBrainMaskImage()
+{
+    return mBrainMask;
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "setDomainRegionFullImage"
 void AdLem3D::setDomainRegionFullImage()
 {
@@ -266,13 +273,13 @@ int AdLem3D::getZnum() const
 
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
-void AdLem3D::solveModel()
+void AdLem3D::solveModel(bool operatorChanged)
 {
     if(!mPetscSolverTarasUsed) {
         mPetscSolverTarasUsed = true;
         mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
     }
-    mPetscSolverTaras->solveModel();
+    mPetscSolverTaras->solveModel(operatorChanged);
     createResultImages();
 }
 
@@ -470,6 +477,15 @@ void AdLem3D::writeAtrophyToFile(std::string fileName) {
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "writeBrainMaskToFile"
+void AdLem3D::writeBrainMaskToFile(std::string fileName) {
+    ScalarImageWriterType::Pointer writer = ScalarImageWriterType::New();
+    writer->SetFileName(fileName);
+    writer->SetInput(mBrainMask);
+    writer->Update();
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "getVelocityImage"
 AdLem3D::VectorImageType::Pointer AdLem3D::getVelocityImage()
 {
@@ -517,7 +533,6 @@ void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool i
     forceWriter->SetFileName(forceFileName);
     forceWriter->SetInput(mForce);
     forceWriter->Update();
-
 
     VectorImageWriterType::Pointer   velocityWriter = VectorImageWriterType::New();
     velocityWriter->SetFileName(velocityFileName);

@@ -1,12 +1,12 @@
 #ifndef GLOBALCONSTANTS_HXX
 #define GLOBALCONSTANTS_HXX
 
-namespace constants
+namespace maskLabels
 {
-const int NBR_LABEL = 0; //Non Brain Region
-const int CSF_LABEL = 1;
-const int GM_LABEL  = 2;
-const int WM_LABEL  = 3;
+const int NBR = 0; //Non Brain Region
+const int CSF = 1;
+const int GM  = 2;
+const int WM  = 3;
 }
 
 #endif // GLOBALCONSTANTS_HXX

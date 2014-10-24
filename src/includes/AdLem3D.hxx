@@ -75,6 +75,9 @@ public:
 
     void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
     void setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
+    ScalarImageType::Pointer getBrainMaskImage();
+    void writeBrainMaskToFile(std::string fileName);
+
     int getRelaxIcPressureCoeff();
 
     //string should be either of "mu", "lambda" or "atrophy".
@@ -96,7 +99,7 @@ public:
     void setDomainRegion(unsigned int origin[3], unsigned int size[3]);
 
     //solver related functions
-    void solveModel();
+    void solveModel(bool operatorChanged = false);
     VectorImageType::Pointer getVelocityImage();
     ScalarImageType::Pointer getPressureImage();
 

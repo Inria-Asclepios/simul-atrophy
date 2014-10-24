@@ -37,7 +37,7 @@ public:
     PetscReal lambdaYz(PetscInt x, PetscInt y, PetscInt z);
 
     PetscReal aC(PetscInt x, PetscInt y, PetscInt z);
-    PetscErrorCode solveModel();
+    PetscErrorCode solveModel(bool operatorChanged);
     PetscErrorCode writeToMatFile(const std::string& fileName, bool writeA, const std::string& matFileName);
     static PetscErrorCode computeMatrixTaras3d(KSP, Mat, Mat, MatStructure*, void*);
     static PetscErrorCode computeRHSTaras3d(KSP, Vec, void*);

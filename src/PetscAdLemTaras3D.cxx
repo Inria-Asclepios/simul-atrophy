@@ -181,16 +181,25 @@ void PetscAdLemTaras3D::createPcForSc()
 
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
-PetscErrorCode PetscAdLemTaras3D::solveModel()
+PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
 {
     PetscErrorCode ierr;
     PetscFunctionBeginUser;
 
-    if(!mOperatorComputed) {
+    if(!mOperatorComputed || operatorChanged) { //FIXME: Currently, everytime the operator
+        //is changed pc is recomputed. Later see if this is to be done only when null space
+        //is required to be computed. otherwise, may be ask not to recompute
+        //pc.
         ierr = KSPSetDM(mKsp,mDa);CHKERRQ(ierr);              //mDa with dof = 4, vx,vy,vz and p.
         if(mIsMuConstant) {
-            ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
-            ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
+//            ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
+//            ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
+            //Using DMKSPSetComputeOperators called computeMatrixTaras3dConstantMu only once, the
+            //first time. After that, even when the function DMKSPSetCom... was called, it did not
+            //call the computeMatrixTaras3D... to recompute the operator. Using KSPSetComputeOperators
+            //below solved this problem.
+            ierr = KSPSetComputeOperators(mKsp,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
+            ierr = KSPSetComputeRHS(mKsp,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
         } else {
             ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
             ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
@@ -991,6 +1000,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscReal       kCont = 1.0; //need to change it to scale the coefficients.
 
     PetscFunctionBeginUser;
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for the linear solve \n");
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
     Hx = 1;//1./(mx-1);
