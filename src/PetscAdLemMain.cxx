@@ -71,10 +71,10 @@ int main(int argc,char **argv)
 
         ierr = PetscOptionsGetInt(NULL,"-numOfTimeSteps",&numOfTimeSteps,&optionFlag);CHKERRQ(ierr);
         if(!optionFlag) {
-            std::cout<<"Using default number of steps: 1 since -numOfTimeSteps option was not used.\n";
             numOfTimeSteps = 1;
+            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Using default number of steps: 1 since -numOfTimeSteps option was not used.\n");
         } else {
-            std::cout<<"Computing for "<<numOfTimeSteps<<" time steps"<<std::endl;
+            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Computing for %d time steps", numOfTimeSteps);
         }
 
         if (useTensorLambda) {
@@ -217,13 +217,16 @@ int main(int argc,char **argv)
             if(numOfTimeSteps > 1) {
 
                 //------------*** Invert the current displacement field to create warping field *** -------------//
-                FPInverseType::Pointer inverter1 = FPInverseType::New();
-                inverter1->SetInput(composedDisplacementField);
-                inverter1->SetErrorTolerance(1e-1);
-                inverter1->SetMaximumNumberOfIterations(50);
-                inverter1->Update();
-                std::cout<<"tolerance not reached for "<<inverter1->GetNumberOfErrorToleranceFailures()<<" pixels"<<std::endl;
-                AdLem3D::VectorImageType::Pointer warperField = inverter1->GetOutput();
+//                FPInverseType::Pointer inverter1 = FPInverseType::New();
+//                inverter1->SetInput(composedDisplacementField);
+//                inverter1->SetErrorTolerance(1e-1);
+//                inverter1->SetMaximumNumberOfIterations(50);
+//                inverter1->Update();
+//                std::cout<<"tolerance not reached for "<<inverter1->GetNumberOfErrorToleranceFailures()<<" pixels"<<std::endl;
+//                AdLem3D::VectorImageType::Pointer warperField = inverter1->GetOutput();
+                //----------------*** Let's not invert the field, rather assume the atrophy is provided to be negative
+                //---------------- so that we can use the field obtained from the model itself as being already inverted.//
+                AdLem3D::VectorImageType::Pointer warperField = composedDisplacementField;
 
                 //---------------- *** Warp baseline brain mask with an itk warpFilter, nearest neighbor *** -------------------//
                 //------------- *** Using the inverted composed field. ** --------------//
@@ -247,13 +250,14 @@ int main(int argc,char **argv)
                 StatisticsImageFilterType::Pointer statisticsImageFilter = StatisticsImageFilterType::New();
                 statisticsImageFilter->SetInput(diffImageFilter->GetOutput());
                 statisticsImageFilter->Update();
-                if(statisticsImageFilter->GetSum() < 1)
+                if(statisticsImageFilter->GetSum() < 1) {
                     isMaskChanged = false;
-                else {
+                } else {
                     isMaskChanged = true;
-                    AdLemModel.writeBrainMaskToFile(resultsPath + resultsFilenamesPrefix + stepString+"Mask.nii.gz");
                     AdLemModel.setBrainMask(warper->GetOutput(),maskLabels::CSF,k,true,maskLabels::NBR);
+                    AdLemModel.writeBrainMaskToFile(resultsPath + resultsFilenamesPrefix + stepString+"Mask.nii.gz");
                 }
+//                PetscSynchronizedPrintf(PETSC_COMM_WORLD,"sum of the diff image of two masks for step %d is: %f \n",t,statisticsImageFilter->GetSum());
 
                 //------------------- ******* Warp baseline atrophy with an itk WarpFilter, linear interpolation *******-------//
                 //------------- *** using the inverted composed field *** ---------------//
