@@ -66,18 +66,19 @@ PetscErrorCode PetscAdLem3D::writeResidual(std::string resultPath)
 #define __FUNCT__ "getSolutionArray"
 PetscErrorCode PetscAdLem3D::getSolutionArray()
 {
-    mSolAllocated = PETSC_TRUE;
     PetscErrorCode ierr;
     Vec xNatural;
     ierr = DMDACreateNaturalVector(mDa,&xNatural);CHKERRQ(ierr);
     ierr = DMDAGlobalToNaturalBegin(mDa,mX,INSERT_VALUES,xNatural);CHKERRQ(ierr);
     ierr = DMDAGlobalToNaturalEnd(mDa,mX,INSERT_VALUES,xNatural);CHKERRQ(ierr);
-    ierr = VecScatterCreateToAll(xNatural,&mScatterCtx,&mXLocal);CHKERRQ(ierr);
+    if(!mSolAllocated)
+        ierr = VecScatterCreateToAll(xNatural,&mScatterCtx,&mXLocal);CHKERRQ(ierr);
     ierr = VecScatterBegin(mScatterCtx,xNatural,mXLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterEnd(mScatterCtx,xNatural,mXLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecGetArray(mXLocal,&mSolArray);CHKERRQ(ierr);
     ierr = VecDestroy(&xNatural);CHKERRQ(ierr);
     //    ierr = VecView(mXLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    mSolAllocated = PETSC_TRUE;
     PetscFunctionReturn(0);
 }
 
@@ -85,18 +86,19 @@ PetscErrorCode PetscAdLem3D::getSolutionArray()
 #define __FUNCT__ "getRhsArray"
 PetscErrorCode PetscAdLem3D::getRhsArray()
 {
-    mRhsAllocated = PETSC_TRUE;
     PetscErrorCode ierr;
     Vec bNatural;
     ierr = DMDACreateNaturalVector(mDa,&bNatural);CHKERRQ(ierr);
     ierr = DMDAGlobalToNaturalBegin(mDa,mB,INSERT_VALUES,bNatural);CHKERRQ(ierr);
     ierr = DMDAGlobalToNaturalEnd(mDa,mB,INSERT_VALUES,bNatural);CHKERRQ(ierr);
-    ierr = VecScatterCreateToAll(bNatural,&mScatterRhsCtx,&mBLocal);CHKERRQ(ierr);
+    if(!mRhsAllocated)
+        ierr = VecScatterCreateToAll(bNatural,&mScatterRhsCtx,&mBLocal);CHKERRQ(ierr);
     ierr = VecScatterBegin(mScatterRhsCtx,bNatural,mBLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecScatterEnd(mScatterRhsCtx,bNatural,mBLocal,INSERT_VALUES,SCATTER_FORWARD);CHKERRQ(ierr);
     ierr = VecGetArray(mBLocal,&mRhsArray);CHKERRQ(ierr);
     ierr = VecDestroy(&bNatural);CHKERRQ(ierr);
     //    ierr = VecView(mBLocal,PETSC_VIEWER_STDOUT_WORLD);CHKERRQ(ierr);
+    mRhsAllocated = PETSC_TRUE;
     PetscFunctionReturn(0);
 }
 

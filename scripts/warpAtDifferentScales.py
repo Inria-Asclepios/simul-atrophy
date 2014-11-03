@@ -16,7 +16,7 @@ parser.add_option('-v', '--invertField', dest='invertField', help='true or false
 parser.add_option('-n', '--number', dest='numOfScales', help='Total Number of time points to warp image to', type=int)
 parser.add_option('-f', '--firstScale', dest='firstScale', help = 'Starting time point', type=int)
 parser.add_option('-s', '--step', dest='stepSize', help = 'Step size between two time points', type=float)
-
+parser.add_option('-c', '--compScheme', dest='compScheme', help = 'Computational scheme: 0 for scaling and squaring, is faster; 1 for forward euler, is more accurate')
 (options, args) = parser.parse_args()
 
 if options.inputFile is None:
@@ -30,6 +30,9 @@ if options.displacementFile is None:
 if options.outputFile is None:
     options.outputFile = raw_input('Enter the output image FileName')
 
+if options.invertField is None:
+    options.invertField = raw_input('Enter invertField option: true or false')
+    
 if options.numOfScales is None:
     options.numOfScales = int(raw_input('Enter total number of time points'))
 
@@ -44,6 +47,9 @@ if options.stepSize is None:
     options.stepSize = float(raw_input('Enter step size:'))
 
 print "step size: " + str(options.stepSize)
+
+if options.compScheme is None:
+    options.compScheme = (raw_input('Enter Computational scheme: 0 for scaling and squaring, is faster; 1 for forward euler, is more accurate'))
 
 #executables
 workDir = "/user/bkhanal/home/works/"
@@ -62,7 +68,7 @@ while num <= options.numOfScales:
     outputImage = "warpedByDisp" + str(num) + ".mha"
 
     #create displacement field from inputVel
-    svfExpOptions = " -s " + str(scale) + " -i " + inputVel + " -o " + outputDisp
+    svfExpOptions = " -s " + str(scale) + " -e " + options.compScheme + " -i " + inputVel + " -o " + outputDisp
     print svfExp + svfExpOptions + "\n"
     subprocess.call(svfExp + svfExpOptions, shell=True)
 
