@@ -34,6 +34,7 @@ int main(int argc,char **argv)
     int             numOfTimeSteps;
     bool            isMaskChanged;
 
+
     std::vector<double> wallVelocities(18);
     /*0,1,2,     //south wall
        3,4,5,     //west wall
@@ -104,6 +105,13 @@ int main(int argc,char **argv)
         } else {
             resultsFilenamesPrefix = optionString;
         }
+
+        // Options for results storage: Velocity and divergence will always be written to file. For others options must be passed.
+        PetscBool            writePressure, writeForce, writeResidual;
+
+        ierr = PetscOptionsHasName(NULL,"-writePressure", &writePressure);CHKERRQ(ierr);
+        ierr = PetscOptionsHasName(NULL,"-writeForce", &writeForce);CHKERRQ(ierr);
+        ierr = PetscOptionsHasName(NULL,"-writeResidual", &writeResidual);CHKERRQ(ierr);
 
         /*std::cout<<"atrophy file: "<<atrophyFileName<<std::endl;
         std::cout<<"mask file: "<<maskFileName<<std::endl;
@@ -184,23 +192,14 @@ int main(int argc,char **argv)
 
             //---------------------------*** Solve the system of equations ****-------------------//
             AdLemModel.solveModel(isMaskChanged);
-            //--- Must check here to recompute the operator ---//
-            //TODO: the above comment.
-            //This requires:
-            //1. Modifying other classes to support this recomputation of the operator.
-
             //----------------------------**** Write the solutions and residuals ***----------------//
-            //TODO: Add debug flag and write these solutions only for the case of debug.
-            //or set level of detail and write different files based on this level.
-            //E.g. Files to be saved:
-            //1 => save final composed disp. field, final warped image.
-            //2 => all of 1 + intermediate warped images.
-            //3 => all of 2 + intermediate velocity fields.
-            //4 => all of 3 + intermediate residual files.
-            // can add more as required!
-            AdLemModel.writeSolution(resultsPath + resultsFilenamesPrefix + stepString);
-            //        AdLemModel.writeSolution(resultsPath + resultsFilenamesPrefix + stepString,true,true);
-            AdLemModel.writeResidual(resultsPath + resultsFilenamesPrefix + stepString);
+            //TODO: Add options on command line to decide whether to write each of the results.
+
+            AdLemModel.writeVelocityImage(resultsPath+resultsFilenamesPrefix+stepString+"vel.nii.gz");
+            AdLemModel.writeDivergenceImage(resultsPath+resultsFilenamesPrefix+stepString+"div.nii.gz");
+            if (writeForce) AdLemModel.writeForceImage(resultsPath+resultsFilenamesPrefix+stepString+"force.nii.gz");
+            if (writePressure) AdLemModel.writePressureImage(resultsPath+resultsFilenamesPrefix+stepString+"press.nii.gz");
+            if (writeResidual) AdLemModel.writeResidual(resultsPath + resultsFilenamesPrefix + stepString);
 
             //--------------- Compose velocity fields before inversion and the consequent warping ---------------//
             if(t == 1) {

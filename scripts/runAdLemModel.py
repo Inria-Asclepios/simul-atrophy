@@ -12,11 +12,14 @@ parser = optparse.OptionParser()
 parser.add_option('-p', '--patientID', dest='patient', help='patient ID name which is also a valid directory containing the div/atrophy map')
 parser.add_option('-a', '--atrophyFile', dest='atrophyFile',help='valid atrophy filename with extension present in patientID directory')
 parser.add_option('-m', '--maskFile', dest='maskFile', help='valid brain Mask/segmentation filename with extension present in patientID data directory')
-parser.add_option('-u', '--useTensorLambda', dest='useTensorLambda', help='provide true or false. If true given, must provide a valid lambdaFile with the option -l')
+parser.add_option('--useTensorLambda', dest='useTensorLambda', action = 'store_true', help='If the option is provided, a valid lambdaFile must be given with the option -l')
 parser.add_option('-l', '--lambdaFile', dest='lambdaFile', help='valid tensor image filename (if useTensorLambda is set to true) with extension present in patientID directory.')
 parser.add_option('-f', '--resultsFilenamesPrefix', dest='resultsFilenamesPrefix', help='prefix to be added to all the output filenames')
 parser.add_option('-i', '--imageFile', dest='imageFile', help='valid input image that will be warped by the obtained displacement fields from the model.')
 parser.add_option('-t', '--numOfTimeSteps', dest='numOfTimeSteps', help='(integer) number of time steps you want to solve the system.')
+parser.add_option('--writePressure', dest='writePressure', action = 'store_true', help='If the option is not provided pressure map will not be written to the disk.')
+parser.add_option('--writeForce', dest='writeForce', action = 'store_true', help='If the option is not provided, force term will not be written to the disk.')
+parser.add_option('--writeResidual',dest='writeResidual', action = 'store_true', help='If the option is not provided, residual will not be written to the disk.')
 
 (options, args) = parser.parse_args()
 
@@ -42,19 +45,29 @@ if options.maskFile is None:
     options.maskFile = raw_input('Enter a valid mask/segmented image filename')
 maskFile = resultsDir + options.maskFile
 
-if options.useTensorLambda is None:
-    options.useTensorLambda = raw_input('provide true or false depending on if you intend to use a lambda from a tensor image.')
+#if options.useTensorLambda is None:
+#    options.useTensorLambda = raw_input('provide true or false depending on if you intend to use a lambda from a tensor image.')
 
 if options.useTensorLambda is True:
+    useTensorLambdaString = 'true'
     if options.lambdaFile is None:
         options.lambdaFile = raw_input('Enter a valid tensor image filename, or simply put a random string if you are not using tensor image by internally changing the PetscAdLemMain.cxx file')
     lambdaFile = resultsDir + options.lambdaFile
 else:
+    useTensorLambdaString = 'false'
     lambdaFile = "dummyFileName"
 
 if options.resultsFilenamesPrefix is None:
     options.resultsFilenamesPrefix = raw_input('Enter a prefix string that will be added to all the output filenames')
 
+# if options.writePressure is None:
+#     options.writePressure = raw_input('write pressure map: true or false?')
+
+# if options.writeForce is None:
+#     options.writeForce = raw_input('write force map: true or false')
+
+# if options.writeResidual is None:
+#     options.writeResidual = raw_input('write residual map: true or false')
 
 #Petsc options:
 petscOptions = " -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_precondition self -pc_fieldsplit_dm_splits 0 -pc_fieldsplit_0_fields 0,1,2 -pc_fieldsplit_1_fields 3 "
@@ -66,10 +79,19 @@ petscOptions += "-fieldsplit_0_pc_type hypre "
 #monitor options
 petscOptions += "-fieldsplit_1_ksp_converged_reason -ksp_converged_reason "
 #petscOptions += "-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 "
-petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual" # -log_summary" # -ksp_view"
+petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual " # -log_summary " # -ksp_view "
+
+if options.writePressure is True:
+    petscOptions += "-writePressure "
+
+if options.writeForce is True:
+    petscOptions += "-writeForce "
+
+if options.writeResidual is True:
+    petscOptions += "-writeResidual "
 
 
-petscCommand += target + " -atrophyFile " + atrophyFile + " -useTensorLambda " + options.useTensorLambda + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -imageFile " + imageFile + " -numOfTimeSteps " + options.numOfTimeSteps + " -resPath " + resultsDir + " -resultsFilenamesPrefix " + options.resultsFilenamesPrefix + petscOptions
+petscCommand += target + " -atrophyFile " + atrophyFile + " -useTensorLambda " + useTensorLambdaString + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -imageFile " + imageFile + " -numOfTimeSteps " + options.numOfTimeSteps + " -resPath " + resultsDir + " -resultsFilenamesPrefix " + options.resultsFilenamesPrefix + petscOptions
 
 print "given command:\n" + petscCommand + "\n"
 subprocess.call(petscCommand, shell=True)

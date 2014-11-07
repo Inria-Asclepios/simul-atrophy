@@ -14,6 +14,19 @@ AdLem3D::AdLem3D():mWallVelocities(18)
     mIsBrainMaskSet = false;
     mPetscSolverTarasUsed = false;
     mRelaxIcPressureCoeff = 0;  //This gets non-zero only if brain mask is set
+
+    // number of times the solver is called.
+    mNumOfSolveCalls = 0;
+    //results allocation track variables
+    mVelocityAllocated = false;
+    mPressureAllocated = false;
+    mForceAllocated = false;
+    mDivergenceAllocated = false;
+
+    mVelocityLatest = false;
+    mPressureLatest = false;
+    mForceLatest = false;
+    mDivergenceLatest = false;
 }
 
 #undef __FUNCT__
@@ -109,14 +122,14 @@ void AdLem3D::setDomainRegionFullImage()
 #define __FUNCT__ "setDomainRegion"
 void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[])
 {
-        ScalarImageType::IndexType domainOrigin;
-        ScalarImageType::SizeType domainSize;
-        for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
-            domainSize.SetElement(i,size[i]);     //size!!
-            domainOrigin.SetElement(i,origin[i]); //provided is less or equal to the input
-        }
-        mDomainRegion.SetIndex(domainOrigin);
-        mDomainRegion.SetSize(domainSize);
+    ScalarImageType::IndexType domainOrigin;
+    ScalarImageType::SizeType domainSize;
+    for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
+        domainSize.SetElement(i,size[i]);     //size!!
+        domainOrigin.SetElement(i,origin[i]); //provided is less or equal to the input
+    }
+    mDomainRegion.SetIndex(domainOrigin);
+    mDomainRegion.SetSize(domainSize);
     //    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
 }
 
@@ -171,11 +184,6 @@ int AdLem3D::getSkullLabel()
 #define __FUNCT__ "muAt"
 double AdLem3D::muAt(int x, int y, int z) const
 {
-    /*if ( (x > (mXnum/2. - 4)) && (x < (mXnum/2. + 4))
-         && (y > (mYnum/2. - 4)) && (y < (mYnum/2. + 4))
-         && (z > (mZnum/2. - 4)) && (z < (mZnum/2. + 4))) {
-        return mMuGm;
-    }*/
     return mMuCsf;
 }
 
@@ -269,8 +277,6 @@ int AdLem3D::getZnum() const
     return mDomainRegion.GetSize()[2];
 }
 
-
-
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
 void AdLem3D::solveModel(bool operatorChanged)
@@ -280,7 +286,18 @@ void AdLem3D::solveModel(bool operatorChanged)
         mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
     }
     mPetscSolverTaras->solveModel(operatorChanged);
-    createResultImages();
+    updateStateAfterSolveCall();
+
+}
+#undef __FUNCT__
+#define __FUNCT__ "updateStateAfterSolveCall"
+void AdLem3D::updateStateAfterSolveCall()
+{
+    ++mNumOfSolveCalls;
+    mVelocityLatest = false;
+    mPressureLatest = false;
+    mDivergenceLatest = false;
+    mForceLatest = false;
 }
 
 #undef __FUNCT__
@@ -313,84 +330,11 @@ void AdLem3D::scaleAtrophy(double factor)
     mAtrophy=multiplyImageFilter->GetOutput();
 }
 
-
-#undef __FUNCT__
-#define __FUNCT__ "createAtrophy"
-void AdLem3D::createAtrophy(unsigned int size[3])  //Must be removed and put to another class!!
-{
-    ScalarImageType::IndexType  start;
-    start.Fill(0);
-    ScalarImageType::SizeType   sizeAtrophy;
-    for(int i=0; i<3; ++i)  sizeAtrophy.SetElement(i,size[i]);
-
-    ScalarImageType::RegionType region(start,sizeAtrophy);
-    mAtrophy = ScalarImageType::New();
-    mAtrophy->SetRegions(region);
-    mAtrophy->Allocate();
-    mAtrophy->FillBuffer(0);
-
-    unsigned int    xn = size[0];
-    unsigned int    yn = size[1];
-    unsigned int    zn = size[2];
-    unsigned int    numOfCentreVoxels = 8;
-    double          posAtrophy = 0.4;
-    //Center mass loss: in centreVoxels:
-    for(unsigned int i = (xn/2)-1; i<= xn/2; ++i) {
-        for(unsigned int j = (yn/2)-1; j<= yn/2; ++j) {
-            for(unsigned int k = (zn/2)-1; k<= zn/2; ++k) {
-                ScalarImageType::IndexType  pos;
-                pos[0] = i;
-                pos[1] = j;
-                pos[2] = k;
-                mAtrophy->SetPixel(pos,posAtrophy);
-            }
-        }
-    }
-    unsigned int    numOfBorderVoxels = xn*yn*zn - (xn-2)*(yn-2)*(zn-2);
-    double  negAtrophy = -1.* (posAtrophy*numOfCentreVoxels)/
-            (double)(xn*yn*zn - numOfCentreVoxels - numOfBorderVoxels);
-
-    //Uniform creation everywhere else except the borders:
-    for(unsigned int i=1; i<xn-1; ++i) {
-        for(unsigned int j=1; j<yn-1; ++j) {
-            for(unsigned int k=1; k<zn-1; ++k) {
-                ScalarImageType::IndexType pos;
-                pos[0] = i;
-                pos[1] = j;
-                pos[2] = k;
-                /*if(!((i>= (xn/2)-1) && (i<=xn/2) &&
-                        (j>= (yn/2)-1) && (j<=yn/2) &&
-                        (k>= (zn/2)-1) && (k<=zn/2)))*/
-                if(mAtrophy->GetPixel(pos) != posAtrophy) //prolly not a good idea to have inequality for double type!
-                    mAtrophy->SetPixel(pos,negAtrophy); //so use the above commented condition instead ?
-            }
-        }
-    }
-
-    double pixelSum = 0;
-    for(unsigned int i=1; i<xn-1; ++i) {
-        for(unsigned int j=1; j<yn-1; ++j) {
-            for(unsigned int k=1; k<zn-1; ++k) {
-                ScalarImageType::IndexType pos;
-                pos[0] = i;
-                pos[1] = j;
-                pos[2] = k;
-                pixelSum += mAtrophy->GetPixel(pos);
-            }
-        }
-    }
-    //    std::cout<<"Sum of created Atrophy: "<<pixelSum<<std::endl;
-    if(!isAtrophyValid(0.000009)) {
-        std::cout<<"yaha, strange, should be valid!!"<<std::endl;
-    }
-}
-
-//Valid atrophy has:
-//total sum close to zero, i.e. < sumMaxValue.
-//all boundary voxels has zero.
 #undef __FUNCT__
 #define __FUNCT__ "isAtrophyValid"
-bool AdLem3D::isAtrophyValid(double sumMaxValue) {
+//total sum close to zero, i.e. < sumMaxValue.
+//all boundary voxels has zero.
+bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
     //Check if sum is zero:
     itk::ImageRegionIterator<ScalarImageType> it(mAtrophy,mDomainRegion);
     it.GoToBegin();
@@ -489,6 +433,16 @@ void AdLem3D::writeBrainMaskToFile(std::string fileName) {
 #define __FUNCT__ "getVelocityImage"
 AdLem3D::VectorImageType::Pointer AdLem3D::getVelocityImage()
 {
+    if(mNumOfSolveCalls == 0) {
+        std::cerr<<"the model is not solved yet, first solve the system to get the solution."<<std::endl;
+        return NULL;
+    }
+    if(!mVelocityAllocated) {
+        createVelocityImage();
+    }
+    if(!mVelocityLatest) {
+        updateVelocityImage();
+    }
     return mVelocity;
 }
 
@@ -496,58 +450,110 @@ AdLem3D::VectorImageType::Pointer AdLem3D::getVelocityImage()
 #define __FUNCT__ "getPressureImage"
 AdLem3D::ScalarImageType::Pointer AdLem3D::getPressureImage()
 {
+    if(mNumOfSolveCalls == 0) {
+        std::cerr<<"the model is not solved yet, first solve the system to get the solution."<<std::endl;
+        return NULL;
+    }
+    if(!mPressureAllocated) {
+        createPressureImage();
+    }
+    if(!mPressureLatest) {
+        updatePressureImage();
+    }
     return mPressure;
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "getDivergenceImage"
+AdLem3D::ScalarImageType::Pointer AdLem3D::getDivergenceImage()
+{
+    if(mNumOfSolveCalls == 0) {
+        std::cerr<<"the model is not solved yet, first solve the system to get the solution."<<std::endl;
+        return NULL;
+    }
+    if(!mDivergenceAllocated) {
+        createDivergenceImage();
+    }
+    if(!mDivergenceLatest) {
+        updateDivergenceImage();
+    }
+    return mDivergence;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getForceImage"
+AdLem3D::VectorImageType::Pointer AdLem3D::getForceImage()
+{
+    if(mNumOfSolveCalls == 0) {
+        std::cerr<<"the model is not solved yet, first solve the system to get the solution."<<std::endl;
+        return NULL;
+    }
+    if(!mForceAllocated) {
+        createForceImage();
+    }
+    if(!mForceLatest) {
+        updateForceImage();
+    }
+    return mForce;
+}
 
 
 #undef __FUNCT__
-#define __FUNCT__ "writeSolution"
-void AdLem3D::writeSolution(std::string resultsPath, bool inMatlabFormat, bool inMatlabFormatSystemMatrix)
+#define __FUNCT__ "writeVelcoityImage"
+void AdLem3D::writeVelocityImage(std::string fileName)
+{
+    VectorImageWriterType::Pointer   velocityWriter = VectorImageWriterType::New();
+    velocityWriter->SetFileName(fileName);
+    velocityWriter->SetInput(getVelocityImage());
+    velocityWriter->Update();
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "writePressureImage"
+void AdLem3D::writePressureImage(std::string fileName)
+{
+    ScalarImageWriterType::Pointer   pressureWriter = ScalarImageWriterType::New();
+    pressureWriter->SetFileName(fileName);
+    pressureWriter->SetInput(getPressureImage());
+    pressureWriter->Update();
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "writeDivergenceImage"
+void AdLem3D::writeDivergenceImage(std::string fileName)
+{
+    ScalarImageWriterType::Pointer divWriter = ScalarImageWriterType::New();
+    divWriter->SetFileName(fileName);
+    divWriter->SetInput(getDivergenceImage());
+    divWriter->Update();
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "writeForceImage"
+void AdLem3D::writeForceImage(std::string fileName)
+{
+    VectorImageWriterType::Pointer   forceWriter = VectorImageWriterType::New();
+    forceWriter->SetFileName(fileName);
+    forceWriter->SetInput(getForceImage());
+    forceWriter->Update();
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "writeSolutionForMatlab"
+//Writes in matlab format.
+void AdLem3D::writeSolutionForMatlab(std::string resultsPath, bool writeSystemMatrix)
 {
 
-    if(inMatlabFormat) {
-        std::string matSolFileName(resultsPath+"sol");
-        std::string matSysFileName(resultsPath+"sys");
-        std::string matSizeSysFileName(resultsPath+"size_lin_sys");
-        mPetscSolverTaras->writeToMatFile(matSolFileName,inMatlabFormatSystemMatrix,matSysFileName);
-        //        mPetscSolverTaras->writeToMatFile(matSolFileName,true,matSysFileName);
-        std::ofstream size_file;
-        size_file.open(matSizeSysFileName.c_str());
-        size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
-                <<mDomainRegion.GetSize()[2]+1;
-        size_file.close();
-    }
-//    std::string atrophyGradientFileName(resultsPath+"atrophyGradient.nii.gz");
-    std::string forceFileName(resultsPath+"force.nii.gz");
-    std::string velocityFileName(resultsPath+"vel.nii.gz");
-    std::string pressureFileName(resultsPath+"press.nii.gz");
-    std::string divergenceFileName(resultsPath+"div.nii.gz");
-
-//    VectorImageWriterType::Pointer   gradientWriter = VectorImageWriterType::New();
-//    gradientWriter->SetFileName(atrophyGradientFileName);
-//    gradientWriter->SetInput(mAtrophyGradient);
-//    gradientWriter->Update();
-
-    VectorImageWriterType::Pointer   forceWriter = VectorImageWriterType::New();
-    forceWriter->SetFileName(forceFileName);
-    forceWriter->SetInput(mForce);
-    forceWriter->Update();
-
-    VectorImageWriterType::Pointer   velocityWriter = VectorImageWriterType::New();
-    velocityWriter->SetFileName(velocityFileName);
-    velocityWriter->SetInput(mVelocity);
-    velocityWriter->Update();
-
-    ScalarImageWriterType::Pointer   pressureWriter = ScalarImageWriterType::New();
-    pressureWriter->SetFileName(pressureFileName);
-    pressureWriter->SetInput(mPressure);
-    pressureWriter->Update();
-
-    ScalarImageWriterType::Pointer divWriter = ScalarImageWriterType::New();
-    divWriter->SetFileName(divergenceFileName);
-    divWriter->SetInput(mDivergence);
-    divWriter->Update();
+    std::string matSolFileName(resultsPath+"sol");
+    std::string matSysFileName(resultsPath+"sys");
+    std::string matSizeSysFileName(resultsPath+"size_lin_sys");
+    mPetscSolverTaras->writeToMatFile(matSolFileName,writeSystemMatrix,matSysFileName);
+    std::ofstream size_file;
+    size_file.open(matSizeSysFileName.c_str());
+    size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
+            <<mDomainRegion.GetSize()[2]+1;
+    size_file.close();
 }
 
 #undef __FUNCT__
@@ -558,28 +564,14 @@ void AdLem3D::writeResidual(std::string resultsPath)
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "createImageOf"
-void AdLem3D::createResultImages()
+#define __FUNCT__ "createVelocityImage"
+void AdLem3D::createVelocityImage()
 {
     itk::Index<3>           outputImageStart;       //should be 0!
     ScalarImageType::RegionType domainRegion;
     for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
     domainRegion.SetSize(mDomainRegion.GetSize());
     domainRegion.SetIndex(outputImageStart);
-
-//    mAtrophyGradient = VectorImageType::New();
-//    mAtrophyGradient->SetRegions(domainRegion);
-//    mAtrophyGradient->SetOrigin(mAtrophy->GetOrigin());
-//    mAtrophyGradient->SetSpacing(mAtrophy->GetSpacing());
-//    mAtrophyGradient->SetDirection(mAtrophy->GetDirection());
-//    mAtrophyGradient->Allocate();
-
-    mForce = VectorImageType::New();
-    mForce->SetRegions(domainRegion);
-    mForce->SetOrigin(mAtrophy->GetOrigin());
-    mForce->SetSpacing(mAtrophy->GetSpacing());
-    mForce->SetDirection(mAtrophy->GetDirection());
-    mForce->Allocate();
 
     mVelocity = VectorImageType::New();
     mVelocity->SetRegions(domainRegion);
@@ -588,6 +580,19 @@ void AdLem3D::createResultImages()
     mVelocity->SetDirection(mAtrophy->GetDirection());
     mVelocity->Allocate();
 
+    mVelocityAllocated = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "createPressureImage"
+void AdLem3D::createPressureImage()
+{
+    itk::Index<3>           outputImageStart;       //should be 0!
+    ScalarImageType::RegionType domainRegion;
+    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
+    domainRegion.SetSize(mDomainRegion.GetSize());
+    domainRegion.SetIndex(outputImageStart);
+
     mPressure = ScalarImageType::New();
     mPressure->SetRegions(domainRegion);
     mPressure->SetOrigin(mAtrophy->GetOrigin());
@@ -595,6 +600,38 @@ void AdLem3D::createResultImages()
     mPressure->SetDirection(mAtrophy->GetDirection());
     mPressure->Allocate();
 
+    mPressureAllocated = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "createForceImage"
+void AdLem3D::createForceImage()
+{
+    itk::Index<3>           outputImageStart;       //should be 0!
+    ScalarImageType::RegionType domainRegion;
+    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
+    domainRegion.SetSize(mDomainRegion.GetSize());
+    domainRegion.SetIndex(outputImageStart);
+
+    mForce = VectorImageType::New();
+    mForce->SetRegions(domainRegion);
+    mForce->SetOrigin(mAtrophy->GetOrigin());
+    mForce->SetSpacing(mAtrophy->GetSpacing());
+    mForce->SetDirection(mAtrophy->GetDirection());
+    mForce->Allocate();
+
+    mForceAllocated = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "createDivergenceImage"
+void AdLem3D::createDivergenceImage()
+{
+    itk::Index<3>           outputImageStart;       //should be 0!
+    ScalarImageType::RegionType domainRegion;
+    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
+    domainRegion.SetSize(mDomainRegion.GetSize());
+    domainRegion.SetIndex(outputImageStart);
 
     mDivergence = ScalarImageType::New();
     mDivergence->SetRegions(domainRegion);
@@ -603,28 +640,19 @@ void AdLem3D::createResultImages()
     mDivergence->SetDirection(mAtrophy->GetDirection());
     mDivergence->Allocate();
 
+    mDivergenceAllocated = true;
+}
 
+#undef __FUNCT__
+#define __FUNCT__ "updateVelocityImage"
+void AdLem3D::updateVelocityImage()
+{
     typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
-    typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
-
-//    VectorIteratorType atrophyGradientIterator(mAtrophyGradient,mAtrophyGradient->GetLargestPossibleRegion());
-    VectorIteratorType forceIterator(mForce,mForce->GetLargestPossibleRegion());
     VectorIteratorType velocityIterator(mVelocity,mVelocity->GetLargestPossibleRegion());
-    ScalarIteratorType pressureIterator(mPressure,mPressure->GetLargestPossibleRegion());
-    ScalarIteratorType divergenceIterator(mDivergence,mDivergence->GetLargestPossibleRegion());
-//    VectorImageType::PixelType atrophyGradientPixel;
-    VectorImageType::PixelType forcePixel;
     VectorImageType::PixelType velocityPixel;
-    ScalarImageType::PixelType pressurePixel;
-    ScalarImageType::PixelType divergencePixel;
-
     unsigned int pos[3];
     unsigned int k = 0;
-//    atrophyGradientIterator.GoToBegin();
-    forceIterator.GoToBegin();
     velocityIterator.GoToBegin();
-    pressureIterator.GoToBegin();
-    divergenceIterator.GoToBegin();
     while(k<mDomainRegion.GetSize()[2] && !velocityIterator.IsAtEnd()) {
         pos[2] = k;
         unsigned int j = 0;
@@ -634,19 +662,99 @@ void AdLem3D::createResultImages()
             while(i<mDomainRegion.GetSize()[0] && !velocityIterator.IsAtEnd()) {
                 pos[0] = i;
                 for(int cc = 0; cc<3; ++cc) {
-//                    atrophyGradientPixel[cc] = mPetscSolverTaras->getAtrophyGradientAt(pos,cc);
-                    forcePixel[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
                     velocityPixel[cc] = mPetscSolverTaras->getSolVelocityAt(pos,cc);
                 }
-//                atrophyGradientIterator.Set(atrophyGradientPixel);
-//                ++atrophyGradientIterator;
-                forceIterator.Set(forcePixel);
-                ++forceIterator;
                 velocityIterator.Set(velocityPixel);
                 ++velocityIterator;
+                ++i;
+            }
+            ++j;
+        }
+        ++k;
+    }
+    mVelocityLatest = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "updatePressureImage"
+void AdLem3D::updatePressureImage()
+{
+    typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
+    ScalarIteratorType pressureIterator(mPressure,mPressure->GetLargestPossibleRegion());
+    ScalarImageType::PixelType pressurePixel;
+    unsigned int pos[3];
+    unsigned int k = 0;
+    pressureIterator.GoToBegin();
+    while(k<mDomainRegion.GetSize()[2] && !pressureIterator.IsAtEnd()) {
+        pos[2] = k;
+        unsigned int j = 0;
+        while(j<mDomainRegion.GetSize()[1] && !pressureIterator.IsAtEnd()) {
+            pos[1] = j;
+            unsigned int i = 0;
+            while(i<mDomainRegion.GetSize()[0] && !pressureIterator.IsAtEnd()) {
+                pos[0] = i;
                 pressurePixel = mPetscSolverTaras->getSolPressureAt(pos);
                 pressureIterator.Set(pressurePixel);
                 ++pressureIterator;
+                ++i;
+            }
+            ++j;
+        }
+        ++k;
+    }
+    mPressureLatest = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "updateForceImage"
+void AdLem3D::updateForceImage()
+{
+    typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
+    VectorIteratorType forceIterator(mForce,mForce->GetLargestPossibleRegion());
+    VectorImageType::PixelType forcePixel;
+    unsigned int pos[3];
+    unsigned int k = 0;
+    forceIterator.GoToBegin();
+    while(k<mDomainRegion.GetSize()[2] && !forceIterator.IsAtEnd()) {
+        pos[2] = k;
+        unsigned int j = 0;
+        while(j<mDomainRegion.GetSize()[1] && !forceIterator.IsAtEnd()) {
+            pos[1] = j;
+            unsigned int i = 0;
+            while(i<mDomainRegion.GetSize()[0] && !forceIterator.IsAtEnd()) {
+                pos[0] = i;
+                for(int cc = 0; cc<3; ++cc) {
+                    forcePixel[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
+                }
+                forceIterator.Set(forcePixel);
+                ++forceIterator;
+                ++i;
+            }
+            ++j;
+        }
+        ++k;
+    }
+    mForceLatest = true;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "udpateDivergenceImage"
+void AdLem3D::updateDivergenceImage()
+{
+    typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
+    ScalarIteratorType divergenceIterator(mDivergence,mDivergence->GetLargestPossibleRegion());
+    ScalarImageType::PixelType divergencePixel;
+    unsigned int pos[3];
+    unsigned int k = 0;
+    divergenceIterator.GoToBegin();
+    while(k<mDomainRegion.GetSize()[2] && !divergenceIterator.IsAtEnd()) {
+        pos[2] = k;
+        unsigned int j = 0;
+        while(j<mDomainRegion.GetSize()[1] && !divergenceIterator.IsAtEnd()) {
+            pos[1] = j;
+            unsigned int i = 0;
+            while(i<mDomainRegion.GetSize()[0] && !divergenceIterator.IsAtEnd()) {
+                pos[0] = i;
                 divergencePixel = mPetscSolverTaras->getDivergenceAt(pos);
                 divergenceIterator.Set(divergencePixel);
                 ++divergenceIterator;
@@ -656,4 +764,5 @@ void AdLem3D::createResultImages()
         }
         ++k;
     }
+    mDivergenceLatest = true;
 }

@@ -47,6 +47,16 @@ target_link_libraries(WarpImage ${ITK_LIBRARIES}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
 
+include_directories( ${Boost_INCLUDE_DIR} )
+add_executable(ExtractConvexHull
+    convexHullExtractor.cxx
+)
+target_link_libraries(ExtractConvexHull ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+include_directories( ${Boost_INCLUDE_DIR} )
 add_executable(BinarizeThreshold
     binarizeThreshold.cxx
 )

@@ -102,16 +102,21 @@ public:
     void solveModel(bool operatorChanged = false);
     VectorImageType::Pointer getVelocityImage();
     ScalarImageType::Pointer getPressureImage();
+    ScalarImageType::Pointer getDivergenceImage();
+    VectorImageType::Pointer getForceImage();
 
-    void writeSolution(std::string resultsPath, bool inMatlabFormat = false,
-                       bool inMatlabFormatSystemSolution = false);
-    void writeResidual(std::string resultsPath);
+    void writeSolutionForMatlab(std::string resultsPath,
+                       bool writeSystemSolution = false);
+    void writeVelocityImage(std::string fileName);
+    void writePressureImage(std::string fileName);
+    void writeDivergenceImage(std::string fileName);
+    void writeForceImage(std::string fileName);
+    void writeResidual(std::string fileName);
 
     //Atrophy related functions
-    void createAtrophy(unsigned int size[3]);   //This should be later moved to another class!
     void setAtrophy(ScalarImageType::Pointer inputAtrophy);
     void setAtrophy(std::string atrophyImageFile);
-    bool isAtrophyValid(double sumMaxValue);
+    bool isAtrophySumZero(double sumMaxValue);
     ScalarImageType::Pointer getAtrophyImage();
 
     //By default, the total sum of atrophy is not forced to be zero; use this option
@@ -149,11 +154,28 @@ protected:
     AdLem3D::bcType             mBc;
     std::vector<double>         mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
 
+    // integer number to keep track of how many times the solver is solved.
+    int                         mNumOfSolveCalls;
+
+
 //    VectorImageType::Pointer    mAtrophyGradient;   //gradient of the atrophy computed within the solver
     VectorImageType::Pointer    mForce;             //Force term computed i.e. lambda*grad(a)
     ScalarImageType::Pointer    mPressure;          //Output pressure-map.
     VectorImageType::Pointer    mVelocity;          //Output velocity field.
     ScalarImageType::Pointer    mDivergence;        //Divergence map of the solution (computed by the solver)
+
+    // Memory for different result images needed to be allocated only once.
+    bool                        mVelocityAllocated;
+    bool                        mPressureAllocated;
+    bool                        mForceAllocated;
+    bool                        mDivergenceAllocated;
+
+    // Variables to track whether the result images have been updated after the most recent
+    // solve.
+    bool                        mVelocityLatest;
+    bool                        mPressureLatest;
+    bool                        mForceLatest;
+    bool                        mDivergenceLatest;
 
     //Solver option
     PetscAdLemTaras3D   *mPetscSolverTaras;
@@ -175,7 +197,17 @@ protected:
                     unsigned int Li = 0, unsigned int Lj = 0) const;
     double aAt(int x, int y, int z) const;
 
-    void createResultImages();
+    void updateStateAfterSolveCall(); // update all the state and track variables that depend on
+    // or should change once the solveModel() function is called.
+    void createVelocityImage();
+    void createPressureImage();
+    void createForceImage();
+    void createDivergenceImage();
+
+    void updateVelocityImage();
+    void updatePressureImage();
+    void updateForceImage();
+    void updateDivergenceImage();
 };
 
 
