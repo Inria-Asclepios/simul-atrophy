@@ -60,14 +60,20 @@ else:
 if options.resultsFilenamesPrefix is None:
     options.resultsFilenamesPrefix = raw_input('Enter a prefix string that will be added to all the output filenames')
 
-# if options.writePressure is None:
-#     options.writePressure = raw_input('write pressure map: true or false?')
+if options.writePressure is True:
+    writePressureString = 'true'
+else:
+    writePressureString = 'false'
 
-# if options.writeForce is None:
-#     options.writeForce = raw_input('write force map: true or false')
+if options.writeForce is True:
+    writeForceString = 'true'
+else:
+    writeForceString = 'false'
 
-# if options.writeResidual is None:
-#     options.writeResidual = raw_input('write residual map: true or false')
+if options.writeResidual is True:
+    writeResidualString = 'true'
+else:
+    writeResidualString = 'false'
 
 #Petsc options:
 petscOptions = " -pc_type fieldsplit -pc_fieldsplit_type schur -pc_fieldsplit_schur_precondition self -pc_fieldsplit_dm_splits 0 -pc_fieldsplit_0_fields 0,1,2 -pc_fieldsplit_1_fields 3 "
@@ -81,17 +87,9 @@ petscOptions += "-fieldsplit_1_ksp_converged_reason -ksp_converged_reason "
 #petscOptions += "-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 "
 petscOptions += "-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual " # -log_summary " # -ksp_view "
 
-if options.writePressure is True:
-    petscOptions += "-writePressure "
-
-if options.writeForce is True:
-    petscOptions += "-writeForce "
-
-if options.writeResidual is True:
-    petscOptions += "-writeResidual "
 
 
-petscCommand += target + " -atrophyFile " + atrophyFile + " -useTensorLambda " + useTensorLambdaString + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -imageFile " + imageFile + " -numOfTimeSteps " + options.numOfTimeSteps + " -resPath " + resultsDir + " -resultsFilenamesPrefix " + options.resultsFilenamesPrefix + petscOptions
+petscCommand += target + " -atrophyFile " + atrophyFile + " -useTensorLambda " + useTensorLambdaString + " -lambdaFile " + lambdaFile + " -maskFile " + maskFile + " -imageFile " + imageFile + " -numOfTimeSteps " + options.numOfTimeSteps + " -resPath " + resultsDir + " -resultsFilenamesPrefix " + options.resultsFilenamesPrefix + " -writePressure " + writePressureString + " -writeForce " + writeForceString + " -writeResidual " + writeResidualString + petscOptions
 
 print "given command:\n" + petscCommand + "\n"
 subprocess.call(petscCommand, shell=True)

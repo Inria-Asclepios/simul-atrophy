@@ -33,7 +33,8 @@ int main(int argc,char **argv)
     bool            useTensorLambda;
     int             numOfTimeSteps;
     bool            isMaskChanged;
-
+    // Options for results storage: Velocity and divergence will always be written to file. For others options must be passed.
+    bool            writePressure, writeForce, writeResidual;
 
     std::vector<double> wallVelocities(18);
     /*0,1,2,     //south wall
@@ -106,12 +107,29 @@ int main(int argc,char **argv)
             resultsFilenamesPrefix = optionString;
         }
 
-        // Options for results storage: Velocity and divergence will always be written to file. For others options must be passed.
-        PetscBool            writePressure, writeForce, writeResidual;
+        ierr = PetscOptionsGetString(NULL,"-writePressure",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag) {
+            writePressure = false;
+        } else {
+            if(strcmp(optionString,"true")==0)  writePressure = true;
+            else writePressure = false;
+        }
 
-        ierr = PetscOptionsHasName(NULL,"-writePressure", &writePressure);CHKERRQ(ierr);
-        ierr = PetscOptionsHasName(NULL,"-writeForce", &writeForce);CHKERRQ(ierr);
-        ierr = PetscOptionsHasName(NULL,"-writeResidual", &writeResidual);CHKERRQ(ierr);
+        ierr = PetscOptionsGetString(NULL,"-writeForce",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag) {
+            writeForce = false;
+        } else {
+            if(strcmp(optionString,"true")==0)  writeForce = true;
+            else writeForce = false;
+        }
+
+        ierr = PetscOptionsGetString(NULL,"-writeResidual",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag) {
+            writeResidual = false;
+        } else {
+            if(strcmp(optionString,"true")==0)  writeResidual = true;
+            else writeResidual = false;
+        }
 
         /*std::cout<<"atrophy file: "<<atrophyFileName<<std::endl;
         std::cout<<"mask file: "<<maskFileName<<std::endl;
