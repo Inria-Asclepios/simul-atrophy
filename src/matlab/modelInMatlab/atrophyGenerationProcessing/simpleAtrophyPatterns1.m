@@ -10,7 +10,7 @@ bw = 2;
 % Left: L Right: R Middle: M
 % CSF: c:
 % Two spheres of CSF on left and right
-r_cL = 6;      r_cR = 6;       
+r_cL = 8;      r_cR = 8;       
 % A cylinder joining the two above spheres
 r_cM = 1;    w_cM = 4;
 
@@ -18,8 +18,14 @@ r_cM = 1;    w_cM = 4;
 % Two spheres concentric to the CSF spheres but of smaller size:
 r_bpL = 5;     r_bpR = 5;
 
+% Another Brain Parenchyma region: bp1
+r_bp1L = 2;     r_bp1R = 2;
+
 % MASKS and their values:
-v_cL = 20;  v_cM = 40;  v_cR = 60;  v_bpL = 100;    v_bpR = 100;
+% v_cL = 20;  v_cM = 40;  v_cR = 60;  v_bpL = 100;    v_bpR = 100;
+v_cL = 1;  v_cM = 1;  v_cR = 1;  v_bpL = 2;    v_bpR = 2;
+% v_bp1L = 200;           v_bp1R = 200;
+v_bp1L = 3;           v_bp1R = 3;
 
 % The cube size:
 xn = 2*r_cL + 2*bw;
@@ -56,10 +62,23 @@ bpL(bpL<=0) = -1;     bpL(bpL>0) = 0;   bpL(bpL<0) = 1;
 bpR = (x-c_bpR(1)).^2 + (y-c_bpR(2)).^2 + (z-c_bpR(3)).^2 - r_bpR*r_bpR;
 bpR(bpR<=0) = -1;     bpR(bpR>0) = 0;   bpR(bpR<0) = 1;
 
-% Create the image:
 btest3d(bpL==1) = v_bpL;     btest3d(bpR==1) = v_bpR;
-imshow3D(btest3d)
 
+c_bp1L = c_cL;       c_bp1R = c_cR;
+bp1L = (x-c_bp1L(1)).^2 + (y-c_bp1L(2)).^2 + (z-c_bp1L(3)).^2 - r_bp1L*r_bp1L;
+bp1L(bp1L<=0) = -1;     bp1L(bp1L>0) = 0;   bp1L(bp1L<0) = 1;
+
+bp1R = (x-c_bp1R(1)).^2 + (y-c_bp1R(2)).^2 + (z-c_bp1R(3)).^2 - r_bp1R*r_bp1R;
+bp1R(bp1R<=0) = -1;     bp1R(bp1R>0) = 0;   bp1R(bp1R<0) = 1;
+
+btest3d(bp1L==1) = v_bp1L;     btest3d(bp1R==1) = v_bp1R;
+
+% Create the image:
+
+imshow3D(btest3d)
+writemetaimagefile('btest.mha',btest3d,[1 1 1]);
+% btest3dnii = make_nii(btest3d);
+save_nii(make_nii(btest3d),'btest.nii');
 %% Save the image:
 save('btest.mat','btest3d');
 writemetaimagefile('btest.mha',btest3d,[1 1 1]);

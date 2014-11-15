@@ -88,3 +88,20 @@ target_link_libraries(createDiffusionTensorImage ${ITK_LIBRARIES}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
+
+add_executable(blurWithGaussian
+    blurWithGaussian.cxx
+)
+target_link_libraries(blurWithGaussian ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+add_executable(diffuseImage
+    diffuseImage.cxx
+)
+target_link_libraries(diffuseImage ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
