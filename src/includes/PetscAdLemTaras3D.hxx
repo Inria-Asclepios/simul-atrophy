@@ -39,10 +39,10 @@ public:
     PetscReal aC(PetscInt x, PetscInt y, PetscInt z);
     PetscErrorCode solveModel(bool operatorChanged);
     PetscErrorCode writeToMatFile(const std::string& fileName, bool writeA, const std::string& matFileName);
-    static PetscErrorCode computeMatrixTaras3d(KSP, Mat, Mat, MatStructure*, void*);
+    static PetscErrorCode computeMatrixTaras3d(KSP, Mat, Mat, void*);
     static PetscErrorCode computeRHSTaras3d(KSP, Vec, void*);
     static PetscErrorCode computeNullSpace(MatNullSpace, Vec, void*);
-    static PetscErrorCode computeMatrixTaras3dConstantMu(KSP, Mat, Mat, MatStructure*, void*);
+    static PetscErrorCode computeMatrixTaras3dConstantMu(KSP, Mat, Mat, void*);
     static PetscErrorCode computeRHSTaras3dConstantMu(KSP, Vec, void*);
 
     PetscReal bMaskAt(PetscInt x, PetscInt y, PetscInt z);

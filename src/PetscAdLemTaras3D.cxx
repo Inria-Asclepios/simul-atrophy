@@ -21,7 +21,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     //MUST CREATE THE DMDA of stencil width 2 instead of 1 in that case.
     //Easy fix: just put the conditional creation of dmda in the above if(mIsMuConstant) condition!
     //DMDA for only pressure field that is used in Schur Complement solve Sp=rhs.
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDaP);CHKERRXX(ierr);
 
@@ -29,7 +29,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
 
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE,
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,4,1,0,0,0,&mDa);CHKERRXX(ierr);
 
@@ -143,7 +143,8 @@ void PetscAdLemTaras3D::createPcForSc()
     ierr = DMDAGetCorners(mDaP,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRXX(ierr);
 
     ierr = DMSetMatrixPreallocateOnly(mDaP,PETSC_TRUE);CHKERRXX(ierr);
-    ierr = DMCreateMatrix(mDaP,MATMPIAIJ,&mPcForSc);CHKERRXX(ierr);
+//    ierr = DMCreateMatrix(mDaP,MATMPIAIJ,&mPcForSc);CHKERRXX(ierr);
+    ierr = DMCreateMatrix(mDaP,&mPcForSc);CHKERRXX(ierr);
 
 
     MatStencil row, col;
@@ -210,7 +211,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
         ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
         ierr = KSPSetUp(mKsp);CHKERRQ(ierr);                  //register the fieldsplits obtained from options.
 
-        ierr = KSPGetOperators(mKsp,&mA,NULL,NULL);CHKERRQ(ierr);
+        ierr = KSPGetOperators(mKsp,&mA,NULL);CHKERRQ(ierr);
         ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
 
         PetscBool isNull;
@@ -251,7 +252,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
                             ierr = DMGetCoordinates(mDa,&coords);CHKERRQ(ierr);
                             ierr = MatNullSpaceCreateRigidBody(coords,&rigidBodyModes);CHKERRQ(ierr);
                             Mat matA00;
-                            ierr = KSPGetOperators(subKsp[0],&matA00,NULL,NULL);CHKERRQ(ierr);
+                            ierr = KSPGetOperators(subKsp[0],&matA00,NULL);CHKERRQ(ierr);
                             ierr = MatSetNearNullSpace(matA00,rigidBodyModes);CHKERRQ(ierr);
                             ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
                         }
@@ -260,7 +261,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
                         if(mPressureNullspacePresent) {
                             ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
                             Mat matSc;
-                            ierr = KSPGetOperators(subKsp[1],&matSc,NULL,NULL);CHKERRQ(ierr);
+                            ierr = KSPGetOperators(subKsp[1],&matSc,NULL);CHKERRQ(ierr);
                             ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
                             if(!isNull) {
                                 SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
@@ -563,7 +564,7 @@ PetscReal PetscAdLemTaras3D::lambdaYz(PetscInt x, PetscInt y, PetscInt z)
 #undef __FUNCT__
 #define __FUNCT__ "computeMatrixTaras3d"
 PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3d(
-        KSP ksp, Mat J, Mat jac, MatStructure *str, void *ctx)
+        KSP ksp, Mat J, Mat jac, void *ctx)
 {
     PetscAdLemTaras3D *user = (PetscAdLemTaras3D*)ctx;
 
@@ -986,7 +987,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3d(KSP ksp, Vec b, void *ctx)
 #undef __FUNCT__
 #define __FUNCT__ "computeMatrixTaras3dConstantMu"
 PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
-        KSP ksp, Mat J, Mat jac, MatStructure *str, void *ctx)
+        KSP ksp, Mat J, Mat jac, void *ctx)
 {
     PetscAdLemTaras3D *user = (PetscAdLemTaras3D*)ctx;
 

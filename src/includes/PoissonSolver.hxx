@@ -5,6 +5,8 @@
 #include<petscsys.h>
 #include<petscksp.h>
 
+#include<string>
+
 template <class PixelType> class PoissonProblem;
 //class PoissonProblem;
 
@@ -40,7 +42,7 @@ public:
     PetscErrorCode solve();
     PetscErrorCode computeResidual();
     PetscErrorCode writeToFile(std::string format, std::string fileName, bool writeResidual);
-    static PetscErrorCode computeMatrix(KSP, Mat, Mat, MatStructure*, void* );
+    static PetscErrorCode computeMatrix(KSP, Mat, Mat, void* );
     static PetscErrorCode computeRhs(KSP ksp,Vec b,void* ctx);
     double getSolAtPosition(unsigned int x, unsigned int y, unsigned int z);
     double getResAtPosition(unsigned int x, unsigned int y, unsigned int z);

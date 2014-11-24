@@ -5,7 +5,7 @@ import optparse
 
 workDir = "/user/bkhanal/home/works/AdLemModel/"
 target = workDir + "build/src/AdLemMain"
-petscCommand = "/home/bkhanal/Documents/softwares/petsc-3.4.3/bin/petscmpiexec -n 4 "
+petscCommand = "/home/bkhanal/Documents/softwares/petsc/bin/petscmpiexec -n 4 "
 
 #parse the command line inputs
 parser = optparse.OptionParser()

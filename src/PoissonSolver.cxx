@@ -9,7 +9,7 @@ PoissonSolver::PoissonSolver(PoissonProblem<double> *problem):
 {
     PetscErrorCode ierr;
     ierr = KSPCreate(PETSC_COMM_WORLD, &mKsp);CHKERRXX(ierr);
-    ierr = DMDACreate3d(PETSC_COMM_WORLD,DMDA_BOUNDARY_NONE,DMDA_BOUNDARY_NONE, DMDA_BOUNDARY_NONE,
+    ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,
                         DMDA_STENCIL_STAR,mProblem->getSize(0),mProblem->getSize(1),mProblem->getSize(2),
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,1,0,0,0,&mDa);CHKERRXX(ierr);
 
@@ -78,7 +78,7 @@ PetscErrorCode PoissonSolver::computeResidual()
 {
     mResComputed = PETSC_TRUE;
     PetscErrorCode ierr;
-    ierr = KSPGetOperators(mKsp,&mA,NULL,NULL);CHKERRQ(ierr);
+    ierr = KSPGetOperators(mKsp,&mA,NULL);CHKERRQ(ierr);
     PetscReal norm;
     ierr = DMCreateGlobalVector(mDa,&mRes);CHKERRQ(ierr);
 //    ierr = VecDuplicate(mRes,&mB);CHKERRQ(ierr);
@@ -154,7 +154,7 @@ PetscErrorCode PoissonSolver::writeToFile(std::string format, std::string fileNa
 #undef __FUNCT__
 #define __FUNCT__ "computeMatrix"
 PetscErrorCode PoissonSolver::computeMatrix(KSP ksp, Mat A,
-                                                Mat B, MatStructure *str, void *ctx)
+                                                Mat B, void *ctx)
 {
 
     PoissonSolver *context = (PoissonSolver*)ctx;
