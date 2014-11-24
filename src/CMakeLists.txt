@@ -48,10 +48,10 @@ target_link_libraries(WarpImage ${ITK_LIBRARIES}
 )
 
 include_directories( ${Boost_INCLUDE_DIR} )
-add_executable(ExtractConvexHull
-    convexHullExtractor.cxx
+add_executable(ExtractRegionOfDtiByMask
+    ExtractRegionOfDtiByMask.cxx
 )
-target_link_libraries(ExtractConvexHull ${ITK_LIBRARIES}
+target_link_libraries(ExtractRegionOfDtiByMask ${ITK_LIBRARIES}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
 )
@@ -103,5 +103,11 @@ add_executable(diffuseImage
 target_link_libraries(diffuseImage ${ITK_LIBRARIES}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+add_executable(SwitchUpperLowerTriangular
+    SwitchUpperLowerTriangular.cxx
+)
+target_link_libraries(SwitchUpperLowerTriangular ${ITK_LIBRARIES}
 )
 
