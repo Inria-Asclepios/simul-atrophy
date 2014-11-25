@@ -17,26 +17,11 @@ int main(int argc, char *argv[])
 {
     const unsigned int ImageDimension = 3;
 
-    if( argc < 6 || argc > 7 )
+    if( argc < 5 || argc > 6 )
     {
         std::cout << "Extract a sub-region from image using the bounding"
                      " box from a label image, with optional padding radius."
-                  << std::endl << "Usage : " << argv[0] << " ImageDimension "
-                  << "inputImage outputImage labelMaskImage [label=1] [padRadius=0]"
-                  << std::endl;
-        if( argc >= 2 &&
-                ( std::string( argv[1] ) == std::string("--help") || std::string( argv[1] ) == std::string("-h") ) )
-        {
-            return EXIT_SUCCESS;
-        }
-        return EXIT_FAILURE;
-    }
-    if( argc < 6 || argc > 7 )
-    {
-        std::cout << "Extract a sub-region from DTI using the bounding"
-                     " box from a label image, with optional padding radius."
-                  << std::endl << "Usage : " << argv[0] << " ImageDimension "
-                  << "inputDiffusionTensorImage outputDiffusionTensorImage labelMaskImage [label=1] [padRadius=0]"
+                  << std::endl << "Usage : " << argv[0] << "inputImage outputImage labelMaskImage [label=1] [padRadius=0]"
                   << std::endl;
         if( argc >= 2 &&
                 ( std::string( argv[1] ) == std::string("--help") || std::string( argv[1] ) == std::string("-h") ) )
@@ -46,32 +31,32 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    // ** Get in the inputs **//
+    std::string inputImageFile(argv[1]), outputImageFile(argv[2]), labelMaskImageFile(argv[3]);
+    const unsigned int label = (argc >= 5) ? atoi(argv[4]) : 1;
+    const unsigned int padWidth = (argc >= 6) ? atoi(argv[5]) : 0;
 
+    // --------------------------------------------------------------------//
     typedef itk::DiffusionTensor3D< float > PixelType;
     //  typedef itk::Image<itk::DiffusionTensor3D<double>, 3>       TensorImageType;
     typedef itk::Image<PixelType, ImageDimension> ImageType;
     typedef itk::ImageFileReader<ImageType>       ReaderType;
     typename ReaderType::Pointer reader = ReaderType::New();
-    reader->SetFileName(argv[2]);
+    reader->SetFileName(inputImageFile);
     reader->Update();
-
-//    typename ImageType::RegionType region;
-    //    typename ImageType::RegionType::SizeType size;
-    //    typename ImageType::RegionType::IndexType index;
 
     typedef itk::Image<unsigned short, ImageDimension> ShortImageType;
     typedef itk::ImageFileReader<ShortImageType> ShortImageReaderType;
     typename ShortImageReaderType::Pointer shortReader = ShortImageReaderType::New();
-    shortReader->SetFileName(argv[4]);
+    shortReader->SetFileName(labelMaskImageFile);
     shortReader->Update();
 
-    const unsigned int label = (argc >= 6) ? atoi(argv[5]) : 1;
     typename ShortImageType::IndexType minIndex, maxIndex, currIndex;
     typename ShortImageType::SizeType  size;
     minIndex.Fill(100000);   maxIndex.Fill(0);
     size.Fill(0);
     itk::ImageRegionConstIteratorWithIndex< ShortImageType > it(shortReader->GetOutput(), shortReader->GetOutput()->GetRequestedRegion());
-    it.Begin();
+    it.GoToBegin();
     while( !it.IsAtEnd() ) {
         if(it.Get() == label) {
             currIndex = it.GetIndex();
@@ -83,18 +68,15 @@ int main(int argc, char *argv[])
         ++it;
     }
 
-    for(int i = 0; i<ImageDimension; ++i)
+    for(unsigned int i = 0; i<ImageDimension; ++i)
         size[i] = maxIndex[i] - minIndex[i] + 1;
 
-    //    region = stats->GetRegion(label);
     typename ImageType::RegionType region;
     region.SetIndex(minIndex);
     region.SetSize(size);
 
     std::cout << "bounding box of label=" << label
               << " : " << region << std::endl;
-
-    const unsigned int padWidth = (argc >= 7) ? atoi(argv[6]) : 0;
 
     region.PadByRadius(padWidth);
 
@@ -118,7 +100,7 @@ int main(int argc, char *argv[])
     typedef itk::ImageFileWriter<ImageType> WriterType;
     typename WriterType::Pointer writer = WriterType::New();
     writer->SetInput(cropper->GetOutput() );
-    writer->SetFileName(argv[3]);
+    writer->SetFileName(outputImageFile);
     writer->Update();
 
     return EXIT_SUCCESS;

@@ -25,11 +25,17 @@ of the vector in which the values are stored for all pixels.
 int main(int argc, char **argv)
 {
     //---------------------  Read input image ----------------------//
+    if (argc < 3) {
+        std::cout<<"usage: "<<argv[0]<<" inputDtiFile outputDtiFile"<<std::endl;
+        return EXIT_FAILURE;
+    }
+    std::string inFile, outFile;
+
     typedef itk::Image<itk::DiffusionTensor3D<double>, 3> ImageType;
     typedef itk::ImageFileReader<ImageType>       ImageReaderType;
 
     ImageReaderType::Pointer reader = ImageReaderType::New();
-    reader->SetFileName(argv[1]);
+    reader->SetFileName(inFile);
     reader->Update();
     ImageType::Pointer tensorImage = reader->GetOutput();
 
@@ -39,7 +45,7 @@ int main(int argc, char **argv)
 
 
     itk::ImageRegionIterator< ImageType > it(tensorImage, tensorImage->GetLargestPossibleRegion());
-    it.Begin();
+    it.GoToBegin();
     typename ImageType::PixelType currPixel;
     while (!it.IsAtEnd()) {
         currPixel = it.Get();
@@ -54,7 +60,7 @@ int main(int argc, char **argv)
     //------------ Write output image -------------------------//
     typedef itk::ImageFileWriter<ImageType>       ImageWriterType;
     ImageWriterType::Pointer writer = ImageWriterType::New();
-    writer->SetFileName(argv[2]);
+    writer->SetFileName(outFile);
     writer->SetInput(tensorImage);
     writer->Update();
 
