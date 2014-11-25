@@ -9,6 +9,7 @@
 #include "itkImageRegionIteratorWithIndex.h"
 #include "itkExtractImageFilter.h"
 //#include "itkLabelStatisticsImageFilter.h"
+#include "itkVersion.h"
 
 #include <string>
 #include <vector>
@@ -21,7 +22,7 @@ int main(int argc, char *argv[])
     {
         std::cout << "Extract a sub-region from image using the bounding"
                      " box from a label image, with optional padding radius."
-                  << std::endl << "Usage : " << argv[0] << "inputImage outputImage labelMaskImage [label=1] [padRadius=0]"
+                  << std::endl << "Usage : " << argv[0] << " inputImage outputImage labelMaskImage [label=1] [padRadius=0]"
                   << std::endl;
         if( argc >= 2 &&
                 ( std::string( argv[1] ) == std::string("--help") || std::string( argv[1] ) == std::string("-h") ) )
