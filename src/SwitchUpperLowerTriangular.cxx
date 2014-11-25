@@ -29,7 +29,7 @@ int main(int argc, char **argv)
         std::cout<<"usage: "<<argv[0]<<" inputDtiFile outputDtiFile"<<std::endl;
         return EXIT_FAILURE;
     }
-    std::string inFile, outFile;
+    std::string inFile(argv[1]), outFile(argv[2]);
 
     typedef itk::Image<itk::DiffusionTensor3D<double>, 3> ImageType;
     typedef itk::ImageFileReader<ImageType>       ImageReaderType;
