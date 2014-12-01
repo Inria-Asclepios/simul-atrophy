@@ -7,6 +7,7 @@
 
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
+#include <itkImageDuplicator.h>
 
 #include <boost/program_options.hpp>
 
@@ -20,6 +21,7 @@ int main(int argc, char **argv)
     double      upperThr;
     double      insideVal;
     double      outsideVal;
+    bool        outsideSameAsInput;
 
     //------------------- Set up the command line options database and parse them -----------------------------//
     boost::program_options::options_description optionsDescription("binarize the input image by setting inside value to the pixels having values within the given range");
@@ -27,10 +29,11 @@ int main(int argc, char **argv)
             ("help,h", "display help message")
             ("input,i", boost::program_options::value< std::string >(&inImgFile), "input FileName")
             ("output,o", boost::program_options::value< std::string >(&outImgFile), "output filename")
-            ("lower,l",boost::program_options::value< double >(&lowerThr), "Lower value")
-            ("upper,u",boost::program_options::value< double >(&upperThr), "Upper value")
+            ("lower,l",boost::program_options::value< double >(&lowerThr), "Lower value, includes this value and above as in the selected region.")
+            ("upper,u",boost::program_options::value< double >(&upperThr), "Upper value, includes this value and below as in the selected region.")
             ("inside,x",boost::program_options::value< double >(&insideVal)->default_value(1), "Inside pixel value")
-            ("outside,y",boost::program_options::value< double >(&outsideVal)->default_value(0), "Outside pixel value")
+            ("outsideSameAsInput,s",boost::program_options::value< bool >(&outsideSameAsInput)->default_value(false), "copy input image everywhere except at the regions with given range")
+            ("outside,y",boost::program_options::value< double >(&outsideVal)->default_value(0), "if outsideSameAsInput is false, sets this value to all regions outside the given range labels.")
             ;
 
     boost::program_options::variables_map options;
@@ -59,18 +62,15 @@ int main(int argc, char **argv)
     reader->Update();
     ImageType::Pointer inImg = reader->GetOutput();
 
-    ImageType::Pointer outImg;
+    typedef itk::ImageDuplicator< ImageType > DuplicatorType;
+    DuplicatorType::Pointer duplicator = DuplicatorType::New();
+    duplicator->SetInputImage(inImg);
+    duplicator->Update();
+    ImageType::Pointer outImg = duplicator->GetModifiableOutput();
+    //fill all pixels with outsideValue or copy image;
+    if(!outsideSameAsInput)
+            outImg->FillBuffer(outsideVal);
 
-        outImg = ImageType::New();
-        outImg->SetRegions(inImg->GetLargestPossibleRegion());
-        outImg->SetOrigin(inImg->GetOrigin());
-        outImg->SetSpacing(inImg->GetSpacing());
-        outImg->SetDirection(inImg->GetDirection());
-        outImg->Allocate();
-        //fill all pixels with outsideValue;
-        outImg->FillBuffer(outsideVal);
-
-    //set 1 all to all the pixels lying in the given range.
     typedef itk::ImageRegionIterator< ImageType >       IteratorType;
     IteratorType    out_it(outImg,outImg->GetLargestPossibleRegion());
     IteratorType    in_it(inImg,inImg->GetLargestPossibleRegion());
@@ -78,7 +78,7 @@ int main(int argc, char **argv)
     for(out_it.GoToBegin(), in_it.GoToBegin(); !out_it.IsAtEnd(); ++out_it, ++in_it) {
         {
             double curr_val = in_it.Get();
-            if(curr_val > lowerThr && curr_val < upperThr )
+            if(curr_val >= lowerThr && curr_val <= upperThr )
                 out_it.Set(insideVal);
         }
     }
