@@ -78,8 +78,8 @@ while num <= options.numOfScales:
     subprocess.call(warpImage + warpImageOptions, shell=True)
 
     #Delete displacement field
-    print "rm " + outputDisp + "\n"
-    subprocess.call("rm " + outputDisp, shell=True)
+    #print "rm " + outputDisp + "\n"
+    #subprocess.call("rm " + outputDisp, shell=True)
 
     #Go to next file
     num += 1

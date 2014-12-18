@@ -1,4 +1,4 @@
-#include"AdLem3D.hxx"
+#include "AdLem3D.hxx"
 #include "GlobalConstants.hxx"
 
 #include <iostream>
@@ -45,7 +45,6 @@ int main(int argc,char **argv)
        15,16,17    //back wall*/
     //    unsigned int wallPos = 6;
     //        wallVelocities.at(wallPos) = 1;
-
     PetscInitialize(&argc,&argv,(char*)0,help);
     {
         //---------------*** Get the atrophy, mask file and result directory ***--------------//
@@ -194,7 +193,6 @@ int main(int argc,char **argv)
         typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D::ScalarImageType,AdLem3D::ScalarImageType,AdLem3D::ScalarImageType> DiffImageFilterType;
         typedef itk::StatisticsImageFilter<AdLem3D::ScalarImageType> StatisticsImageFilterType;
         typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D::VectorImageType, AdLem3D::VectorImageType> VectorComposerType;
-
         AdLem3D::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
         isMaskChanged = true;
         for (int t=1; t<=numOfTimeSteps; ++t) {
@@ -202,7 +200,6 @@ int main(int argc,char **argv)
             std::stringstream timeStep;
             timeStep << t;
             std::string stepString("T"+timeStep.str());
-
             //------------- Modify atrophy map to adapt to the provided mask. ----------------//
             AdLemModel.modifyAtrophy(maskLabels::CSF,0);  //CSF region, set zero atrophy
             AdLemModel.modifyAtrophy(maskLabels::NBR,0);  //non-brain region, set zero atrophy
@@ -312,7 +309,6 @@ int main(int argc,char **argv)
         displacementWriter->SetFileName(resultsPath+resultsFilenamesPrefix+"ComposedField.nii.gz");
         displacementWriter->SetInput(composedDisplacementField);
         displacementWriter->Update();
-
     }
     PetscErrorCode ierr;
     ierr = PetscFinalize();CHKERRQ(ierr);

@@ -5,10 +5,13 @@ import optparse
 
 #parse the command line inputs
 parser = optparse.OptionParser()
-parser.add_option('-i', '--inImage', dest='inImage', help='Filename of the input Segmentation whose convex hull is to be taken after optionally padding with CSF i.e. label=1')
+parser.add_option('-i', '--inImage', dest='inImage', help='Filename of the input Segmentation whose convex hull is to be taken after optionally padding with desired pixel value')
 parser.add_option('-m', '--inMask', dest='inMask', help='Filename of the input skull strip mask that was used in generating segementation mask')
+parser.add_option('-w', '--dilateWidth', dest='dilateWidth', help='Voxel Width with which to dilate the input mask which will determine the width with which to surround the input image by adding input pixelValue')
+parser.add_option('-v', '--pixelAddValue', dest='pixelAddValue', help='Default = 1. Pixel value that will be added at all newly created non-zero location due to dilation of the input mask.')
+parser.add_option('-p', '--beforeCropPadWidth', dest='beforeCropPadWidth', help=' Defalut = 0. Width which will be added to the extracted bounding box region before cropping the input image.')
 parser.add_option('-o', '--outImage', dest='outImage', help='Filename of the output file')
-parser.add_option('-w', '--width', dest='width', help='Voxel Width with which to dilate the input mask')
+parser.add_option('-d', '--dilatedMask', dest='dilatedMask', help='Filename of the output dilated mask, that could be used to extract regions for other images to have same size as the one extracted with this script.')
 
 (options, args) = parser.parse_args()
 
@@ -18,60 +21,45 @@ if options.inImage is None:
 if options.inMask is None:
     options.inMask = raw_input('Enter the input Mask, e.g. a skull strip mask')
 
-if options.outImage is None:
-    options.outImage = raw_input('Enter the output image FileName')
+if options.dilateWidth is None:
+    options.dilateWidth = raw_input('Enter the mask dilation radius in voxel size')
 
-if options.width is None:
-    options.width = raw_input('Enter the mask dilation radius in voxel size')
+if options.pixelAddValue is None:
+    options.pixelAddValue = 1
+
+if options.beforeCropPadWidth is None:
+    options.beforeCropPadWidth = 0
+
+if options.outImage is None:
+    options.outImage = raw_input('Enter the output image fileName')
+
+if options.dilatedMask is None:
+    options.dilatedMask = raw_input('Enter the output dilated image mask fileName')
+
 
 #executables:
 ImageMath = "ImageMath 3 "
 
-outFileTmp = "dilated.nii.gz"
-subprocess.call(ImageMath + outFileTmp + " MD " + options.inMask + " " + options.width, shell=True)
-subprocess.call(ImageMath + outFileTmp + " - " + outFileTmp + " " + options.inMask, shell=True)
+outFileTmp = "tmp.nii.gz"
+dilatedMask = options.dilatedMask
+# Assumptions:
+# 1. The input mask is a binary with 1 being forground pixel.
+
+# Dilate the input mask with the given radius.
+subprocess.call(ImageMath + dilatedMask + " MD " + options.inMask + " " + options.dilateWidth, shell=True)
+
+#Substract the input mask from the dilated image to get a mask of newly added pixel locations.
+subprocess.call(ImageMath + outFileTmp + " - " + dilatedMask + " " + options.inMask, shell=True)
+
+#Multiply the result by the pixel Value to be added to the input image at these locations.
+subprocess.call(ImageMath + outFileTmp + " m " + outFileTmp + " " + options.pixelAddValue, shell=True)
+
+#Add the result to the input image. This means pixelValue gets added at the newly created locations due to dilation of the input mask.
+#This for example can pad a segmented brain image with csf around the skull stripped boundary.
 subprocess.call(ImageMath + outFileTmp + " + " + outFileTmp + " " + options.inImage, shell=True)
-subprocess.call("ExtractRegionFromImage 3 " + outFileTmp + " " + options.outImage + " 1", shell=True)
 
-print "now use: ExtractRegionFromImage 3 " + "inputImage outputImage indexDisplayedabove:axbxc size+index-1"
-# $ ExtractRegionFromImage
-# Usage 1: ExtractRegionFromImage ImageDimension inputImage outputImage minIndex maxIndex 
-# Usage 2: ExtractRegionFromImage ImageDimension inputImage outputImage label 
-
-# $ ExtractRegionFromImage 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPadded.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_segCsfPaddedConvexHull.nii.gz 1
-# ImageRegion (0x7fffcfce0300)
-#   Dimension: 3
-#   Index: [17, 16, 6]
-#   Size: [147, 187, 151]
-
-# $ ExtractRegionFromImage 3 ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped.nii.gz ~/data/patients/002_S_0938Atrophy1/002_S_0938_T0_W1_MNI_Stripped_ConvexHull.nii.gz 17x16x6 163x202x156
-# ImageRegion (0x7fffae1c6a60)
-#   Dimension: 3
-#   Index: [17, 16, 6]
-#   Size: [147, 187, 151]
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Subsampled case:
-# $ExtractRegionFromImage 3 ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb.nii.gz ../results/patients/002_S_0938SubSampled2/002_S_0938SubSampled2_Cereb_ConvexHull.nii.gz 8x8x3 82x101x78
-# ImageRegion (0x7fff96816760)
-#   Dimension: 3
-#   Index: [8, 8, 3]
-#   Size: [75, 94, 76]
-
-# %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-# Creating individual masks of GM, WM and computing volume fractions and assigning atrophy maps accordingly:
-# $ fslmaths -dt int tstMask.nii.gz -thr 3 tstMaskWM.nii.gz
-# $ fslmaths -dt int tstMaskWM.nii.gz -div 3 tstMaskWM.nii.gz
-
-# $ fslmaths -dt int tstMask.nii.gz -uthr 2 tstMaskGmTmp.nii.gz
-# $ fslmaths -dt int tstMaskGmTmp.nii.gz -thr 2 tstMaskGM.nii.gz
-# $ fslmaths -dt int tstMaskGM.nii.gz -div 2 tstMaskGM.nii.gz
-
-# $ fslstats tstMaskGM.nii.gz -V
-# 85150 681200.000000 
-# $ fslstats tstMaskWM.nii.gz -V
-# 72868 582944.000000 
-
+#Extract convex hull bounding box (BB) of the input image using dilated mask after adding the input crop width to the BB.
+subprocess.call("ExtractRegionFromImageByMask 3 " + outFileTmp + " " + options.outImage + " " + dilatedMask + " 1 " + options.beforeCropPadWidth, shell=True)
 
 # %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 # Adapting the cerebellum mask:
