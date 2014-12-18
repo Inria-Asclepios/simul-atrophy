@@ -121,7 +121,7 @@ printAndExecute(command)
 # Note: Do all these before cropping because that way, the cropping and padding can be done at the very end on only those images that are required by the AdLemModel code!
 # ;; Atrophy generation:
 # ;; Combine gmSeg with corticalSturcturesSeg excluding the brain stem and add desired atrophy.
-#  1019  ImageMath 3 tmp.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_1.nii.gz -0.05 ;;GM atrophy 
+#  1019  ImageMath 3 tmp.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_1.nii.gz -0.05 ;;GM atrophy
 #  1020  ImageMath 3 tmp1.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstsegBinaryP4C0.nii.gz -0.1  ;;cs atrophy
 #  1022  ImageMath 3 ../results/patients/003_S_4288GmAtrophy/atrophyGm5pCstructs10p.nii.gz + tmp.nii.gz tmp1.nii.gz  ;;combine the atrophies.
 
@@ -129,13 +129,13 @@ printAndExecute(command)
 # ;; White matter distance from boundary in negative. All other zero; Set the brain stem to zero too.
 distImage = fastOutputPrefix + 'DistMap.nii.gz'
 command = '/home/bkhanal/works/quickTests/build/src/quickTest ' + wmSeg + ' ' + distImage
-#  897  src/quickTest ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2.nii.gz ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImage.nii.gz 
+#  897  src/quickTest ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2.nii.gz ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImage.nii.gz
 printAndExecute(command)
 command = antsPath + '/ImageMath 3 ' + distImage + ' - ' + distImage + ' 1' # make all WM region negative
 #  1047  ImageMath 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedMinus1.nii.gz - ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClipped.nii.gz 1
 printAndExecute(command)
 command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + distImage + ' -o ' + distImage + ' -l 0 -u 1000 -x 0 -s true'  # set all non-WM region to zero.
-#  1048  src/BinarizeThreshold -i ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedMinus1.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz -l 0 -u 10 -x 0 -s true 
+#  1048  src/BinarizeThreshold -i ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedMinus1.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz -l 0 -u 10 -x 0 -s true
 printAndExecute(command)
 
 # Set brain stem area to zero.
@@ -144,7 +144,7 @@ command = antsPath + '/ImageMath 3 ' + tmpImage + ' m ' + stemSeg + ' 1000'
 # 1058  ImageMath 3 tmp.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5brainStemP4C0.nii.gz 10
 printAndExecute(command)
 command = antsPath + '/ImageMath 3 ' + distImage + ' + ' + tmpImage + ' ' + distImage
-# 1062  ImageMath 3 tmp1.nii.gz addtozero tmp.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz 
+# 1062  ImageMath 3 tmp1.nii.gz addtozero tmp.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz
 printAndExecute(command)
 command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + distImage + ' -o ' + distImage + ' -l 0 -u 1000 -x 0 -s true'
 # src/BinarizeThreshold -i tmp1.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceMapClippedThresholdedNobrainStemP4C0.nii.gz -l 1 -u 200 -x 0 -s true
@@ -165,7 +165,7 @@ ssMaskDilated = filePrefix + '_ssMaskDilated.nii.gz'
 #  1009  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_2.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
 #  1016  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstseg.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstsegP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
 #  1027  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1.nii.gz ../results/patients/003_S_4288/inputProcessing/T1P4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1061  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0                                                                                                                                                                                                                                                     
+#  1061  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
 #  1030  src/ExtractRegionOfDtiByMask ../results/patients/003_S_4288/inputProcessing/dt.nii.gz ../results/patients/003_S_4288/inputProcessing/dtP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
 #  1032  src/SwitchUpperLowerTriangular ../results/patients/003_S_4288/inputProcessing/dtP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/dt_itkP4C0.nii.gz
 
