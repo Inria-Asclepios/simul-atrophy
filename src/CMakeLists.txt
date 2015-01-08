@@ -111,9 +111,3 @@ add_executable(SwitchUpperLowerTriangular
 target_link_libraries(SwitchUpperLowerTriangular ${ITK_LIBRARIES}
 )
 
-add_executable(redistributeAtrophy
-    redistributeAtrophy.cxx
-)
-target_link_libraries(redistributeAtrophy ${ITK_LIBRARIES}
-)
-
