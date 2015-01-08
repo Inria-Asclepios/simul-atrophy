@@ -6,3 +6,6 @@ diagnostics/
 build/
 
 /src/Makefile
+/GPATH
+/GRTAGS
+/GTAGS

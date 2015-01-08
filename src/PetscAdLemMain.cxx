@@ -10,9 +10,10 @@
 #include <itkImageFileWriter.h>
 
 #include <itkWarpImageFilter.h>
-#include "InverseDisplacementImageFilter.h"
+//#include "InverseDisplacementImageFilter.h"
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
+#include "itkLabelImageGenericInterpolateImageFunction.h"
 
 #include <itkComposeDisplacementFieldsImageFilter.h>
 
@@ -187,9 +188,10 @@ int main(int argc,char **argv)
         AdLemModel.setAtrophy(baselineAtrophy);
 
         //Define itk types required for the warping of the mask and atrophy map:
-        typedef InverseDisplacementImageFilter<AdLem3D::VectorImageType> FPInverseType;
+        //typedef InverseDisplacementImageFilter<AdLem3D::VectorImageType> FPInverseType;
         typedef itk::WarpImageFilter<AdLem3D::ScalarImageType,AdLem3D::ScalarImageType,AdLem3D::VectorImageType> WarpFilterType;
         typedef itk::NearestNeighborInterpolateImageFunction<AdLem3D::ScalarImageType> InterpolatorFilterNnType;
+	typedef itk::LabelImageGenericInterpolateImageFunction<AdLem3D::ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
         typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D::ScalarImageType,AdLem3D::ScalarImageType,AdLem3D::ScalarImageType> DiffImageFilterType;
         typedef itk::StatisticsImageFilter<AdLem3D::ScalarImageType> StatisticsImageFilterType;
         typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D::VectorImageType, AdLem3D::VectorImageType> VectorComposerType;
@@ -201,15 +203,12 @@ int main(int argc,char **argv)
             timeStep << t;
             std::string stepString("T"+timeStep.str());
             //------------- Modify atrophy map to adapt to the provided mask. ----------------//
-            AdLemModel.modifyAtrophy(maskLabels::CSF,0);  //CSF region, set zero atrophy
-            AdLemModel.modifyAtrophy(maskLabels::NBR,0);  //non-brain region, set zero atrophy
-            AdLemModel.writeAtrophyToFile(resultsPath + resultsFilenamesPrefix + stepString + "AtrophyModified.nii.gz");
+	    // ---------- do the modification after the first step. That means I expect the atrophy map to be valid
+	    // ---------- when input by the user. i.e. only GM/WM has atrophy and 0 on CSF and NBR regions. 
 
             //---------------------------*** Solve the system of equations ****-------------------//
             AdLemModel.solveModel(isMaskChanged);
             //----------------------------**** Write the solutions and residuals ***----------------//
-            //TODO: Add options on command line to decide whether to write each of the results.
-
             AdLemModel.writeVelocityImage(resultsPath+resultsFilenamesPrefix+stepString+"vel.nii.gz");
             AdLemModel.writeDivergenceImage(resultsPath+resultsFilenamesPrefix+stepString+"div.nii.gz");
             if (writeForce) AdLemModel.writeForceImage(resultsPath+resultsFilenamesPrefix+stepString+"force.nii.gz");
@@ -252,7 +251,9 @@ int main(int argc,char **argv)
                 warper->SetOutputDirection(baselineBrainMask->GetDirection());
 
                 InterpolatorFilterNnType::Pointer nnInterpolatorFilter = InterpolatorFilterNnType::New();
+		InterpolatorGllType::Pointer gllInterpolator = InterpolatorGllType::New();
                 warper->SetInterpolator(nnInterpolatorFilter);
+		//warper->SetInterpolator(gllInterpolator);
                 warper->Update();
 
                 //-------------------- ** Compare warped mask with the previous mask ** -----------------------//
@@ -271,8 +272,6 @@ int main(int argc,char **argv)
                     AdLemModel.setBrainMask(warper->GetOutput(),maskLabels::CSF,k,true,maskLabels::NBR);
                     AdLemModel.writeBrainMaskToFile(resultsPath + resultsFilenamesPrefix + stepString+"Mask.nii.gz");
                 }
-//                PetscSynchronizedPrintf(PETSC_COMM_WORLD,"sum of the diff image of two masks for step %d is: %f \n",t,statisticsImageFilter->GetSum());
-
                 //------------------- ******* Warp baseline atrophy with an itk WarpFilter, linear interpolation *******-------//
                 //------------- *** using the inverted composed field *** ---------------//
                 WarpFilterType::Pointer warper1 = WarpFilterType::New();
@@ -283,13 +282,13 @@ int main(int argc,char **argv)
                 warper1->SetOutputDirection(baselineAtrophy->GetDirection());
                 warper1->Update();
                 AdLemModel.setAtrophy(warper1->GetOutput());
-                //WHAT DOES IT MEAN for an atrophy present in some voxels to be
-                //substituted by 0 as a result of these voxels being converted to CSF voxels due to NN interpolation of the mask ??
-                //Or, WHAT ABOUT the dilution of atrophy value due to linear interpolation because of zero atrophy contribution from
-                //the neighboring CSF or NBR regions ?
+                //Atrophy present at the newly created CSF regions are redistributed to the nearest GM/WM tissues voxels.
+	        AdLemModel.modifyAtrophy(maskLabels::CSF,0,true); //redistributeatrophy; then set zero atrophy in CSF region.
+		//AdLemModel.modifyAtrophy(maskLabels::CSF,0,false); //set zero atrophy in CSF region without redistribution.
+		AdLemModel.modifyAtrophy(maskLabels::NBR,0);  //set zero atrophy at non-brain region.
+		AdLemModel.writeAtrophyToFile(resultsPath + resultsFilenamesPrefix + stepString + "AtrophyModified.nii.gz");
 
                 //-------------- **** Warp the baseline image with the inverted composed field with linear interpolation ****------//
-                //TODO: Do this and save only when the debug priority level is set to maximum.
                 WarpFilterType::Pointer warper2 = WarpFilterType::New();
                 warper2->SetDisplacementField(warperField);
                 warper2->SetInput(baselineImage);
@@ -303,6 +302,7 @@ int main(int argc,char **argv)
                 imageWriter->SetFileName(resultsPath + resultsFilenamesPrefix + "WarpedImage" + stepString+ ".nii.gz");
                 imageWriter->SetInput(warper2->GetOutput());
                 imageWriter->Update();
+
             }
         }
         AdLem3D::VectorImageWriterType::Pointer   displacementWriter = AdLem3D::VectorImageWriterType::New();

@@ -1,8 +1,13 @@
 #include "AdLem3D.hxx"
+#include "GlobalConstants.hxx"
 #include"PetscAdLemTaras3D.hxx"
 #include <itkImageRegionIteratorWithIndex.h>
 #include <itkMultiplyImageFilter.h>
 #include <itkMaskImageFilter.h>
+#include "itkConstShapedNeighborhoodIterator.h"
+#include "itkConstNeighborhoodIterator.h"
+#include "itkShapedNeighborhoodIterator.h"
+#include "itkNeighborhoodAlgorithm.h"
 #include<iostream>
 
 #undef __FUNCT__
@@ -351,13 +356,62 @@ bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
 
 }
 
-
 #undef __FUNCT__
 #define __FUNCT__ "modifyAtrophy"
-void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
+void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy, bool makeSumZero) {
+    if(redistributeAtrophy) {
+	int rad = 1; 	// redistribution only on 3X3 neigborhood at present.
+	typedef itk::ConstShapedNeighborhoodIterator< ScalarImageType > ConstShapedNeighborhoodIteratorType;
+	typedef itk::ConstNeighborhoodIterator<	ScalarImageType > ConstNeighborhoodIteratorType;
+	typedef itk::ShapedNeighborhoodIterator< ScalarImageType > ShapedNeighborhoodIteratorType;
+
+	ConstShapedNeighborhoodIteratorType::RadiusType radius;
+	radius.Fill(rad);
+
+	typedef itk::NeighborhoodAlgorithm::ImageBoundaryFacesCalculator< ScalarImageType > FaceCalculatorType;
+	FaceCalculatorType faceCalculator;
+	FaceCalculatorType::FaceListType faceList;
+	faceList = faceCalculator( mAtrophy, mAtrophy->GetRequestedRegion(), radius );
+	FaceCalculatorType::FaceListType::iterator fit;
+	for ( fit=faceList.begin(); fit != faceList.end(); ++fit) {
+	    ConstNeighborhoodIteratorType maskIt( radius, mBrainMask, *fit); //iterate over brain mask to find CSF voxel and its neighboring tissue voxels.
+	    ShapedNeighborhoodIteratorType atrophyIt (radius, mAtrophy, *fit); //iterate over atrophy map to change neighborhood values if required.
+	    for (maskIt.GoToBegin(), atrophyIt.GoToBegin(); !maskIt.IsAtEnd(); ++maskIt, ++atrophyIt) {
+		double eps = 1e-6;
+		if ( (int)maskIt.GetCenterPixel() == maskLabels::CSF) {
+		    ScalarImageType::PixelType atrophyCurrentPixel = atrophyIt.GetCenterPixel();
+		    if (std::abs(atrophyCurrentPixel) > eps) {
+			int adjacentTissueVolume = 0;
+			atrophyIt.ClearActiveList();
+			for (int z = -rad; z <= rad; z++) { //activateIndex is protected so must create offset!
+			    for (int y = -rad; y <= rad; y++) {
+				for (int x = -rad; x <= rad; x++) {
+				    ConstShapedNeighborhoodIteratorType::OffsetType off;
+				    off[0] = x; off[1] = y; off[2] = z;
+				    int neighbMaskPixel = maskIt.GetPixel(off);
+				    if (neighbMaskPixel == maskLabels::GM || neighbMaskPixel == maskLabels::WM) {
+					++adjacentTissueVolume;
+					atrophyIt.ActivateOffset(off);
+				    }
+				}
+			    }
+			}
+			if (adjacentTissueVolume > 0) {
+			    double inc = atrophyCurrentPixel/adjacentTissueVolume;
+			    ShapedNeighborhoodIteratorType::Iterator neighbTissueIt;
+			    for (neighbTissueIt = atrophyIt.Begin(); neighbTissueIt != atrophyIt.End(); neighbTissueIt++)
+				neighbTissueIt.Set(neighbTissueIt.Get() + inc);
+			}
+		    }
+		}
+	    }
+	}
+    }
+
+
     if(!makeSumZero) {
         typedef itk::MaskImageFilter< ScalarImageType, ScalarImageType,
-                ScalarImageType> MaskFilterType;
+				      ScalarImageType> MaskFilterType;
         MaskFilterType::Pointer maskFilter = MaskFilterType::New();
         maskFilter->SetInput(mAtrophy);
         maskFilter->SetMaskImage(mBrainMask);
@@ -378,18 +432,18 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
         for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
             aSum += itInner.Get();
         unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
-                -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
+	    -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
         aSum/=(-1*(double)numOfPixels);
 
         itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
         for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
             ScalarImageType::IndexType pos = itOuter.GetIndex();
             if(pos[0] == mDomainRegion.GetIndex()[0] ||
-                    pos[1] == mDomainRegion.GetIndex()[1] ||
-                    pos[2] == mDomainRegion.GetIndex()[2] ||
-                    pos[0] == mDomainRegion.GetUpperIndex()[0] ||
-                    pos[1] == mDomainRegion.GetUpperIndex()[1] ||
-                    pos[2] == mDomainRegion.GetUpperIndex()[2]) {
+	       pos[1] == mDomainRegion.GetIndex()[1] ||
+	       pos[2] == mDomainRegion.GetIndex()[2] ||
+	       pos[0] == mDomainRegion.GetUpperIndex()[0] ||
+	       pos[1] == mDomainRegion.GetUpperIndex()[1] ||
+	       pos[2] == mDomainRegion.GetUpperIndex()[2]) {
                 itOuter.Set(0);
             } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
                        pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
@@ -397,7 +451,7 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero) {
                        pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
                        pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
                        pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
-                       ) {
+		) {
                 itOuter.Set(aSum);
             }
         }
@@ -552,7 +606,7 @@ void AdLem3D::writeSolutionForMatlab(std::string resultsPath, bool writeSystemMa
     std::ofstream size_file;
     size_file.open(matSizeSysFileName.c_str());
     size_file<<mDomainRegion.GetSize()[0]+1<<" "<<mDomainRegion.GetSize()[1]+1<<" "
-            <<mDomainRegion.GetSize()[2]+1;
+	     <<mDomainRegion.GetSize()[2]+1;
     size_file.close();
 }
 

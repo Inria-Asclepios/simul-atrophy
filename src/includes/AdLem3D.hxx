@@ -119,12 +119,19 @@ public:
     bool isAtrophySumZero(double sumMaxValue);
     ScalarImageType::Pointer getAtrophyImage();
 
-    //By default, the total sum of atrophy is not forced to be zero; use this option
+    //By default:
+    // 1. Total sum of atrophy is not forced to be zero; use this option
     //if you want to enforce IC everywhere, that this is usually the case when you
     //are not using brainMask.
+    // 2. Does not redistribute atrophy. Set this to true if you want to redistribute atrophy.
+    // This is the case when you apply transformation to the atrophy map using linear interpolation but
+    // NN interpolation for the brain mask.
+    // The transforamation and interpolation can result in non-zero atrophy values in the CSF region.
+    // This option will distribute uniformly the volume loss in these CSF regions to the nearest tissue volumes.
+    // And then we can replace the atrophy values in the newly created CSF regions to zero.
     //By default, uses brainMask and sets the value maskValue to all the places
     //where brainMask has the value maskLabel.
-    void modifyAtrophy(int maskLabel, double maskValue, bool makeSumZero = false);
+    void modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy = false, bool makeSumZero = false);
     void scaleAtrophy(double factor);
     void writeAtrophyToFile(std::string fileName);
 
