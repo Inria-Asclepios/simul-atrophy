@@ -26,7 +26,7 @@ int main(int argc,char **argv)
 	return EXIT_FAILURE;
     }
 
-    // Read first line of the table and check if it is in the desired format i.e. labels atrophyValues
+    // Read first line of the table and check if it is in the desired format i.e. labels newValues
     {
 	std::string line;
 	std::getline(labelTable, line);
@@ -34,12 +34,12 @@ int main(int argc,char **argv)
 	std::string checkString;
 	is >> checkString;
 	if(checkString.compare("labels")) {
-	    std::cout<<"incorrect table format. 1st col- labels; 2nd col- atrophyValues"<<std::endl<<"The first word must be: labels"<<std::endl;
+	    std::cout<<"incorrect table format. 1st col- labels; 2nd col- newValues"<<std::endl<<"The first word must be: labels"<<std::endl;
 	    return EXIT_FAILURE;
 	}
 	is >> checkString;
-	if (checkString.compare("atrophyValues")) {
-	    std::cout<<"incorrect table format. 1st col- labels; 2nd col- atrophyValues"<<std::endl<<"The second word must be: atrophyValues"<<std::endl;
+	if (checkString.compare("newValues")) {
+	    std::cout<<"incorrect table format. 1st col- labels; 2nd col- newValues"<<std::endl<<"The second word must be: newValues"<<std::endl;
 	    return EXIT_FAILURE;
 	}
     }
@@ -62,9 +62,9 @@ int main(int argc,char **argv)
     }
     labelTable.close();
 
-    for (LabelWithAtrophyIteratorType labelWithAtrophyIt = labelWithAtrophy.begin(); labelWithAtrophyIt != labelWithAtrophy.end(); ++labelWithAtrophyIt) {
-	std::cout<<labelWithAtrophyIt->first<<" ** "<<labelWithAtrophyIt->second<<std::endl;
-    }
+    // for (LabelWithAtrophyIteratorType labelWithAtrophyIt = labelWithAtrophy.begin(); labelWithAtrophyIt != labelWithAtrophy.end(); ++labelWithAtrophyIt) {
+    // 	std::cout<<labelWithAtrophyIt->first<<" ** "<<labelWithAtrophyIt->second<<std::endl;
+    // }
 
     // Read label image
     typedef itk::ImageFileReader< LabelImageType > LabelImageReaderType;

@@ -111,7 +111,7 @@ add_executable(SwitchUpperLowerTriangular
 target_link_libraries(SwitchUpperLowerTriangular ${ITK_LIBRARIES}
 )
 
-add_executable(createAtrophyMapFromRoi
-  createAtrophyMapFromRoi.cxx
+add_executable(replaceLabelsInLabelImage
+  replaceLabelsInLabelImage.cxx
   )
-target_link_libraries(createAtrophyMapFromRoi ${ITK_LIBRARIES})
+target_link_libraries(replaceLabelsInLabelImage ${ITK_LIBRARIES})
