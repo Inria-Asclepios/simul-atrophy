@@ -57,6 +57,7 @@ while num < options.numOfTimeSteps:
     #print 'command: ' + extractSlice + '\n'
     subprocess.call(extractSlice, shell=True)
     subprocess.call("convert -rotate 180 " + tmp2DImage + " " + tmp2DImage, shell=True)
+    #subprocess.call("convert -rotate 90 " + tmp2DImage + " " + tmp2DImage, shell=True)
 
     #Delete individual 3D files.
     deleteTmpFiles = "rm tmp3DImage" + index + ".nii.gz"
@@ -67,8 +68,5 @@ while num < options.numOfTimeSteps:
 #Now make the animation and delete individual 2D slices:
 subprocess.call('convert slice1*.png -resize ' + options.resize + ' -set delay ' + options.delay + ' ' + options.outputFile, shell=True)
 subprocess.call('rm slice1*.png', shell=True)
-
-
-    
 
 

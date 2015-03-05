@@ -111,7 +111,23 @@ add_executable(SwitchUpperLowerTriangular
 target_link_libraries(SwitchUpperLowerTriangular ${ITK_LIBRARIES}
 )
 
-add_executable(replaceLabelsInLabelImage
-  replaceLabelsInLabelImage.cxx
+add_executable(createImageFromLabelImage
+  createImageFromLabelImage.cxx
   )
-target_link_libraries(replaceLabelsInLabelImage ${ITK_LIBRARIES})
+target_link_libraries(createImageFromLabelImage ${ITK_LIBRARIES}
+    ${Boost_SYSTEM_LIBRARY}
+    ${Boost_PROGRAM_OPTIONS_LIBRARY}
+)
+
+add_executable(pasteImageToBiggerImage
+    pasteImageToBiggerImage.cxx
+)
+target_link_libraries(pasteImageToBiggerImage ${ITK_LIBRARIES}
+)
+
+add_executable(signedDanielssonDistance
+    signedDanielssonDistance.cxx
+)
+target_link_libraries(signedDanielssonDistance ${ITK_LIBRARIES}
+)
+

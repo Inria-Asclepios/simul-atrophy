@@ -17,7 +17,8 @@ parser.add_option('-s', '--ssMask', dest='ssMask', help='Binary skull strip mask
 parser.add_option('--runFast', dest='runFast', action = 'store_true', help='given: run fsl fast to segment gm/wm/csf. Not given: uses the file prefix given to infer the fast segmented files')
 parser.add_option('-H', '--segSmoothness', dest='segSmoothness', help='fsl fast option -H that determines smoothness of the segmented GM/WM/CSF. Default=0.3; Must be provided to determine fast result prefix.')
 parser.add_option('--runFirstAll', dest='runFirstAll', action = 'store_true', help='given: run fsl run_first_all to segment sub-cortical structures. Not given: uses the file prefix given to infer the first segmented files')
-
+parser.add_option('-w', '--dilateWidth', dest='dilateWidth', help='Voxel Width with which to dilate the brain mask which will determine the width with which to surround the segmented image by CSF; Set 0 if you dont want to dilate')
+parser.add_option('-c', '--beforeCropPadWidth', dest='beforeCropPadWidth', help=' Width which will be added to the extracted bounding box region before cropping the input image.')
 
 (options, args) = parser.parse_args()
 
@@ -29,6 +30,11 @@ if options.inImage is None:
     options.inImage = raw_input('Enter a valid structural MRI.')
 inImage = options.inImage
 
+if options.dilateWidth is None:
+    options.dilateWidth = raw_input('Enter the mask dilation radius in voxel size. 0 if you dont want to dilate')
+
+if options.beforeCropPadWidth is None:
+    options.beforeCropPadWidth = raw_input('Enter the pad radius to be used before cropping.')
 
 # Set the paths:
 if options.isCluster is True:
@@ -44,129 +50,75 @@ else:
     AdLemModelPath = '/home/bkhanal/works/AdLemModel'
     myToolsPath = '/home/bkhanal/works/tools'
 
+
+# Command aliases
+binarize = AdLemModelPath + '/build/src/BinarizeThreshold -i '
+ImageMath = antsPath + '/ImageMath 3 '
+
+# If asked do skull stripping, otherwise ask for a brain mask.
 ssImage = filePrefix + '_ss.nii.gz'
 if options.noSkullStripping is True:
     if options.ssMask is None:
         options.ssMask = raw_input('Enter a valid skull strip mask that defines brain region of the input structural MRI')
     ssMask = options.ssMask
     command = fslPath + '/fslmaths ' + inImage + ' -mas ' + ssMask + ' ' + ssImage
-    #fslmaths ../results/patients/testGenerateScript/T1.nii.gz -mas ../results/patients/testGenerateScript/T1_ssMask.nii.gz ../results/patients/testGenerateScript/testingSS.nii.gz
     printAndExecute(command)
 else:
     # Skull strip mask
     ssMask = filePrefix + '_ssMask.nii.gz'
     command = skullStrip + inImage + ' ' + ssImage + ' ' + ssMask
-    #  ./ROBEX ~/works/AdLemModel/results/patients/003_S_4288/T1.nii.gz ~/works/AdLemModel/results/patients/003_S_4288/T1_ss.nii.gz ~/works/AdLemModel/results/patients/003_S_4288/T1_ssMask.nii.gz
     printAndExecute(command)
 
-
-# Do the required segmentations on the skull stripped images:
-# GM, WM, CSF segmentation:
+# If asked, do segmentations using FAST on the skull stripped images:
+fastOutputPrefix = filePrefix
 if options.runFast is True:
     if options.segSmoothness is None:
         options.segSmoothness = '0.3'
-fastOutputPrefix = filePrefix + 'H' + options.segSmoothness
-command = fslPath + '/fast -g --nopve -H ' + options.segSmoothness + ' -o ' + fastOutputPrefix + ' ' + ssImage
-#   863  fast -g --nopve -H 0.5 -o T1H0_5 T1_ss.nii.gz
-printAndExecute(command)
-csfSeg = fastOutputPrefix + '_seg_0.nii.gz'
-gmSeg = fastOutputPrefix + '_seg_1.nii.gz'
-wmSeg = fastOutputPrefix + '_seg_2.nii.gz'
+    command = fslPath + '/fast -g --nopve -H ' + options.segSmoothness + ' -o ' + fastOutputPrefix + ' ' + ssImage
+    printAndExecute(command)
 
-# Cortical substructures segmentation of ssImage except brainStem
-command = fslPath + '/run_first_all -m fast -b -i ' + ssImage + ' -o ' + filePrefix
-#  1011  run_first_all -m fast -b -s L_Accu,L_Amyg,L_Caud,L_Hipp,L_Pall,L_Puta,L_Thal,R_Accu,R_Amyg,R_Caud,R_Hipp,R_Pall,R_Puta,R_Thal -i ../results/patients/003_S_4288/inputProcessing/T1_ss.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll
-printAndExecute(command)
+# If asked, do cortical substructures segmentation of ssImage
+if options.runFirstAll is True:
+    command = fslPath + '/run_first_all -m fast -b -i ' + ssImage + ' -o ' + filePrefix
+    printAndExecute(command)
 csSeg = filePrefix + '_all_fast_firstseg.nii.gz'
 
-#Separate out the stem and nonStem parts and binarize them:
-# Non-stem part
-csNoStemSeg = filePrefix + '_all_fast_firstNoStemSeg.nii.gz'
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + csSeg + ' -o ' + csNoStemSeg + ' -l 16 -u 16.5 -x 0 -s true'
-printAndExecute(command)
-# 1102  src/BinarizeThreshold -i ../results/patients/003_S_4288TestFsl/T1_all_fast_firstseg.nii.gz -o ../results/patients/003_S_4288TestFsl/T1_all_fast_firstsegNoStem.nii.gz -l 16 -u 16.5 -x 0 -s true
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + csNoStemSeg + ' -o ' + csNoStemSeg + ' -l 1 -u 100 -x 1'
-# 1103  src/BinarizeThreshold -i ../results/patients/003_S_4288TestFsl/T1_all_fast_firstsegNoStem.nii.gz -o ../results/patients/003_S_4288TestFsl/T1_all_fast_firstsegNoStemBinary.nii.gz -l 1 -u 100 -x 1
-printAndExecute(command)
 
-#Stem part
-stemSeg = filePrefix + '_all_fast_firstStemSeg.nii.gz'
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + csSeg + ' -o ' + stemSeg + ' -l 16 -u 16.5 -x 1'
-# src/BinarizeThreshold -i ../results/patients/003_S_4288TestFsl/T1_all_fast_firstseg.nii.gz -o ../results/patients/003_S_4288TestFsl/T1_all_fast_firstsegStemBinary.nii.gz -l 16 -u 16.5 -x 1
-printAndExecute(command)
+#If label table is given, use it to create atrophy map.
+# Replace label code and atrophy generation code.
 
 
-# Make a binary mask with object as GM+WM+CS and everything else including CSF as the background.
-gmWmCsNoStemSeg = fastOutputPrefix + '_seg_12_firstAllNoStem.nii.gz' # 3 for CS without stem. Use 4 for CS with stem.
+# Create the segMask for model i.e. with labels: NBR -> 0, CSF -> 1, GM/WM -> 2:
+fastSeg = fastOutputPrefix + '_seg.nii.gz'
+modelSegTmp = 'tmp++segMaskForModel.nii.gz'
+printAndExecute(binarize + fastSeg + ' -o ' + modelSegTmp + ' -l 2 -u 3 -x 2 -s true')
 
-# First combine the cs structures except stem and gm and wm which is still a binary image. 
-command = antsPath + '/ImageMath 3 ' + gmWmCsNoStemSeg + ' + ' +  gmSeg + ' ' + wmSeg
-printAndExecute(command)
-command = antsPath + '/ImageMath 3 ' + gmWmCsNoStemSeg + ' addtozero ' +  gmWmCsNoStemSeg + ' ' + csNoStemSeg
-printAndExecute(command)
-
-#Now remove the brain stem
-tmpImage = 'tmp.nii.gz'
-command = antsPath + '/ImageMath 3 ' + tmpImage + ' m ' +  stemSeg + ' 5 '
-printAndExecute(command)
-command = antsPath + '/ImageMath 3 ' + gmWmCsNoStemSeg + ' + ' +  gmWmCsNoStemSeg + ' ' + tmpImage
-printAndExecute(command)
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + gmWmCsNoStemSeg + ' -o ' + gmWmCsNoStemSeg + ' -l 5 -u 7 -x 0 -s true'
-printAndExecute(command)
-
-command = 'rm ' + tmpImage
-printAndExecute(command)
-
-# If separate atrophy values are desired at different segmentations, use the individual segmentations that are saved and multiply them before adding such as:
-# Note: Do all these before cropping because that way, the cropping and padding can be done at the very end on only those images that are required by the AdLemModel code!
-# ;; Atrophy generation:
-# ;; Combine gmSeg with corticalSturcturesSeg excluding the brain stem and add desired atrophy.
-#  1019  ImageMath 3 tmp.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_1.nii.gz -0.05 ;;GM atrophy
-#  1020  ImageMath 3 tmp1.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstsegBinaryP4C0.nii.gz -0.1  ;;cs atrophy
-#  1022  ImageMath 3 ../results/patients/003_S_4288GmAtrophy/atrophyGm5pCstructs10p.nii.gz + tmp.nii.gz tmp1.nii.gz  ;;combine the atrophies.
+# Fill CSF around the segmentation if non zero mask dilation width is given
+if (options.dilateWidth == '0'):
+    cropMask = ssMask
+else:
+    # Dilate ssMask which will be used to crop segmented images.
+    ssMaskDilated = filePrefix + '_ssMaskDilated.nii.gz'
+    # Dilate the input mask with the given radius.
+    printAndExecute(ImageMath + ssMaskDilated + " MD " + ssMask + " " + options.dilateWidth)
+    #Substract the input mask from the dilated image to get a mask of newly added pixel locations.
+    outFileTmp = 'tmp++Dilation.nii.gz'
+    printAndExecute(ImageMath + outFileTmp + " - " + ssMaskDilated + " " + ssMask)
+    #Add the result to the segmented mask image for the model. This means extra CSF gets added at the newly created locations due to dilation of the brain mask.
+    printAndExecute(ImageMath + modelSegTmp + " + " + outFileTmp + " " + modelSegTmp)
+    cropMask = ssMaskDilated
 
 
-# ;; White matter distance from boundary in negative. All other zero; Set the brain stem to zero too.
-distImage = fastOutputPrefix + 'DistMap.nii.gz'
-command = '/home/bkhanal/works/quickTests/build/src/quickTest ' + wmSeg + ' ' + distImage
-#  897  src/quickTest ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2.nii.gz ~/works/AdLemModel/results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImage.nii.gz
-printAndExecute(command)
-command = antsPath + '/ImageMath 3 ' + distImage + ' - ' + distImage + ' 1' # make all WM region negative
-#  1047  ImageMath 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedMinus1.nii.gz - ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClipped.nii.gz 1
-printAndExecute(command)
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + distImage + ' -o ' + distImage + ' -l 0 -u 1000 -x 0 -s true'  # set all non-WM region to zero.
-#  1048  src/BinarizeThreshold -i ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedMinus1.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz -l 0 -u 10 -x 0 -s true
-printAndExecute(command)
+#Extract convex hull bounding box (BB) of all the images that are required by the model.
+crop = antsPath + '/ExtractRegionFromImageByMask 3 '
+cropPostfix = 'CW' + options.dilateWidth + '.nii.gz'
 
-# Set brain stem area to zero.
-tmpImage = 'tmpImage.nii.gz'
-command = antsPath + '/ImageMath 3 ' + tmpImage + ' m ' + stemSeg + ' 1000'
-# 1058  ImageMath 3 tmp.nii.gz m ../results/patients/003_S_4288/inputProcessing/T1H0_5brainStemP4C0.nii.gz 10
-printAndExecute(command)
-command = antsPath + '/ImageMath 3 ' + distImage + ' + ' + tmpImage + ' ' + distImage
-# 1062  ImageMath 3 tmp1.nii.gz addtozero tmp.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz
-printAndExecute(command)
-command = AdLemModelPath + '/build/src/BinarizeThreshold -i ' + distImage + ' -o ' + distImage + ' -l 0 -u 1000 -x 0 -s true'
-# src/BinarizeThreshold -i tmp1.nii.gz -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceMapClippedThresholdedNobrainStemP4C0.nii.gz -l 1 -u 200 -x 0 -s true
-printAndExecute(command)
+inImageCropped = filePrefix + cropPostfix
+printAndExecute(crop + inImage + " " + inImageCropped + " " + cropMask + " 1 " + options.beforeCropPadWidth)
 
-command = 'rm ' + tmpImage
-printAndExecute(command)
+modelSeg = filePrefix + '_segMaskForModelCW' + options.dilateWidth + '.nii.gz'
+printAndExecute(crop + modelSegTmp + " " + modelSeg + " " + cropMask + " 1 " + options.beforeCropPadWidth)
 
-# Dilate ssMask and which will be used to crop segmented images.
-ssMaskDilated = filePrefix + '_ssMaskDilated.nii.gz'
-
-# ;;pad and crop the ssImage. First add CSF around segmentedImage with the given csfWidth (=4 here). This is done with dilation of the ssMask. Then extract bounding box using the ssMaskDilated after again padding with given cropPad width(=0 here).
-#   872  ../scripts/padCsfInStrippedSkullAndTakeConvexHull.py -i ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg.nii.gz -m ../results/patients/003_S_4288/inputProcessing/T1_ssMask.nii.gz -w 4 -v 1 -p 0 -o ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0.nii.gz -d ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz
-
-# ;; Crop all the required images (for atrophy generation and as model inputs) using ssMaskDilated.
-#  1007  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1008  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_1.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_1.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1009  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_segP4C0_2.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1016  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstseg.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5noStemAll_all_fast_firstsegP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1027  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1.nii.gz ../results/patients/003_S_4288/inputProcessing/T1P4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1061  ExtractRegionFromImageByMask 3 ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholded.nii.gz ../results/patients/003_S_4288/inputProcessing/T1H0_5_seg_2DistanceImageClippedThresholdedP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1030  src/ExtractRegionOfDtiByMask ../results/patients/003_S_4288/inputProcessing/dt.nii.gz ../results/patients/003_S_4288/inputProcessing/dtP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/T1_ssMaskDilatedW4.nii.gz 1 0
-#  1032  src/SwitchUpperLowerTriangular ../results/patients/003_S_4288/inputProcessing/dtP4C0.nii.gz ../results/patients/003_S_4288/inputProcessing/dt_itkP4C0.nii.gz
-
+# Delete all tmp++ prefixed files from the result directory.
+printAndExecute('rm ' + 'tmp++*')
 
