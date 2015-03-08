@@ -14,7 +14,6 @@ def print_and_execute(cmd):
 
 #parse the command line inputs
 parser = optparse.OptionParser()
-parser.add_option('--isCluster', dest='isCluster', action='store_true', help='given: use nef cluster paths. not given: use laptop paths')
 parser.add_option('-m', '--mrOriginal', dest='mrOriginal', help='MRI T1 image. A cropped version of this image will be created ')
 parser.add_option('-i', '--inImage', dest='inImage', help='input freesurfer aparc+aseg file in the same space as the input MR image.')
 parser.add_option('-d', '--distThreshold', dest='distThreshold', help='distance from the tissue up to which  to fill CSF')
@@ -23,13 +22,20 @@ parser.add_option('-t', '--atrophyTables', dest='atrophyTables', help='a file th
 parser.add_option('-r', '--resPath', dest='resPath', help='path to save results. Use . for current working directory.')
 (options, args) = parser.parse_args()
 
+AdLemModelPath = os.getenv('ADLEM_DIR')
+antsPath = os.getenv('ANTS_BIN')
+if AdLemModelPath is None:
+    raise ValueError('environment variable ADLEM_DIR not found')
+if antsPath is None:
+    raise ValueError('environment variable ANTS_BIN not found.')
+
 # Set required paths and binary aliases
-if options.isCluster is True:
-    antsPath = '/epi/asclepios2/bkhanal/antsbin/bin'
-    AdLemModelPath = '/epi/asclepios2/bkhanal/works/AdLemModel'
-else:
-    antsPath = '/home/bkhanal/Documents/softwares/antsbin/bin'
-    AdLemModelPath = '/home/bkhanal/works/AdLemModel'
+# if options.isCluster is True:
+#     antsPath = '/epi/asclepios2/bkhanal/antsbin/bin'
+#     AdLemModelPath = '/epi/asclepios2/bkhanal/works/AdLemModel'
+# else:
+#     antsPath = '/home/bkhanal/Documents/softwares/antsbin/bin'
+#     AdLemModelPath = '/home/bkhanal/works/AdLemModel'
 
 if options.inImage is None:
     options.inImage = raw_input('Enter a valid aparc+aseg freesurfer segmentation')
