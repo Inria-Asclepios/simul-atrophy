@@ -126,7 +126,7 @@ def main():
     if ops.in_cluster is True:
         cluster_mpi = '/opt/openmpi-gcc/current/bin/mpiexec '
         cmd = bu.sophia_nef_pbs_setting() + cluster_mpi + cmd
-        job_name = 'AdLemModel_' + ops.patient.partition('/')[2] #string after /
+        job_name = 'AdLemModel' + ops.time_steps + 'steps'
         #print cmd
         bu.qsub_job(name=job_name, queue='parlong', walltime='12:00:00',
                     procs='nodes=3:xeon:ppn=20', mem='mem=180gb',
