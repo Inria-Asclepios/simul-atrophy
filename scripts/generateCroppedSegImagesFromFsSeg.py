@@ -77,18 +77,18 @@ crop = antsPath + '/ExtractRegionFromImageByMask 3 '
 
 # Binarize input with 1. only tissue excluding all CSF to create distance map. 2. tissue with csf from freesurfer.
 # With freesurfer csf
-inBinaryWithCsf = 'tmp++InBinaryWithCsf.nii.gz'
+inBinaryWithCsf = op.join(resPath, 'tmp++InBinaryWithCsf.nii.gz')
 command = binarize + inImage + ' -o ' + inBinaryWithCsf + ' -l 1 -u 15000'
 print_and_execute(command)
 # Now binary input excluding CSF (i.e. just tissue no CSF at all)
-inBinary = 'tmp++InBinary.nii.gz'
+inBinary = op.join(resPath, 'tmp++InBinary.nii.gz')
 # Extract freesurferCsf labels
-freesurferCsf ='tmp++freesurferCsf.nii.gz'
+freesurferCsf =op.join(resPath, 'tmp++freesurferCsf.nii.gz')
 command = AdLemModelPath + '/build/src/createImageFromLabelImage -t ' + AdLemModelPath + '/configFiles/freeSurferCsfLabels -l ' \
           + inImage + ' -o ' + freesurferCsf
 print_and_execute(command)
 # Change freesurfer csf labels to prepare for binarization of input excluding freesurferCSF.
-freesurferCsfMult = 'tmp++freesurferCsfMult.nii.gz'
+freesurferCsfMult = op.join(resPath, 'tmp++freesurferCsfMult.nii.gz')
 command = ImageMath + freesurferCsfMult + ' m ' + freesurferCsf + ' -300 '  # 221 is max label for CSF region.
 print_and_execute(command)
 command = ImageMath + inBinary + ' + ' + inImage + ' ' + freesurferCsfMult
@@ -98,11 +98,11 @@ command = binarize + inBinary + ' -o ' + inBinary + ' -l 1 -u 15000'
 print_and_execute(command)
 
 # get the distance of the binary input
-distImage = 'tmp++distImage.nii.gz'
+distImage = op.join(resPath, 'tmp++distImage.nii.gz')
 command = getDistance + inBinary + ' ' + distImage
 print_and_execute(command)
 # Extract desired CSF region input distance threshold
-sulcalCsf = 'tmp++sulcalCsf.nii.gz'
+sulcalCsf = op.join(resPath, 'tmp++sulcalCsf.nii.gz')
 command = binarize + distImage + ' -o ' + sulcalCsf + ' -l 0 -u ' + distThreshold
 print_and_execute(command)
 
@@ -160,5 +160,5 @@ command = crop + t1Image + ' ' + t1Cropped + ' ' + cropMask + ' 1 ' + cropPadRad
 print_and_execute(command)
 
 # Delete all tmp++ prefixed files from the result directory.
-command = 'rm ' + 'tmp++*'
+command = 'rm ' + op.join(resPath, 'tmp++*')
 print_and_execute(command)
