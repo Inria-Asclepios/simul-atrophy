@@ -3,7 +3,7 @@ import subprocess
 import optparse
 import os
 import os.path as op
-
+import time as tm
 
 def print_and_execute(cmd):
     """
@@ -137,6 +137,7 @@ print_and_execute(command)
 for table in tables[1:]: # from the remaining tables modify the output file
     command = commandPrefix + table + ' -m ' + outAtrophyMap
     print_and_execute(command)
+    tm.sleep(0.2) # wait the command to write the file before launching another one.
 
 # Crop all the images:
 # Make a mask of including CSF regions with distance one more than the input distance.

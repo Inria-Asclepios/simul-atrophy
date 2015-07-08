@@ -1,6 +1,7 @@
 /CMakeLists.txt.user
 *~
 *.vtk
+*.pyc
 results/
 diagnostics/
 build/

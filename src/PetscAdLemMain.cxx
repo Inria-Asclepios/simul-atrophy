@@ -13,6 +13,7 @@
 //#include "InverseDisplacementImageFilter.h"
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
+#include <itkBSplineInterpolateImageFunction.h>
 #include "itkLabelImageGenericInterpolateImageFunction.h"
 
 #include <itkComposeDisplacementFieldsImageFilter.h>
@@ -302,6 +303,25 @@ int main(int argc,char **argv)
                 imageWriter->SetFileName(resultsPath + resultsFilenamesPrefix + "WarpedImage" + stepString+ ".nii.gz");
                 imageWriter->SetInput(warper2->GetOutput());
                 imageWriter->Update();
+
+                //-------------- **** Warp the baseline image with b-spline interpolation too. ****------//
+		typedef itk::BSplineInterpolateImageFunction<AdLem3D::ScalarImageType> InterpolatorFilterType;
+		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
+		interpolatorFilter->SetSplineOrder(3);
+                WarpFilterType::Pointer warper3 = WarpFilterType::New();
+                warper3->SetDisplacementField(warperField);
+		warper3->SetInterpolator(interpolatorFilter);
+                warper3->SetInput(baselineImage);
+                warper3->SetOutputSpacing(baselineImage->GetSpacing());
+                warper3->SetOutputOrigin(baselineImage->GetOrigin());
+                warper3->SetOutputDirection(baselineImage->GetDirection());
+                warper3->Update();
+                AdLem3D::ScalarImageWriterType::Pointer imageWriter1 = AdLem3D::ScalarImageWriterType::New();
+                //Write with the stepString lying at the end of the filename so that other tool can combine all the images
+                //into 4D by using the number 1, 2, 3 ... at the end.
+                imageWriter1->SetFileName(resultsPath + resultsFilenamesPrefix + "WarpedImageBspline" + stepString+ ".nii.gz");
+                imageWriter1->SetInput(warper3->GetOutput());
+                imageWriter1->Update();
 
             }
         }
