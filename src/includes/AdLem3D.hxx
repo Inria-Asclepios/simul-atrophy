@@ -55,6 +55,11 @@ public:
     int getYnum() const;
     int getZnum() const;
 
+
+    int getXspacing() const;
+    int getYspacing() const;
+    int getZspacing() const;
+
     //--**********Boundary condition related functions**************//
     bcType getBcType() const;
     void setWallVelocities(std::vector<double>& wallVelocities);

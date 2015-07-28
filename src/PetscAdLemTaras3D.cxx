@@ -1004,9 +1004,10 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for the linear solve \n");
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx = 1;//1./(mx-1);
-    Hy = 1;//1./(my-1);
-    Hz = 1;//1./(mz-1);
+    Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
+    Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
+    Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid spacings hx, hy, hz: (%d, %d, %d)\n", Hx, Hy, Hz);
     HyHzdHx = (Hy*Hz)/Hx;
     HxHzdHy = (Hx*Hz)/Hy;
     HxHydHz = (Hx*Hy)/Hz;
@@ -1285,9 +1286,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da, 0, &mx, &my, &mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx   = 1;//1.0 / (PetscReal)(mx-1);
-    Hy   = 1;//1.0 / (PetscReal)(my-1);
-    Hz   = 1;//1.0 / (PetscReal)(mz-1);
+    Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
+    Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
+    Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
+
+    // Hx   = 1;//1.0 / (PetscReal)(mx-1);
+    // Hy   = 1;//1.0 / (PetscReal)(my-1);
+    // Hz   = 1;//1.0 / (PetscReal)(mz-1);
 
     //Gradient of A.
     PetscReal gradAx;

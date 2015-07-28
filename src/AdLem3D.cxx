@@ -283,6 +283,27 @@ int AdLem3D::getZnum() const
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "getXspacing"
+int AdLem3D::getXspacing() const
+{
+    return mBrainMask->GetSpacing()[0];
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getYspacing"
+int AdLem3D::getYspacing() const
+{
+    return mBrainMask->GetSpacing()[1];
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getZspacing"
+int AdLem3D::getZspacing() const
+{
+    return mBrainMask->GetSpacing()[2];
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "solveModel"
 void AdLem3D::solveModel(bool operatorChanged)
 {
