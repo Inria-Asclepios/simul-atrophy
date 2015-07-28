@@ -1007,7 +1007,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
     Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
     Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
-    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid spacings hx, hy, hz: (%d, %d, %d)\n", Hx, Hy, Hz);
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid spacings hx, hy, hz: (%f, %f, %f)\n", Hx, Hy, Hz);
     HyHzdHx = (Hy*Hz)/Hx;
     HxHzdHy = (Hx*Hz)/Hy;
     HxHydHz = (Hx*Hy)/Hz;
