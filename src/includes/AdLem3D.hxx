@@ -56,9 +56,9 @@ public:
     int getZnum() const;
 
 
-    int getXspacing() const;
-    int getYspacing() const;
-    int getZspacing() const;
+    double getXspacing() const;
+    double getYspacing() const;
+    double getZspacing() const;
 
     //--**********Boundary condition related functions**************//
     bcType getBcType() const;
