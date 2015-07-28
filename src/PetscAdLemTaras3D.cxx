@@ -10,7 +10,8 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     PetscErrorCode ierr;
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dmda of size: (%d,%d,%d)\n",
                             model->getXnum()+1,model->getYnum()+1,model->getZnum()+1);
-
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid with the spacings hx, hy, hz: (%f,%f,%f)\n",
+                            model->getXspacing(),model->getYspacing(),model->getZspacing());
     mParaVecsCreated = PETSC_FALSE;
     if(mIsMuConstant)
         PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!");
