@@ -190,6 +190,11 @@ double PetscAdLem3D::getDivergenceAt(unsigned int pos[])
     xn = mProblemModel->getXnum()+1;
     yn = mProblemModel->getYnum()+1;
     zn = mProblemModel->getZnum()+1;
+    //Get the spacings
+    PetscReal hx, hy, hz;
+    hx = mProblemModel->getXspacing();
+    hy = mProblemModel->getYspacing();
+    hz = mProblemModel->getZspacing();
 
     if(x<0 || x>=xn-1 || y<0 || y>=yn-1 || z<0 || z>=zn-1) //>=xn-1 because xn has one bigger size than the input size of the model!
         SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_ARG_OUTOFRANGE,"out of range position asked for velocity solution.\n");
@@ -197,12 +202,12 @@ double PetscAdLem3D::getDivergenceAt(unsigned int pos[])
     //Velocity solution were computed at faces, so the divergence lies in the cell centers.
     double divergence;
     //a = vx(i+1,j,k) - vx(i,j,k) + vy(i,j+1,k) - vy(i,j,k) + vz(i,j,k+1) - vz(i,j,k)
-        divergence = mSolArray[(x+1 + xn*y + xn*yn*z)*4 + 0]
-                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 0]
-                    +mSolArray[(x + xn*(y+1) + xn*yn*z)*4 + 1]
-                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 1]
-                    +mSolArray[(x + xn*y + xn*yn*(z+1))*4 + 2]
-                    -mSolArray[(x + xn*y + xn*yn*z)*4 + 2];
+    divergence = (mSolArray[(x+1 + xn*y + xn*yn*z)*4 + 0]
+		  -mSolArray[(x + xn*y + xn*yn*z)*4 + 0])/hx;
+    divergence += (mSolArray[(x + xn*(y+1) + xn*yn*z)*4 + 1]
+		   -mSolArray[(x + xn*y + xn*yn*z)*4 + 1])/hy;
+    divergence += (mSolArray[(x + xn*y + xn*yn*(z+1))*4 + 2]
+		   -mSolArray[(x + xn*y + xn*yn*z)*4 + 2])/hz;
     PetscFunctionReturn(divergence);
 }
 
