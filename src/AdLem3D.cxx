@@ -51,29 +51,37 @@ void AdLem3D::setWallVelocities(std::vector<double>& wallVelocities) {
 #undef __FUNCT__
 #define __FUNCT__ "setLameParameters"
 void AdLem3D::setLameParameters(bool isMuConstant, bool useTensorLambda,
-                                double muCsf, double muRatio,
-                                double lambdaCsf, double lambdaRatio, std::string lambdaImageFile)
+                                double muBrain, double muCsf,
+                                double lambdaBrain, double lambdaCsf,
+				std::string lambdaImageFile, std::string muImageFile)
 {
     mIsMuConstant = isMuConstant;
     mUseTensorLambda = useTensorLambda;
+    mMuBrain = muBrain;
     mMuCsf = muCsf;
+    mLambdaBrain = lambdaBrain;
     mLambdaCsf = lambdaCsf;
-    if(isMuConstant) {
-        mMuGm = muCsf;
-    } else {
-        mMuGm = muCsf*muRatio;
+    if(!isMuConstant) { // That is if not even piecewise constant, use image.
+        ScalarImageReaderType::Pointer   scalarImageReader = ScalarImageReaderType::New();
+        scalarImageReader->SetFileName(muImageFile);
+        scalarImageReader->Update();
+        setMu(scalarImageReader->GetOutput());
     }
-    mMuWm = mMuGm;
     if(useTensorLambda) {
         TensorImageReaderType::Pointer   tensorImageReader = TensorImageReaderType::New();
         tensorImageReader->SetFileName(lambdaImageFile);
         tensorImageReader->Update();
         setLambda(tensorImageReader->GetOutput());
-    } else {
-        mLambdaGm = lambdaCsf*lambdaRatio;
-        mLambdaWm = lambdaCsf*lambdaRatio;
     }
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "setMu"
+void AdLem3D::setMu(ScalarImageType::Pointer inputMu)
+{
+    mMu = inputMu;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "setLambda"
@@ -189,7 +197,19 @@ int AdLem3D::getSkullLabel()
 #define __FUNCT__ "muAt"
 double AdLem3D::muAt(int x, int y, int z) const
 {
-    return mMuCsf;
+    if (mIsMuConstant) {
+	if (brainMaskAt(x, y, z) == maskLabels::CSF)
+	    return mMuCsf;
+	else
+	    return mMuBrain;
+    }
+    else {
+	ScalarImageType::IndexType pos;
+	pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
+        pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
+        pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+        return (mMu->GetPixel(pos));
+    }
 }
 
 #undef __FUNCT__
@@ -207,8 +227,13 @@ double AdLem3D::lambdaAt(int x, int y, int z,
     // If the model is initialized for scalar lambda then it is same as
     // lamda times identity matrix. So all non-diagonal elements are zero
     // while diagonal elements are the scalar value.
-    if (Li == Lj)
-        return mLambdaCsf;
+    if (Li == Lj) {
+	if (brainMaskAt(x, y, z) == maskLabels::CSF)
+	    return mLambdaCsf;
+	else
+	    return mLambdaBrain;
+
+    }
     else
         return 0.0;
 }

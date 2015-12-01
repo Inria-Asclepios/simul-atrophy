@@ -22,22 +22,36 @@
 #include <itkStatisticsImageFilter.h>
 #include <itkMultiplyImageFilter.h>
 
-static char help[] = "Solves AdLem model.\n\n";
+static char help[] = "Solves AdLem model. Arguments: \n"
+    "-muFile: Lame parameter mu image file. Use this if mu is spatially varying\n"
+    "         If piecewise constant in tissue and in CSF, use -parameters instead.\n\n"
+    "-parameters: String that provides Lame parameters separated by a space in the "
+    "following order:\n"
+    "             muBrain muCsf lambdaBrain lambdaCsf. E.g. -parameters "
+    "'2.4 4.5 1.2 3'\n\n"
+    "-atrophyFile: Filename of a valid existing atrophy file that prescribes desired volume change.\n\n"
+    "-maskFile: Segmentation file that segments the image into CSF, tissue and non-brain regions.\n\n"
+    "-imageFile: Input image filename.\n\n"
+    "-useTensorLambda: true or false. If true must provide a DTI image for lame parameter lambda.\n\n"
+    "-lambdaFile: filename of the DTI lambda-value image. Used when -useTensorlambda is true.\n\n"
+    "-numOfTimeSteps: number of time-steps to run the model.\n\n"
+    "-resPath: Path where all the results are to be placed.\n\n"
+    "-resultsFilenamesPrefix: Prefix to be added to all output files.\n\n"
+    "-writePressure: true or false; write/not write the pressure image file output.\n\n"
+    "-writeForce: true or false; write/not write the force image file output.\n\n"
+    "-writeResidual: true or false; write/not write the residual image file output.\n\n"
+    ;
 
 #undef __FUNCT__
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
-    std::string     atrophyFileName, maskFileName, lambdaFileName;
+    std::string     atrophyFileName, maskFileName, lambdaFileName, muFileName;
     std::string     baselineImageFileName;  //used only when debug priority is highest.
     std::string     resultsPath;            // Directory where all the results will be stored.
     std::string     resultsFilenamesPrefix;           // Prefix for all the filenames of the results to be stored in the resultsPath.
-    bool            useTensorLambda;
-    int             numOfTimeSteps;
-    bool            isMaskChanged;
-    // Options for results storage: Velocity and divergence will always be written to file. For others options must be passed.
-    bool            writePressure, writeForce, writeResidual;
-
+    bool            useTensorLambda, isMuConstant;
+    std::vector<float> lameParas(4); //muBrain, muCsf, lambdaBrain, lambdaCsf
     std::vector<double> wallVelocities(18);
     /*0,1,2,     //south wall
        3,4,5,     //west wall
@@ -47,12 +61,44 @@ int main(int argc,char **argv)
        15,16,17    //back wall*/
     //    unsigned int wallPos = 6;
     //        wallVelocities.at(wallPos) = 1;
+        // Options for results storage: Velocity and divergence will always be written to file. For others options must be passed.
+    int             numOfTimeSteps;
+    bool            isMaskChanged;
+    bool            writePressure, writeForce, writeResidual;
+
     PetscInitialize(&argc,&argv,(char*)0,help);
     {
-        //---------------*** Get the atrophy, mask file and result directory ***--------------//
+        //---------------*** Get the parameters, atrophy, mask file, input image and result directory ***--------------//
         PetscErrorCode ierr;
         PetscBool optionFlag = PETSC_FALSE;
         char optionString[PETSC_MAX_PATH_LEN];
+	ierr = PetscOptionsGetString(NULL,"-muFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(optionFlag) {//Use image option only when mu is not even piecewise constant.
+	    muFileName = optionString;
+	    isMuConstant = false;
+	}
+	else{//Provide parameters from options when mu is piecewise consant.
+	    muFileName = "";
+	    isMuConstant = true;
+	}
+
+	ierr = PetscOptionsGetString(NULL,"-parameters",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(!optionFlag){
+	    if(muFileName.empty()) {
+		std::cerr<<"Must provide -parameters when -muFile not given\n";
+		return(EXIT_FAILURE);
+	    }//Set all paras to 1 but this isn't supposed to be used by the program.
+	    //rather values should be used from muImageFileName.
+	    for(int i=0; i<4; ++i){
+		lameParas[i] = 1.;
+	    }
+	}
+	else {//Set values that will be used instead of the image.
+	    std::stringstream parStream(optionString);
+	    for(int i=0; i<4; ++i){
+		parStream >> lameParas[i];
+	    }
+	}
 
         ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) atrophyFileName = optionString;
@@ -139,14 +185,13 @@ int main(int argc,char **argv)
         //------------------------*** Set up the model parameters ***-----------------------//
         AdLem3D AdLemModel; //xn,yn,zn,1,1,1,1);
         AdLemModel.setWallVelocities(wallVelocities);
-        if(useTensorLambda) {
-            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using tensor image to get lambda\n");
-            AdLemModel.setLameParameters(true,true,1,1,1,1,lambdaFileName);
-        }
-        else {
+	AdLemModel.setLameParameters(
+		isMuConstant, useTensorLambda, lameParas[0], lameParas[1], lameParas[2],
+		lameParas[3], lambdaFileName, muFileName);
+        if(useTensorLambda)
+	    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using tensor image to get lambda\n");
+        else
             PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using scalar lambda\n");
-            AdLemModel.setLameParameters(true,false);
-        }
 
         //-------******** Read baseline image ****** ---------------//
         //TODO: Do this only when debug priority is set highest.
@@ -205,7 +250,7 @@ int main(int argc,char **argv)
             std::string stepString("T"+timeStep.str());
             //------------- Modify atrophy map to adapt to the provided mask. ----------------//
 	    // ---------- do the modification after the first step. That means I expect the atrophy map to be valid
-	    // ---------- when input by the user. i.e. only GM/WM has atrophy and 0 on CSF and NBR regions. 
+	    // ---------- when input by the user. i.e. only GM/WM has atrophy and 0 on CSF and NBR regions.
 
             //---------------------------*** Solve the system of equations ****-------------------//
             AdLemModel.solveModel(isMaskChanged);
@@ -219,6 +264,21 @@ int main(int argc,char **argv)
             //--------------- Compose velocity fields before inversion and the consequent warping ---------------//
             if(t == 1) {
                 composedDisplacementField = AdLemModel.getVelocityImage();
+		typedef itk::BSplineInterpolateImageFunction<AdLem3D::ScalarImageType> InterpolatorFilterType;
+		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
+		interpolatorFilter->SetSplineOrder(3);
+                WarpFilterType::Pointer warper3 = WarpFilterType::New();
+                warper3->SetDisplacementField(composedDisplacementField);
+		warper3->SetInterpolator(interpolatorFilter);
+                warper3->SetInput(baselineImage);
+                warper3->SetOutputSpacing(baselineImage->GetSpacing());
+                warper3->SetOutputOrigin(baselineImage->GetOrigin());
+                warper3->SetOutputDirection(baselineImage->GetDirection());
+                warper3->Update();
+                AdLem3D::ScalarImageWriterType::Pointer imageWriter1 = AdLem3D::ScalarImageWriterType::New();
+                imageWriter1->SetFileName(resultsPath + resultsFilenamesPrefix + "WarpedImageBspline" + stepString+ ".nii.gz");
+                imageWriter1->SetInput(warper3->GetOutput());
+                imageWriter1->Update();
             }
             else {
                 VectorComposerType::Pointer vectorComposer = VectorComposerType::New();

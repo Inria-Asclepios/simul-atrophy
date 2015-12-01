@@ -2,83 +2,73 @@
 import os
 import os.path as op
 import sys
-import optparse
+import argparse as ag
 import bish_utils as bu
 
 def get_input_options():
     """ command line interface, get input options and interact with the user
     """
     #parse the command line inputs
-    parser = optparse.OptionParser()
-    parser.add_option('-p', '--patientID', dest='patient', help='patient dir at'
-                      ' $ADLEM_DIR/results/patients/ which contains all the '
-                      'inputs required by this script. Results will also be '
-                      ' written here.')
-    parser.add_option('-a', '--atrophy', dest='atrophy', help='input atrophy '
-                      'file.')
-    parser.add_option('-s', '--in_seg', dest='in_seg', help='input brain seg ')
-    parser.add_option('--use_dti', dest='use_dti', action='store_true', help=
-                      'If the option is provided, input DTI must be given with'
-                      ' the option -d')
-    parser.add_option('-d', '--in_dti', dest='in_dti', help='valid '
-                      'tensor image file present in patientID directory.')
-    parser.add_option('-f', '--res_prefix', dest='res_prefix', help='prefix to'
-                      ' be added to all the output filenames')
-    parser.add_option('-i', '--in_img', dest='in_img', help='valid input image '
-                      'that will be warped by the obtained displacement fields '
-                      'from the model.')
-    parser.add_option('-t', '--time_steps', dest='time_steps', help='(integer) '
-                      'number of time steps you want to solve the system.')
-    parser.add_option('--wrt_press', dest='wrt_press', action='store_true',
-                      help='Write pressure map on the disk.')
-    parser.add_option('--wrt_force', dest='wrt_force', action='store_true',
-                      help='Write force on the the disk.')
-    parser.add_option('--wrt_residual', dest='wrt_residual', action='store_true'
-                      , help='Write residual on the disk.')
-    parser.add_option('--in_cluster', dest='in_cluster', action='store_true',
-                      help='If the option is provided, launches as a job on the'
-                      ' cluster.')
+    parser = ag.ArgumentParser()
+    parser.add_argument(
+        'patient', help='patient dir at $ADLEM_DIR/results/patients/ which '
+        'contains all the inputs required by this script. Results will also be '
+        ' written here.')
+    parser.add_argument(
+        'res_prefix', help='prefix to be added to all the output filenames')
+    parser.add_argument('lame_paras', help='input lame parameters: '
+                        'Format: "muTissue muCsf lambdaTissue lambdaCsf" '
+                        'If both --mu_image and --in_dti used, lame_paras wont'
+                        ' be used and those images will be used instead. ')
+    parser.add_argument('atrophy', help='input atrophy file.')
+    parser.add_argument('in_seg', help='input brain seg ')
+    parser.add_argument(
+        'in_img', help='valid input image that will be warped by the obtained'
+        ' displacement fields from the model.')
+    parser.add_argument('time_steps', help='(integer) '
+                        'number of time steps you want to solve the system.')
+    parser.add_argument('-m', '--mu_file', help='input mu image file: ')
+    parser.add_argument('--use_dti', dest='use_dti', action='store_true',
+                        help='If the option is provided, input DTI must be '
+                        'given with the option -d')
+    parser.add_argument('-d', '--in_dti', help='valid tensor image file present'
+                        ' in patientID directory.')
+    parser.add_argument('--wrt_press', action='store_true',
+                        help='Write pressure map on the disk.')
+    parser.add_argument('--wrt_force', action='store_true',
+                        help='Write force on the the disk.')
+    parser.add_argument('--wrt_residual', action='store_true',
+                        help='Write residual on the disk.')
+    parser.add_argument('--in_cluster', action='store_true',
+                        help='If provided, launches as a job on the cluster.')
+    parser.add_argument('--no_petsc_summary', action='store_true',
+                        help='If provided, does not detail the petsc outputs.')
 
-    (ops, args) = parser.parse_args()
-    if ops.patient is None:
-        ops.patient = raw_input('Enter a valid existing patient directory name')
-    if ops.time_steps is None:
-        ops.time_steps = raw_input('Enter num_of_time_steps to solve.')
-    if ops.in_img is None:
-        ops.in_img = raw_input('Enter image file that will be warped by the '
-                               'obtained displacement fields.')
-    if ops.atrophy is None:
-        ops.atrophy = raw_input('Enter a valid atrophy file.')
-    if ops.in_seg is None:
-        ops.in_seg = raw_input('Enter a valid segmented image ')
-    if ops.use_dti is True:
+    ops = parser.parse_args()
+    if ops.use_dti:
         if ops.in_dti is None:
             ops.in_dti = raw_input('Enter a DTI file (since you are using '
                                    '--use_dti.):  ')
-    if ops.res_prefix is None:
-        ops.res_prefix = raw_input('Enter a prefix string to be added to all '
-                                   'the output filenames')
     return ops
 
 
-def get_petsc_options():
+def get_petsc_options(no_detailed_output):
     """ Return petsc options. Change the code as required for different
-    options you want. Always puts one character space at the beginning and at
-    the end.
+    options you want.
     """
-    # Put one character space at the beginning and the end!
-    ops = (' -pc_type fieldsplit -pc_fieldsplit_type schur '
+    ops = ('-pc_type fieldsplit -pc_fieldsplit_type schur '
            '-pc_fieldsplit_schur_precondition self -pc_fieldsplit_dm_splits 0 '
            '-pc_fieldsplit_0_fields 0,1,2 -pc_fieldsplit_1_fields 3 '
-           '-fieldsplit_0_pc_type hypre ')
+           '-fieldsplit_0_pc_type hypre')
     #monitor options
     # ops = ops + ('-fieldsplit_0_ksp_converged_reason -fieldsplit_0_ksp_max_it'
     #            ' 100 -ksp_converged_reason')
-    ops = ops + ('-fieldsplit_1_ksp_converged_reason -ksp_converged_reason ')
-    # ops = ops + ('-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 -ksp_rtol 1.0e-8 '
-    #              '-ksp_monitor_true_residual')
-    ops = ops + ('-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_'
-                 'residual -log_summary -ksp_view ')
+    if not no_detailed_output:
+        ops = ops+(' -fieldsplit_1_ksp_converged_reason -ksp_converged_reason')
+        # ops = ops + ('-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 -ksp_rtol 1.0e-8 '
+        #              '-ksp_monitor_true_residual')
+        ops = ops + (' -fieldsplit_1_ksp_monitor_true_residual '
+                     '-ksp_monitor_true_residual -log_summary -ksp_view')
     return ops
 
 
@@ -116,13 +106,26 @@ def main():
         wrt_residual = 'true'
     else:
         wrt_residual = 'false'
-    petsc_ops = get_petsc_options()
-    cmd = target + ' -atrophyFile ' + atrophy + ' -useTensorLambda ' + use_dti+\
-          ' -lambdaFile ' + in_dti + ' -maskFile ' + in_seg + ' -imageFile ' + \
-          in_img + ' -numOfTimeSteps ' + ops.time_steps + ' -resPath '+res_path\
-          + ' -resultsFilenamesPrefix ' + ops.res_prefix + ' -writePressure ' +\
-          wrt_press + ' -writeForce ' + wrt_force + ' -writeResidual ' + \
-          wrt_residual + petsc_ops
+    petsc_ops = get_petsc_options(ops.no_petsc_summary)
+    if ops.mu_file:
+        mu_file = op.join(res_dir, ops.mu_file)
+        mu_ops = '-parameters "%s" -muFile %s' % (ops.lame_paras, mu_file)
+    else:
+        mu_ops = '-parameters "%s"' % (ops.lame_paras)
+
+    cmd = ('%s %s -atrophyFile %s -maskFile %s -imageFile %s -useTensorLambda '
+           '%s -lambdaFile %s -numOfTimeSteps %s -resPath %s '
+           '-resultsFilenamesPrefix %s -writePressure %s -writeForce %s '
+           '-writeResidual %s %s'
+           % (target, mu_ops, atrophy, in_seg, in_img, use_dti, in_dti,
+              ops.time_steps, res_path, ops.res_prefix, wrt_press, wrt_force,
+              wrt_residual, petsc_ops)) # check spaces in petsc_ops.
+    # cmd = target + ' -atrophyFile ' + atrophy + ' -useTensorLambda ' + use_dti+\
+    #       ' -lambdaFile ' + in_dti + ' -maskFile ' + in_seg + ' -imageFile ' + \
+    #       in_img + ' -numOfTimeSteps ' + ops.time_steps + ' -resPath '+res_path\
+    #       + ' -resultsFilenamesPrefix ' + ops.res_prefix + ' -writePressure ' +\
+    #       wrt_press + ' -writeForce ' + wrt_force + ' -writeResidual ' + \
+    #       wrt_residual + petsc_ops
     if ops.in_cluster is True:
         cluster_mpi = '/opt/openmpi-gcc/current/bin/mpiexec '
         cmd = bu.sophia_nef_pbs_setting() + cluster_mpi + cmd

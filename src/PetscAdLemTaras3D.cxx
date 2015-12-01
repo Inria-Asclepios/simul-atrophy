@@ -581,9 +581,10 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3d(
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx = 1;//1./(mx-1);
-    Hy = 1;//1./(my-1);
-    Hz = 1;//1./(mz-1);
+    Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
+    Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
+    Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
+
     HyHzdHx = (Hy*Hz)/Hx;
     HxHzdHy = (Hx*Hz)/Hy;
     HxHydHz = (Hx*Hy)/Hz;
@@ -1005,9 +1006,9 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for the linear solve \n");
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
-    Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
-    Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
+    Hx = user->getProblemModel()->getXspacing();
+    Hy = user->getProblemModel()->getYspacing();
+    Hz = user->getProblemModel()->getZspacing();
     //PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid spacings hx, hy, hz: (%f, %f, %f)\n", Hx, Hy, Hz);
     HyHzdHx = (Hy*Hz)/Hx;
     HxHzdHy = (Hx*Hz)/Hy;
@@ -1287,9 +1288,9 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     PetscFunctionBeginUser;
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da, 0, &mx, &my, &mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
-    Hx = user->getProblemModel()->getXspacing();//0.95;//1;//1./(mx-1);
-    Hy = user->getProblemModel()->getYspacing();//0.95; //1;//1./(my-1);
-    Hz = user->getProblemModel()->getZspacing();//1.5; //;//1./(mz-1);
+    Hx = user->getProblemModel()->getXspacing();
+    Hy = user->getProblemModel()->getYspacing();
+    Hz = user->getProblemModel()->getZspacing();
 
     // Hx   = 1;//1.0 / (PetscReal)(mx-1);
     // Hy   = 1;//1.0 / (PetscReal)(my-1);
@@ -1340,15 +1341,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 else { //interior points, x-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vx = Hy*Hz*(
-                                    (user->lambdaC(i,j,k,0,0)*gradAx) +
-                                    (user->lambdaC(i,j,k,0,1)*gradAy) +
-                                    (user->lambdaC(i,j,k,0,2)*gradAz)
-                                    );
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,0)*gradAx) +
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,1)*gradAy) +
+                            ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,2)*gradAz)
+                            );
                     } else {
-                        // Let's not use mu at all on the right hand side. Can be thought of as being included
-                        // in lamda when we are using constant mu!
                         rhs[k][j][i].vx = Hy*Hz*(
-                                    // user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
+                                    user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
                                     user->lambdaC(i+1,j+1,k+1,0,0) +
                                     user->lambdaC(i,j+1,k+1,0,0)
                                     ) * gradAx / 2.0;
@@ -1379,15 +1378,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 else { //interior points, y-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vy = Hx*Hz*(
-                                    (user->lambdaC(i,j,k,1,0)*gradAx) +
-                                    (user->lambdaC(i,j,k,1,1)*gradAy) +
-                                    (user->lambdaC(i,j,k,1,2)*gradAz)
-                                    );
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,0)*gradAx) +
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,1)*gradAy) +
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,2)*gradAz)
+			    );
                     }else {
-                        // Let's not use mu at all on the right hand side. Can be thought of as being included
-                        // in lamda when we are using constant mu!
                         rhs[k][j][i].vy = Hx*Hz*(
-                                    //user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1) +
+                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1) +
                                     user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
                                              )*gradAy/2.0;
                     }
@@ -1418,15 +1415,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                 else { //interior points, z-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vz = Hx*Hy*(
-                                    (user->lambdaC(i,j,k,2,0)*gradAx) +
-                                    (user->lambdaC(i,j,k,2,1)*gradAy) +
-                                    (user->lambdaC(i,j,k,2,2)*gradAz)
-                                    );
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,0)*gradAx) +
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,1)*gradAy) +
+			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,2)*gradAz)
+			    );
                     } else {
-                        // Let's not use mu at all on the right hand side. Can be thought of as being included
-                        // in lamda when we are using constant mu!
                         rhs[k][j][i].vz = Hx*Hy*(
-//                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k) +
+                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k) +
                                     user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
                                                 )*gradAz/2.0;
                     }

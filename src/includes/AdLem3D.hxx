@@ -73,8 +73,9 @@ public:
     // For tensor value, provide appropriate boolean argument to this function and
     // use setLambda function to provide a tensor image.
     void setLameParameters(bool isMuConstant, bool useTensorLambda,
-                           double muCsf = 1, double muRatio = 1,
-                           double lambdaCsf = 1, double lambdaRatio = 1, std::string lambdaImageFile = "");
+                           double muBrain = 1, double muCsf = 1,
+                           double lambdaBrain = 1, double lambdaCsf = 1,
+			   std::string lambdaImageFile = "", std::string muImageFile = "");
     bool isMuConstant() const;
     bool isLambdaTensor() const;
 
@@ -147,9 +148,9 @@ protected:
     //big number => release IC and allow pressure to vary.
     //the constructor sets it to zero.
     int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
-    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed.
+    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed. (usually CSF regions)
     bool     mSetSkullVelToZero;        //if true, the velocity at all the places in bMask with label value of mDirchletBoundaryLabel will be set to zero.
-    int      mSkullLabel;   //Label value in the brainMask where the velocity will be imposed to be zero
+    int      mSkullLabel;   //Label value in the brainMask where the velocity will be imposed to be zero(usually non-brain regions!)
 
     ScalarImageType::RegionType mDomainRegion;
 
@@ -157,10 +158,11 @@ protected:
 
     //parameters for Gray matter, White matter and Csf:
     TensorImageType::Pointer    mLambda;        //Input diffusion tensor image lambda.
+    ScalarImageType::Pointer    mMu; //Input Mu image; used when isMuConstant is false.
     bool        mUseTensorLambda;
-    double      mMuGm, mMuWm, mMuCsf;
-    double      mLambdaGm, mLambdaWm, mLambdaCsf;
-    bool        mIsMuConstant;
+    double      mMuBrain, mMuCsf;
+    double      mLambdaBrain, mLambdaCsf;
+    bool        mIsMuConstant;//piecewise constant can have different mu values in tissue and CSF.
 
     //Boundary condition:
     AdLem3D::bcType             mBc;
@@ -197,6 +199,7 @@ protected:
     // This method will be called by setLameParameters depending on user's argument to that
     // method.
     void setLambda(TensorImageType::Pointer inputLambda);
+    void setMu(ScalarImageType::Pointer inputMu);
 
     // Internal data access utility methods.
     // The class that inherits will have to provide public interface to these by
