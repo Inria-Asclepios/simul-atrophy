@@ -4,6 +4,8 @@
 #include <itkImageRegionIteratorWithIndex.h>
 #include <itkMultiplyImageFilter.h>
 #include <itkMaskImageFilter.h>
+#include <itkStatisticsImageFilter.h>
+#include <itkLabelStatisticsImageFilter.h>
 #include "itkConstShapedNeighborhoodIterator.h"
 #include "itkConstNeighborhoodIterator.h"
 #include "itkShapedNeighborhoodIterator.h"
@@ -14,24 +16,23 @@
 #define __FUNCT__ "AdLem3D"
 AdLem3D::AdLem3D():mWallVelocities(18)
 {
-    //Initialize with Dirichlet boundary condition, no other boundary condition for now.
-    mBc= AdLem3D::DIRICHLET;
-    mIsBrainMaskSet = false;
+    mIsBrainMaskSet	  = false;
+    mIsBcSet		  = false;
     mPetscSolverTarasUsed = false;
-    mRelaxIcPressureCoeff = 0;  //This gets non-zero only if brain mask is set
+    mRelaxIcPressureCoeff = 0;  //This default changed only when setting brain mask.
 
     // number of times the solver is called.
-    mNumOfSolveCalls = 0;
+    mNumOfSolveCalls		= 0;
     //results allocation track variables
-    mVelocityAllocated = false;
-    mPressureAllocated = false;
-    mForceAllocated = false;
-    mDivergenceAllocated = false;
+    mVelocityAllocated		= false;
+    mPressureAllocated		= false;
+    mForceAllocated		= false;
+    mDivergenceAllocated	= false;
 
-    mVelocityLatest = false;
-    mPressureLatest = false;
-    mForceLatest = false;
-    mDivergenceLatest = false;
+    mVelocityLatest		= false;
+    mPressureLatest		= false;
+    mForceLatest		= false;
+    mDivergenceLatest		= false;
 }
 
 #undef __FUNCT__
@@ -43,8 +44,29 @@ AdLem3D::~AdLem3D()
 
 
 #undef __FUNCT__
+#define __FUNCT__ "setBoundaryConditions"
+void AdLem3D::setBoundaryConditions(std::string boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff) {
+    if((boundaryCondition.compare("dirichlet_at_walls") != 0) &&
+	   (boundaryCondition.compare("dirichlet_at_skull") != 0))
+	    throw "Invalid boundary condition.";
+    else {
+	if(boundaryCondition.compare("dirichlet_at_skull") == 0)
+	    mBc = DIRICHLET_AT_SKULL;
+	else
+	    mBc = DIRICHLET_AT_WALLS;
+    }
+    if(!relaxIcInCsf)
+	if(fabs(relaxIcPressureCoeff) > 1e-6)
+	    throw "cannot set non-zero relaxIcPressureCoeff when relaxIcIncsf is false!";
+    mRelaxIcInCsf = relaxIcInCsf;
+    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "setWallVelocities"
 void AdLem3D::setWallVelocities(std::vector<double>& wallVelocities) {
+    if(mBc != DIRICHLET_AT_WALLS)
+	throw "setWallVelocities can be called only when dirichlet_at_walls boundary condition is set.";
     mWallVelocities = wallVelocities;
 }
 
@@ -55,12 +77,12 @@ void AdLem3D::setLameParameters(bool isMuConstant, bool useTensorLambda,
                                 double lambdaBrain, double lambdaCsf,
 				std::string lambdaImageFile, std::string muImageFile)
 {
-    mIsMuConstant = isMuConstant;
-    mUseTensorLambda = useTensorLambda;
-    mMuBrain = muBrain;
-    mMuCsf = muCsf;
-    mLambdaBrain = lambdaBrain;
-    mLambdaCsf = lambdaCsf;
+    mIsMuConstant	= isMuConstant;
+    mUseTensorLambda	= useTensorLambda;
+    mMuBrain		= muBrain;
+    mMuCsf		= muCsf;
+    mLambdaBrain	= lambdaBrain;
+    mLambdaCsf		= lambdaCsf;
     if(!isMuConstant) { // That is if not even piecewise constant, use image.
         ScalarImageReaderType::Pointer   scalarImageReader = ScalarImageReaderType::New();
         scalarImageReader->SetFileName(muImageFile);
@@ -93,30 +115,33 @@ void AdLem3D::setLambda(TensorImageType::Pointer inputLambda)
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(std::string maskImageFile, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
+int AdLem3D::setBrainMask(std::string maskImageFile, int skullLabel, int relaxIcLabel)
 {
-
-    ScalarImageReaderType::Pointer   imageReader = ScalarImageReaderType::New();
+    if(!mIsBcSet)
+	throw "Boundary conditions must be set before setting brain mask.";
+    IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
     imageReader->SetFileName(maskImageFile);
     imageReader->Update();
-    setBrainMask(imageReader->GetOutput(),relaxIcLabel,relaxIcPressureCoeff, setSkullVelToZero, skullLabel);
+    setBrainMask(imageReader->GetOutput(),skullLabel, relaxIcLabel);
+    return 0;
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
-void AdLem3D::setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel)
+int AdLem3D::setBrainMask(IntegerImageType::Pointer brainMask, int skullLabel, int relaxIcLabel)
 {
-    mBrainMask = brainMask;
-    mRelaxIcLabel = relaxIcLabel;
-    mRelaxIcPressureCoeff = relaxIcPressureCoeff;
-    mSetSkullVelToZero = setSkullVelToZero;
-    mSkullLabel = skullLabel;
-    mIsBrainMaskSet = true;
+    if(mIsBcSet)
+	throw "Boundary conditions must be set before setting brain mask.";
+    mBrainMask			= brainMask;
+    mRelaxIcLabel		= relaxIcLabel;
+    mSkullLabel			= skullLabel;
+    mIsBrainMaskSet		= true;
+    return 0;
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "getBrainMaskImage"
-AdLem3D::ScalarImageType::Pointer AdLem3D::getBrainMaskImage()
+AdLem3D::IntegerImageType::Pointer AdLem3D::getBrainMaskImage()
 {
     return mBrainMask;
 }
@@ -125,9 +150,8 @@ AdLem3D::ScalarImageType::Pointer AdLem3D::getBrainMaskImage()
 #define __FUNCT__ "setDomainRegionFullImage"
 void AdLem3D::setDomainRegionFullImage()
 {
-    if(!mIsBrainMaskSet) {
-        std::cerr<<"must first set the brain mask image to obtain the largest possible region"<<std::endl;
-    }
+    if(!mIsBrainMaskSet)
+        throw "must first set the brain mask image to obtain the largest possible region\n";
     mDomainRegion = mBrainMask->GetLargestPossibleRegion();
 }
 
@@ -135,6 +159,8 @@ void AdLem3D::setDomainRegionFullImage()
 #define __FUNCT__ "setDomainRegion"
 void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[])
 {
+    if(!mIsBrainMaskSet)
+        throw "must first set the brain mask image to obtain the largest possible region\n";
     ScalarImageType::IndexType domainOrigin;
     ScalarImageType::SizeType domainSize;
     for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
@@ -171,19 +197,19 @@ void AdLem3D::getWallVelocities(std::vector<double>& wallVelocities) {
     wallVelocities = mWallVelocities;
 }
 
+#undef __FUNCT__
+#define __FUNCT__ "relaxIcInCsf"
+bool AdLem3D::relaxIcInCsf()
+{
+    return mRelaxIcInCsf;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "getRelaxIcPressureCoeff"
-int AdLem3D::getRelaxIcPressureCoeff()
+float AdLem3D::getRelaxIcPressureCoeff()
 {
     return mRelaxIcPressureCoeff;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "shouldSkullVelSetToZero"
-bool AdLem3D::shouldSkullVelSetToZero()
-{
-    return mSetSkullVelToZero;
 }
 
 #undef __FUNCT__
@@ -268,6 +294,10 @@ double AdLem3D::brainMaskAt(int x, int y, int z) const
 #define __FUNCT__ "getRelaxIcLabel"
 int AdLem3D::getRelaxIcLabel() const
 {
+/*
+  Return a label of the region in brainMask for which the Incompressibility Constraint (IC) is to be relaxed.
+  That is the regions where div(u) - kp = 0 with non-zero k.
+*/
     return mRelaxIcLabel;
 }
 
@@ -384,7 +414,8 @@ void AdLem3D::scaleAtrophy(double factor)
 #undef __FUNCT__
 #define __FUNCT__ "isAtrophyValid"
 //total sum close to zero, i.e. < sumMaxValue.
-//all boundary voxels has zero.
+//FIXME: all boundary voxels has zero ? But what to do with CSF voxels that touch the skull!
+// This could be important when relaxIcIncsf is false, where compatibility condition is important.
 bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
     //Check if sum is zero:
     itk::ImageRegionIterator<ScalarImageType> it(mAtrophy,mDomainRegion);
@@ -403,12 +434,62 @@ bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "prescribeUniformExpansionInCsf"
+void AdLem3D::prescribeUniformExpansionInCsf(){//Need to check this function!
+/*
+    Set atrophy_in_csf  = - total_atrophy_elsewhere/num_of_csf_voxels.
+      // 	//And CHECK how Dirichlet condition at the skull creates issues because CSF voxels touching
+      // 	//skull voxels possibly won't get the desired expansion. But hopefully it shouldn't cause problems!
+      */
+    typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType, ScalarImageType> MaskFilterType;
+    typedef itk::StatisticsImageFilter<ScalarImageType> StatisticsImageFilterType;
+    typedef itk::LabelStatisticsImageFilter<ScalarImageType, IntegerImageType> LabelStatisticsImageFilterType;
+
+
+    // ---------- First set atrophy in CSF region to zero before taking total sum of atrophy.
+    {
+	MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+	maskFilter->SetInput(mAtrophy);
+	maskFilter->SetMaskImage(mBrainMask);
+	maskFilter->SetMaskingValue(maskLabels::CSF);
+	maskFilter->SetOutsideValue(0.);
+	maskFilter->Update();
+	setAtrophy(maskFilter->GetOutput());
+
+    }
+
+    StatisticsImageFilterType::Pointer statisticsImageFilter = StatisticsImageFilterType::New();
+    statisticsImageFilter->SetInput(mAtrophy);
+    statisticsImageFilter->Update();
+    float total_atrophy = statisticsImageFilter->GetSum();
+    //std::cout<<"total atrophy = "<<total_atrophy<<std::endl;
+
+    LabelStatisticsImageFilterType::Pointer labelStatisticsImageFilter = LabelStatisticsImageFilterType::New();
+    labelStatisticsImageFilter->SetInput(mAtrophy);
+    labelStatisticsImageFilter->SetLabelInput(mBrainMask);
+    labelStatisticsImageFilter->Update();
+    unsigned int csf_voxel_count = labelStatisticsImageFilter->GetCount(maskLabels::CSF);
+    //std::cout<<"total number of voxels with csf labels = "<<csf_voxel_count<<std::endl;
+
+    float expansion = -total_atrophy / (float)csf_voxel_count;
+    //std::cout<<"csf expansion values = "<<expansion<<std::endl;
+
+    MaskFilterType::Pointer maskFilter = MaskFilterType::New();
+    maskFilter->SetInput(mAtrophy);
+    maskFilter->SetMaskImage(mBrainMask);
+    maskFilter->SetMaskingValue(maskLabels::CSF);
+    maskFilter->SetOutsideValue(expansion);
+    maskFilter->Update();
+    setAtrophy(maskFilter->GetOutput());
+}
+
+#undef __FUNCT__
 #define __FUNCT__ "modifyAtrophy"
-void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy, bool makeSumZero) {
+void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy, bool relaxIcInCsf) {
     if(redistributeAtrophy) {
 	int rad = 1; 	// redistribution only on 3X3 neigborhood at present.
 	typedef itk::ConstShapedNeighborhoodIterator< ScalarImageType > ConstShapedNeighborhoodIteratorType;
-	typedef itk::ConstNeighborhoodIterator<	ScalarImageType > ConstNeighborhoodIteratorType;
+	typedef itk::ConstNeighborhoodIterator<	IntegerImageType > ConstNeighborhoodIteratorType;
 	typedef itk::ShapedNeighborhoodIterator< ScalarImageType > ShapedNeighborhoodIteratorType;
 
 	ConstShapedNeighborhoodIteratorType::RadiusType radius;
@@ -454,9 +535,8 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAt
 	}
     }
 
-
-    if(!makeSumZero) {
-        typedef itk::MaskImageFilter< ScalarImageType, ScalarImageType,
+    if(relaxIcInCsf) { //If IC is relaxed, set atrophy values to maskValue in regions with label maskLabel.
+        typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType,
 				      ScalarImageType> MaskFilterType;
         MaskFilterType::Pointer maskFilter = MaskFilterType::New();
         maskFilter->SetInput(mAtrophy);
@@ -465,43 +545,47 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAt
         maskFilter->SetOutsideValue(maskValue); //with itk's convention for mask label and values.
         maskFilter->Update();
         mAtrophy = maskFilter->GetOutput();
-    } else {
-        ScalarImageType::RegionType innerRegion;
-        ScalarImageType::SizeType offset;
-        ScalarImageType::SizeType Size(mDomainRegion.GetSize());
-        offset.Fill(2);
-        innerRegion.SetIndex(mDomainRegion.GetIndex() + offset);
-        offset.Fill(4);
-        innerRegion.SetSize(Size - offset);
-        itk::ImageRegionIterator<ScalarImageType> itInner(mAtrophy,innerRegion);
-        double aSum = 0;
-        for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
-            aSum += itInner.Get();
-        unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
-	    -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
-        aSum/=(-1*(double)numOfPixels);
+    } else //not relaxing IC => need to have uniformcsfexpansion!
+	prescribeUniformExpansionInCsf();
+    // else { //Previous code that works only when Dirichlet zero value is set only to
+      // 	//the image borders and not to the skull because here a layer of CSF (for expansion) is made at
+      // 	// the image walls.
+      //   ScalarImageType::RegionType innerRegion;
+      //   ScalarImageType::SizeType offset;
+      //   ScalarImageType::SizeType Size(mDomainRegion.GetSize());
+      //   offset.Fill(2);
+      //   innerRegion.SetIndex(mDomainRegion.GetIndex() + offset);
+      //   offset.Fill(4);
+      //   innerRegion.SetSize(Size - offset);
+      //   itk::ImageRegionIterator<ScalarImageType> itInner(mAtrophy,innerRegion);
+      //   double aSum = 0;
+      //   for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
+      //       aSum += itInner.Get();
+      //   unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
+      // 	    -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
+      //   aSum/=(-1*(double)numOfPixels);
 
-        itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
-        for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
-            ScalarImageType::IndexType pos = itOuter.GetIndex();
-            if(pos[0] == mDomainRegion.GetIndex()[0] ||
-	       pos[1] == mDomainRegion.GetIndex()[1] ||
-	       pos[2] == mDomainRegion.GetIndex()[2] ||
-	       pos[0] == mDomainRegion.GetUpperIndex()[0] ||
-	       pos[1] == mDomainRegion.GetUpperIndex()[1] ||
-	       pos[2] == mDomainRegion.GetUpperIndex()[2]) {
-                itOuter.Set(0);
-            } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
-                       pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
-                       pos[2] == (mDomainRegion.GetIndex()[2] + 1) ||
-                       pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
-                       pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
-                       pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
-		) {
-                itOuter.Set(aSum);
-            }
-        }
-    }
+      //   itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
+      //   for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
+      //       ScalarImageType::IndexType pos = itOuter.GetIndex();
+      //       if(pos[0] == mDomainRegion.GetIndex()[0] ||
+      // 	       pos[1] == mDomainRegion.GetIndex()[1] ||
+      // 	       pos[2] == mDomainRegion.GetIndex()[2] ||
+      // 	       pos[0] == mDomainRegion.GetUpperIndex()[0] ||
+      // 	       pos[1] == mDomainRegion.GetUpperIndex()[1] ||
+      // 	       pos[2] == mDomainRegion.GetUpperIndex()[2]) {
+      //           itOuter.Set(0);
+      //       } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
+      //                  pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
+      //                  pos[2] == (mDomainRegion.GetIndex()[2] + 1) ||
+      //                  pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
+      //                  pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
+      //                  pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
+      // 		) {
+      //           itOuter.Set(aSum);
+      //       }
+      //   }
+      //}
 }
 
 #undef __FUNCT__
@@ -523,7 +607,7 @@ void AdLem3D::writeAtrophyToFile(std::string fileName) {
 #undef __FUNCT__
 #define __FUNCT__ "writeBrainMaskToFile"
 void AdLem3D::writeBrainMaskToFile(std::string fileName) {
-    ScalarImageWriterType::Pointer writer = ScalarImageWriterType::New();
+    IntegerImageWriterType::Pointer writer = IntegerImageWriterType::New();
     writer->SetFileName(fileName);
     writer->SetInput(mBrainMask);
     writer->Update();

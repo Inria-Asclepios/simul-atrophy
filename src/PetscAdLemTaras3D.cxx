@@ -13,10 +13,34 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"grid with the spacings hx, hy, hz: (%f,%f,%f)\n",
                             model->getXspacing(),model->getYspacing(),model->getZspacing());
     mParaVecsCreated = PETSC_FALSE;
-    if(mIsMuConstant)
-        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!");
+
+    if (model->getBcType() == model->DIRICHLET_AT_SKULL)
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dirichlet_at_skull=>Skull velocity = 0.\n");
     else
-        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for variable viscosity case!");
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dirichlet_at_walls =>Skull vel not= 0. Wall vels = provided by user or 0 if not provided.\n");
+
+    if (model->relaxIcInCsf()) {
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint relaxed where brain mask has label %d \n"
+				,model->getRelaxIcLabel());
+	if (fabs(model->getRelaxIcPressureCoeff()) > 1e-6)
+	    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint relaxation coefficient: %f.\n"
+				    ,model->getRelaxIcPressureCoeff());
+	else
+	    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint relaxation coefficient: 1/lambda.\n");
+    } else
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint not relaxed anywhere.\n");
+
+    if(mIsMuConstant)
+        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!\n");
+    else
+        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for variable viscosity case!\n");
+
+    if (model->isLambdaTensor())
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"First Lame Parameter (lambda) is a tensor.\n");
+    else
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"First Lame Parameter (lambda) is a scalar.\n");
+
+
 
     //IMPORTANT CHANGE REQUIRED LATER IF USING NON CONSTANT MU:
     //MUST CREATE THE DMDA of stencil width 2 instead of 1 in that case.
@@ -48,11 +72,13 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D *model, bool writeParaToFile):
 
     //    createPcForSc();
 
-    if(this->getProblemModel()->getRelaxIcPressureCoeff() == 0) {
-        mPressureNullspacePresent = PETSC_TRUE;
+
+    if(this->getProblemModel()->relaxIcInCsf()) //non-zero k => no null space present for pressure variable.
+	mPressureNullspacePresent = PETSC_FALSE;
+    else { //don't relax IC in CSF means k=0 just like in other regions, so there is pressure determined only up to a constant.
+	//if(this->getProblemModel()->getRelaxIcPressureCoeff() == 0) {
+	mPressureNullspacePresent = PETSC_TRUE;
         setNullSpace();
-    } else {
-        mPressureNullspacePresent = PETSC_FALSE;
     }
     mOperatorComputed = PETSC_FALSE;
 }
@@ -91,9 +117,8 @@ void PetscAdLemTaras3D::setNullSpace()
     PetscAdLemTaras3D::Field    ***nullVec;
     ierr = DMDAVecGetArray(mDa, mNullBasis, &nullVec);CHKERRXX(ierr);
 
-    //FIXME: Must handle c++ exception using the error codd PETSC_ERR_SUP, cannot use SETERRQ.
-    /*if (this->getProblemModel()->getBcType() != this->getProblemModel()->DIRICHLET) {
-        SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition implemented",0);
+    //FIXME:
+    /*if (this->getProblemModel()->getBcType() == this->getProblemModel()->DIRICHLET_AT_WALLS) {
     }*/
     for (PetscInt k=info.zs; k<info.zs+info.zm; ++k) {
         for (PetscInt j=info.ys; j<info.ys+info.ym; ++j) {
@@ -107,7 +132,7 @@ void PetscAdLemTaras3D::setNullSpace()
                         || (i==info.mx-1 && (j==1 || j==info.my-1 || k==1 || k==info.mz-1)) //east wall edges
                         || (j==1 && (k==1 || k== info.mz-1)) //front wall horizontal edges
                         || (j==info.my-1 && (k==1 || k==info.mz-1))){ //back wall horizontal edges
-                    nullVec[k][j][i].p = 0;
+                    nullVec[k][j][i].p = 0; //FIXME: When setSkullveltozero is used, there are more places to be included here!!
                 } else {
                     nullVec[k][j][i].p = 1;
                 }
@@ -115,6 +140,8 @@ void PetscAdLemTaras3D::setNullSpace()
             }
         }
     }
+    //FIXME: else if (this->getProblemModel()->getBcType() == this->getProblemModel()->DIRICHLET_AT_SKULL) {
+    //SET DIFFERENTLY NULL SPACE HERE.
 
     ierr = DMDAVecRestoreArray(mDa, mNullBasis, &nullVec);CHKERRXX(ierr);
     ierr = VecAssemblyBegin(mNullBasis);CHKERRXX(ierr);
@@ -168,7 +195,7 @@ void PetscAdLemTaras3D::createPcForSc()
                 col.i = i;  col.j = j;  col.k = k;
                 //                v = 1.0/muC(i,j,k);
                 v = 0;
-                if(!mPressureNullspacePresent) {
+                if(!mPressureNullspacePresent) { //FIXME better to use whether we need to relax IC or not ?
                     if(this->bMaskAt(i,j,k) == this->getProblemModel()->getRelaxIcLabel())
                         v = this->getProblemModel()->getRelaxIcPressureCoeff();
                 }
@@ -218,8 +245,11 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
         PetscBool isNull;
         if(mPressureNullspacePresent) {
             ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
-            if(!isNull)
-                SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
+            if(!isNull) { //FIXME: Must correct this for skull zero boundary condition!
+                //SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
+		PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n WARNING: not a valid system null space\n");
+	    }
+
         }
 
         //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
@@ -264,8 +294,9 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
                             Mat matSc;
                             ierr = KSPGetOperators(subKsp[1],&matSc,NULL);CHKERRQ(ierr);
                             ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
-                            if(!isNull) {
-                                SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
+                            if(!isNull) {//FIXME: Must correct this for skull zero boundary condition!
+                                //SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");
+				PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n WARNING: not a valid pressure null space\n");
                             }
                         }
 
@@ -589,9 +620,6 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3d(
     HxHzdHy = (Hx*Hz)/Hy;
     HxHydHz = (Hx*Hy)/Hz;
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
-
-    if (user->getProblemModel()->getBcType() != user->getProblemModel()->DIRICHLET)
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition supported",0);
 
     for (k=zs; k<zs+zm; ++k) {
         for (j=ys; j<ys+ym; ++j) {
@@ -926,9 +954,6 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3d(KSP ksp, Vec b, void *ctx)
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da, b, &rhs);CHKERRQ(ierr);
 
-    if (user->getProblemModel()->getBcType() != user->getProblemModel()->DIRICHLET) {
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition implemented",0);
-    }
     for (k=zs; k<zs+zm; ++k) {
         for (j=ys; j<ys+ym; ++j) {
             for (i=xs; i<xs+xm; ++i) {
@@ -1015,9 +1040,6 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     HxHydHz = (Hx*Hy)/Hz;
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
 
-    if (user->getProblemModel()->getBcType() != user->getProblemModel()->DIRICHLET)
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition supported",0);
-
     for (k=zs; k<zs+zm; ++k) {
         for (j=ys; j<ys+ym; ++j) {
             for (i=xs; i<xs+xm; ++i) {
@@ -1050,7 +1072,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j;   col[1].k=k-1;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //vx lying in the face that touches a skull (non-brain region) cell
@@ -1102,7 +1124,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j;   col[1].k=k-1;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //vy lying in the face that touches a skull (non-brain region) cell
@@ -1157,7 +1179,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j-1; col[1].k=k;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getSkullLabel())
                             ) { //vz lying in the face that touches a skull (non-brain region) cell
@@ -1196,7 +1218,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                     v[0] = kBond;       col[0].i=i; col[0].j=j; col[0].k=k;
                     ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 } else if (
-                           (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+		    (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getSkullLabel() ||
                              ( user->bMaskAt(i+1,j,k) == user->getProblemModel()->getSkullLabel() &&
                                user->bMaskAt(i-1,j,k) == user->getProblemModel()->getSkullLabel() &&
@@ -1226,8 +1248,8 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                     v[4] = kCont/Hz;    col[4].i = i-1; col[4].j=j-1;   col[4].k=k;
                     v[5] = -v[4];       col[5].i = i-1; col[5].j=j-1;   col[5].k=k-1;
 
-                    //Cannot use member mPressureNullspacePresent here because, this is a static function!!
-                    if((user->getProblemModel()->getRelaxIcPressureCoeff() > 0) &&
+                    //If IC is to be relaxed and if the position is in the region where IC is to be relaxed:
+                    if((user->getProblemModel()->relaxIcInCsf()) &&
                             (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
                             //(   (user->bMaskAt(i,j,k) >= user->getProblemModel()->getRelaxIcLabel()) &&
                             //    user->bMaskAt(i,j,k) < 2)
@@ -1242,16 +1264,20 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         // Now the above commented condition is to select those volumes which are CSF or contain
                         // CSF partially.
 
-                        //Relax compressibility at certain points by putting diagonal term for pressure.
-                        //points obtained from Mask:
+                        // Relax incompressibility in selected regions by setting a non-zero coefficient of pressure variable.
                         col[6].c = 3;
                         col[6].i = i;   col[6].j = j;   col[6].k = k;
-                        v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+			if (fabs(user->getProblemModel()->getRelaxIcPressureCoeff()) < 1e-6)
+			    v[6] = 1./user->lambdaC(i, j, k, 0, 0);
+			else
+			    v[6] = user->getProblemModel()->getRelaxIcPressureCoeff();
+
                         // The following line is commented in sync with the comment above for partial volume case.
                         // The test was to allow coefficient fo the pressure variable to depend on the amount of
                         // partial volume present in the given voxel. This way we thought we could make any voxel
                         // compressibility proportional to the partial volume of CSF present in that volume.
-                        // TODO: Need to recheck why exactly this did not give the desired result!!
+                        // But this doesn't seem to do what I desired, i.e expansion in partial volume CSF
+			// did not change much from when not using partial volume!
 //                        v[6] = 2-user->bMaskAt(i,j,k);
                         ierr=MatSetValuesStencil(jac,1,&row,7,col,v,INSERT_VALUES);CHKERRQ(ierr);
                     } else{
@@ -1304,9 +1330,6 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
     ierr = DMDAGetCorners(da,&xs,&ys,&zs,&xm,&ym,&zm);CHKERRQ(ierr);
     ierr = DMDAVecGetArray(da, b, &rhs);CHKERRQ(ierr);
 
-    if (user->getProblemModel()->getBcType() != user->getProblemModel()->DIRICHLET) {
-        SETERRQ1(PETSC_COMM_WORLD,PETSC_ERR_SUP,"only Dirichlet boundary condition implemented",0);
-    }
     for (k=zs; k<zs+zm; ++k) {
         for (j=ys; j<ys+ym; ++j) {
             for (i=xs; i<xs+xm; ++i) {
@@ -1331,7 +1354,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vx = 2*wallVel.at(sWall);
                 } else if(k==mz-2) {    //north wall:    2nx
                     rhs[k][j][i].vx = 2*wallVel.at(nWall);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //skull or non-brain region:
@@ -1369,7 +1392,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vy = 2*wallVel.at(sWall+1);
                 } else if(k==mz-2) {    //north wall:    2ny
                     rhs[k][j][i].vy = 2*wallVel.at(nWall+1);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //Skull or non-brain region:
@@ -1405,7 +1428,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                     rhs[k][j][i].vz = 2*wallVel.at(fWall+2);
                 } else if(j==my-2) {    //back wall:   2bz
                     rhs[k][j][i].vz = 2*wallVel.at(bWall+2);
-                } else if ( (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             ( user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                               user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getSkullLabel()
                             )
@@ -1436,7 +1459,7 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                         ) {
                     rhs[k][j][i].p = 0;
                 }  else if (
-                            (user->getProblemModel()->shouldSkullVelSetToZero()) &&
+		    (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i,j,k) == user->getProblemModel()->getSkullLabel() ||
                               ( user->bMaskAt(i+1,j,k) == user->getProblemModel()->getSkullLabel() &&
                                 user->bMaskAt(i-1,j,k) == user->getProblemModel()->getSkullLabel() &&

@@ -33,7 +33,7 @@ class PetscAdLemTaras3D;
 class AdLem3D{
 public:
     enum bcType {
-        DIRICHLET, NEUMANN
+        DIRICHLET_AT_WALLS, DIRICHLET_AT_SKULL
     };
 
     typedef typename itk::Image<double, 3>                  ScalarImageType;
@@ -45,6 +45,7 @@ public:
     typedef typename itk::ImageFileReader<ScalarImageType>  ScalarImageReaderType;
     typedef typename itk::ImageFileReader<TensorImageType>  TensorImageReaderType;
     typedef typename itk::ImageFileWriter<ScalarImageType>  ScalarImageWriterType;
+    typedef typename itk::ImageFileWriter<IntegerImageType>  IntegerImageWriterType;
     typedef typename itk::ImageFileWriter<VectorImageType>  VectorImageWriterType;
     typedef typename itk::ImageFileWriter<TensorImageType>  TensorImageWriterType;
 
@@ -60,18 +61,13 @@ public:
     double getYspacing() const;
     double getZspacing() const;
 
-    //--**********Boundary condition related functions**************//
+    // ---------- Boundary condition related functions
+    void setBoundaryConditions(std::string boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff=0.);
     bcType getBcType() const;
     void setWallVelocities(std::vector<double>& wallVelocities);
     void getWallVelocities(std::vector<double>& wallVelocities); //copies mWallVelocities content.
 
     //--***********Model parameters related functions***************//
-
-    // Currently, mu for CSF is asked and the mu values for GM/WM are inferred from the ratio
-    // given as input. GM & WM both have same mu value.
-    // For lambda, in scalar case is same as mu; set using this function.
-    // For tensor value, provide appropriate boolean argument to this function and
-    // use setLambda function to provide a tensor image.
     void setLameParameters(bool isMuConstant, bool useTensorLambda,
                            double muBrain = 1, double muCsf = 1,
                            double lambdaBrain = 1, double lambdaCsf = 1,
@@ -79,12 +75,16 @@ public:
     bool isMuConstant() const;
     bool isLambdaTensor() const;
 
-    void setBrainMask(std::string maskImageFile, int relaxIcLabel,int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
-    void setBrainMask(ScalarImageType::Pointer brainMask, int relaxIcLabel, int relaxIcPressureCoeff, bool setSkullVelToZero, int skullLabel);
-    ScalarImageType::Pointer getBrainMaskImage();
+
+    // ---------- Default label values denotes that these labels are irrelevant for the selected boundary conditions.
+    int setBrainMask(std::string maskImageFile, int skullLabel = -1, int relaxIcLabel = -1);
+    int setBrainMask(IntegerImageType::Pointer brainMask, int skullLabel = -1, int relaxIcLabel = -1);
+    IntegerImageType::Pointer getBrainMaskImage();
     void writeBrainMaskToFile(std::string fileName);
 
-    int getRelaxIcPressureCoeff();
+
+    bool relaxIcInCsf(); //Return whether relax IC in CSF or not.
+    float getRelaxIcPressureCoeff(); //The value of k in the eqn div(u) + kp = 0.
 
     //string should be either of "mu", "lambda" or "atrophy".
     //(Mi,Mj) is the element position of a tensor. Currently lambda can be a tensor.
@@ -96,7 +96,6 @@ public:
     //Normally, relaxIcPressureCoeff should be non-zero.
     //If you do want to relax IC anywhere, set relaxIcPressureCoeff to zero.
 
-    bool shouldSkullVelSetToZero();
     int getSkullLabel();
 
     //BrainMask must already be set before using this, because for full size region it
@@ -125,32 +124,28 @@ public:
     bool isAtrophySumZero(double sumMaxValue);
     ScalarImageType::Pointer getAtrophyImage();
 
-    //By default:
-    // 1. Total sum of atrophy is not forced to be zero; use this option
-    //if you want to enforce IC everywhere, that this is usually the case when you
-    //are not using brainMask.
-    // 2. Does not redistribute atrophy. Set this to true if you want to redistribute atrophy.
-    // This is the case when you apply transformation to the atrophy map using linear interpolation but
-    // NN interpolation for the brain mask.
-    // The transforamation and interpolation can result in non-zero atrophy values in the CSF region.
-    // This option will distribute uniformly the volume loss in these CSF regions to the nearest tissue volumes.
-    // And then we can replace the atrophy values in the newly created CSF regions to zero.
-    //By default, uses brainMask and sets the value maskValue to all the places
-    //where brainMask has the value maskLabel.
-    void modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy = false, bool makeSumZero = false);
+    //If redistributeatrophy:
+    //     Distribute uniformly the non-zero atrophy values in CSF regions to the nearest tissue volumes (if in 3X3 neigborhood)
+    //     Useful when interpolation during warping of the atrophy map leaks some of the atrophy values from the brain tissue
+    //     to the neighboring CSF voxels.
+    //If not relaxICIncsf:
+    //          call prescribeUniformexpansionincsf() (maskValue has no use when this is true)
+    //else:
+    //          set maskValue in the atrophy map in the regions where brainMask has label maskLabel.
+    void modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy = false, bool relaxIcInCsf = true);
     void scaleAtrophy(double factor);
+    void prescribeUniformExpansionInCsf();//Set atrophy_in_csf  = - total_atrophy_elsewhere/num_of_csf_voxels.
     void writeAtrophyToFile(std::string fileName);
 
 protected:
-    ScalarImageType::Pointer    mBrainMask;         //Input segmentation.
+    IntegerImageType::Pointer    mBrainMask;         //Input segmentation.
     bool                        mIsBrainMaskSet;
     //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
-    //big number => release IC and allow pressure to vary.
-    //the constructor sets it to zero.
-    int      mRelaxIcPressureCoeff;  //Non-zero => IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
-    int      mRelaxIcLabel;     //Label value in the brainMask where the IC is to be relaxed. (usually CSF regions)
-    bool     mSetSkullVelToZero;        //if true, the velocity at all the places in bMask with label value of mDirchletBoundaryLabel will be set to zero.
-    int      mSkullLabel;   //Label value in the brainMask where the velocity will be imposed to be zero(usually non-brain regions!)
+
+    bool	mRelaxIcInCsf;
+    float	mRelaxIcPressureCoeff;	//Non-zero = > IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
+    int		mRelaxIcLabel;  //Label value in the brainMask where the IC is to be relaxed. (usually CSF regions)
+    int		mSkullLabel;	//Label value in the brainMask where the velocity will be imposed to be zero(usually non-brain regions!)
 
     ScalarImageType::RegionType mDomainRegion;
 
@@ -165,11 +160,12 @@ protected:
     bool        mIsMuConstant;//piecewise constant can have different mu values in tissue and CSF.
 
     //Boundary condition:
-    AdLem3D::bcType             mBc;
-    std::vector<double>         mWallVelocities;  //velocity components vx,vy,vz on S,W,N,E,F,B walls.
+    AdLem3D::bcType     mBc;
+    bool		mIsBcSet;
+    std::vector<double> mWallVelocities;	//velocity components vx,vy,vz on S,W,N,E,F,B walls.
 
     // integer number to keep track of how many times the solver is solved.
-    int                         mNumOfSolveCalls;
+    int mNumOfSolveCalls;
 
 
 //    VectorImageType::Pointer    mAtrophyGradient;   //gradient of the atrophy computed within the solver
