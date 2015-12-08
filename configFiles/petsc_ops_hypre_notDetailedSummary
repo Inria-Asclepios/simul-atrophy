@@ -7,5 +7,7 @@
 #-fieldsplit_0_ksp_converged_reason
 #-fieldsplit_0_ksp_max_it 100
 #-fieldsplit_1_ksp_converged_reason -ksp_converged_reason
-#-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 -ksp_rtol 1.0e-8 -ksp_monitor_true_residual
-#-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual -log_summary -ksp_view
+#-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 -ksp_rtol 1.0e-8
+#-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual
+#-fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual
+#-log_summary -ksp_view

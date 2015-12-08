@@ -113,6 +113,7 @@ int opsParser(UserOptions &ops) {
 	ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(!optionFlag) throw "Must provide a valid boundary condition. e.g. dirichlet_at_skull";
         ops.boundaryCondition = optionString;
+
 	ierr = PetscOptionsGetString(NULL,"--relax_ic_in_csf",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
 	ops.relaxIcInCsf = (bool)optionFlag;
 

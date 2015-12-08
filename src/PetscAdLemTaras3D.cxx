@@ -233,24 +233,24 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
             ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
             ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
         }
-        if(mPressureNullspacePresent) {
-            ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
-        }
         ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
-        ierr = KSPSetUp(mKsp);CHKERRQ(ierr);                  //register the fieldsplits obtained from options.
-
-        ierr = KSPGetOperators(mKsp,&mA,NULL);CHKERRQ(ierr);
-        ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
-
-        PetscBool isNull;
+	ierr = KSPSetUp(mKsp);CHKERRQ(ierr); //register the fieldsplits obtained from options.
+	// ---------- MUST CALL kspsetfromoptions() and kspsetup() before kspgetoperators and matsetnullspace
+	// otherwise I'm getting a runtime error of mat object type not set (for mA!!)
+	ierr = KSPGetOperators(mKsp,&mA,NULL);CHKERRQ(ierr);
         if(mPressureNullspacePresent) {
-            ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
-            if(!isNull) { //FIXME: Must correct this for skull zero boundary condition!
-                //SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
-		PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n WARNING: not a valid system null space\n");
+            //ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
+	    ierr = MatSetNullSpace(mA,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system, updated for petsc3.6
+	    PetscBool isNull;
+	    if(mPressureNullspacePresent) {
+		ierr = MatNullSpaceTest(mNullSpace,mA,&isNull);CHKERRQ(ierr);
+		if(!isNull) { //FIXME: Must correct this for skull zero boundary condition!
+		    //SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid system null space \n");
+		    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n WARNING: not a valid system null space\n");
+		}
 	    }
-
-        }
+	}
+        ierr = KSPGetPC(mKsp,&mPc);CHKERRQ(ierr);
 
         //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
         PetscBool optionFlag = PETSC_FALSE;
@@ -288,11 +288,13 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
                             ierr = MatNullSpaceDestroy(&rigidBodyModes);CHKERRQ(ierr);
                         }
 
-                        //If constant pressure nullspace present, set it to SchurComplement ksp.
+                        //If constant pressure nullspace present, set it to SchurComplement matrix.
                         if(mPressureNullspacePresent) {
-                            ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr);
+			    PetscBool isNull;
                             Mat matSc;
                             ierr = KSPGetOperators(subKsp[1],&matSc,NULL);CHKERRQ(ierr);
+			    //ierr = KSPSetNullSpace(subKsp[1],mNullSpaceP);CHKERRQ(ierr); //no longer used in petsc 3.6
+			    ierr = MatSetNullSpace(matSc,mNullSpaceP);CHKERRQ(ierr); //petsc 3.6 update
                             ierr = MatNullSpaceTest(mNullSpaceP,matSc,&isNull);
                             if(!isNull) {//FIXME: Must correct this for skull zero boundary condition!
                                 //SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"not a valid pressure null space \n");

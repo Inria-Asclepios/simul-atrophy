@@ -14,9 +14,10 @@ else(IS_CLUSTER)
   set(ITK_DIR ${MY_HOME}/Documents/softwares/ITK-build)
   message("setting up for delorme")
 endif(IS_CLUSTER)
-
+MESSAGE("The directory is: ${CMAKE_SOURCE_DIR}")
 #add cmake modules path to the default one:
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MY_HOME}/cmakeModules/petsc")
+#set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${MY_HOME}/cmakeModules/petsc")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 #Find the external library for Petsc
 find_package(PETSc COMPONENTS CXX REQUIRED)
