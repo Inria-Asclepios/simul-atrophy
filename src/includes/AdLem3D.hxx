@@ -62,7 +62,7 @@ public:
     double getZspacing() const;
 
     // ---------- Boundary condition related functions
-    void setBoundaryConditions(std::string boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff=0.);
+    void setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff=0.);
     bcType getBcType() const;
     void setWallVelocities(std::vector<double>& wallVelocities);
     void getWallVelocities(std::vector<double>& wallVelocities); //copies mWallVelocities content.
@@ -98,9 +98,11 @@ public:
 
     int getSkullLabel();
 
-    //BrainMask must already be set before using this, because for full size region it
-    //gets the region info from the BrainMask image!!
-    void setDomainRegionFullImage();
+    //All images intended to be used by the model must already be set before calling
+    //setDomainRegionXX fxs.
+    void setDomainRegionFullImage(); //sets largestPossibleRegion.
+    //Selected region. This will itkExtractImageFilter and all the image pointers
+    //will then point to the output of this filter.
     void setDomainRegion(unsigned int origin[3], unsigned int size[3]);
 
     //solver related functions
@@ -141,23 +143,28 @@ protected:
     IntegerImageType::Pointer    mBrainMask;         //Input segmentation.
     bool                        mIsBrainMaskSet;
     //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
-
     bool	mRelaxIcInCsf;
     float	mRelaxIcPressureCoeff;	//Non-zero = > IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.
     int		mRelaxIcLabel;  //Label value in the brainMask where the IC is to be relaxed. (usually CSF regions)
     int		mSkullLabel;	//Label value in the brainMask where the velocity will be imposed to be zero(usually non-brain regions!)
 
-    ScalarImageType::RegionType mDomainRegion;
+    ScalarImageType::RegionType mDomainRegion; //Set this only when all the images
+    // that are going to be used in the model are set! This will be used to
+    //extract the desired region will be extracted the corresponding images.
 
-    ScalarImageType::Pointer    mAtrophy;           //Input atrophy-map.
+    ScalarImageType::Pointer    mAtrophy;	//Input atrophy-map.
+    bool			mIsAtrophySet; //true when mAtrophy is set.
 
     //parameters for Gray matter, White matter and Csf:
-    TensorImageType::Pointer    mLambda;        //Input diffusion tensor image lambda.
-    ScalarImageType::Pointer    mMu; //Input Mu image; used when isMuConstant is false.
-    bool        mUseTensorLambda;
-    double      mMuBrain, mMuCsf;
-    double      mLambdaBrain, mLambdaCsf;
-    bool        mIsMuConstant;//piecewise constant can have different mu values in tissue and CSF.
+    bool			mUseTensorLambda, mUseMuImage;
+    TensorImageType::Pointer    mLambda;	//Input diffusion tensor image lambda.
+    bool			mIsLambdaImageSet;	//true when mLambda is set.
+    ScalarImageType::Pointer    mMu;	//Input Mu image; used when isMuConstant is false.
+    bool			mIsMuImageSet;	// true when mMu is set.
+
+    double			mMuBrain, mMuCsf;
+    double			mLambdaBrain, mLambdaCsf;
+    bool			mIsMuConstant;	//piecewise constant can have different mu values in tissue and CSF. Currently mUseMuImage has the same value as mIsMuConstant. This could change later!
 
     //Boundary condition:
     AdLem3D::bcType     mBc;
@@ -215,110 +222,7 @@ protected:
     void createForceImage();
     void createDivergenceImage();
 
-    void updateVelocityImage();
-    void updatePressureImage();
-    void updateForceImage();
-    void updateDivergenceImage();
+    void updateImages(const std::string& whichImage);
 };
-
-
-//#include "itkImage.h"
-//#include "itkImageRegionIterator.h"
-
-//    typedef itk::SymmetricSecondRankTensor<double> PixelType;
-
-//    typedef itk::Image<PixelType, 3> ImageType;
-
-//    typedef itk::ImageFileReader<ImageType> ReaderType;
-
-//    ReaderType:ointer reader = ReaderType::New();
-
-//    reader->SetFileName(tensorImage_i);
-
-//    reader->Update();
-
-//    ImageType:ointer tensorImage = reader->GetOutput();
-
-//    TensorImageType:ointer image_out = TensorImageType::New();
-
-//    image_out->SetOrigin(tensorImage->GetOrigin());
-
-//    image_out->SetDirection(tensorImage->GetDirection());
-
-//    image_out->SetSpacing(tensorImage->GetSpacing());
-
-//    image_out->SetRegions(tensorImage->GetLargestPossibleRegion());
-
-//    image_out->Allocate();
-
-//    image_out->FillBuffer(TensorType(0.0));
-
-//    typedef itk::ImageRegionIterator<ImageType> ImageIterator;
-
-//    typedef itk::ImageRegionIterator<TensorImageType> TensorIterator;
-
-//    TensorIterator itTTK(image_out, image_out->GetLargestPossibleRegion());
-
-//    ImageIterator itImage(tensorImage, tensorImage->GetLargestPossibleRegion());
-
-//    ImageType::IndexType testIndex;
-
-//    testIndex[0]=44; testIndex[1]=56; testIndex[2]=30;
-
-//    for (itTTK.GoToBegin(), itImage.GoToBegin(); !itTTK.IsAtEnd(), !itImage.IsAtEnd();
-
-//         ++itTTK, ++itImage)
-
-//    {
-
-//         double dxx, dxy, dxz, dyy, dyz, dzz;
-
-//         PixelType tempPixel;
-
-//         tempPixel = itImage.Get();
-
-//         dxx = tempPixel.GetNthComponent(0);
-
-//         dxy = tempPixel.GetNthComponent(1);
-
-//         dyy = tempPixel.GetNthComponent(2);
-
-//         dxz = tempPixel.GetNthComponent(3);
-
-//         dyz = tempPixel.GetNthComponent(4);
-
-//         dzz = tempPixel.GetNthComponent(5);
-
-//         TensorType tempTensor;
-
-//         tempTensor.SetNthComponent(0,dxx);
-
-//         tempTensor.SetNthComponent(1,dxy);
-
-//         tempTensor.SetNthComponent(2,dxz);
-
-//         tempTensor.SetNthComponent(3,dyy);
-
-//         tempTensor.SetNthComponent(4,dyz);
-
-//         tempTensor.SetNthComponent(5,dzz);
-
-//         itTTK.Set(tempTensor);
-
-//    }
-
-//    TensorISetFileName(tensorImage_o);
-
-//    TensorISetInput(image_out);
-
-//    TensorIUpdate();
-
-//    TensorIWrite();
-
-//    TensorIUpdate();
-
-//    return 0;
-
-//    }
 
 #endif // ADLEM3D_HXX

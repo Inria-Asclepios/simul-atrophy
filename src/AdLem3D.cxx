@@ -10,6 +10,7 @@
 #include "itkConstNeighborhoodIterator.h"
 #include "itkShapedNeighborhoodIterator.h"
 #include "itkNeighborhoodAlgorithm.h"
+#include "itkExtractImageFilter.h"
 #include<iostream>
 
 #undef __FUNCT__
@@ -17,6 +18,10 @@
 AdLem3D::AdLem3D():mWallVelocities(18)
 {
     mIsBrainMaskSet	  = false;
+    mIsAtrophySet	  = false;
+    mIsMuImageSet	  = false;
+    mIsLambdaImageSet	  = false;
+
     mIsBcSet		  = false;
     mPetscSolverTarasUsed = false;
     mRelaxIcPressureCoeff = 0;  //This default changed only when setting brain mask.
@@ -45,7 +50,7 @@ AdLem3D::~AdLem3D()
 
 #undef __FUNCT__
 #define __FUNCT__ "setBoundaryConditions"
-void AdLem3D::setBoundaryConditions(std::string boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff) {
+void AdLem3D::setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff) {
     if((boundaryCondition.compare("dirichlet_at_walls") != 0) &&
 	   (boundaryCondition.compare("dirichlet_at_skull") != 0))
 	    throw "Invalid boundary condition.";
@@ -78,6 +83,7 @@ void AdLem3D::setLameParameters(bool isMuConstant, bool useTensorLambda,
 				std::string lambdaImageFile, std::string muImageFile)
 {
     mIsMuConstant	= isMuConstant;
+    mUseMuImage		=  !isMuConstant; //Currently constant mu means don't use mu image.
     mUseTensorLambda	= useTensorLambda;
     mMuBrain		= muBrain;
     mMuCsf		= muCsf;
@@ -102,6 +108,7 @@ void AdLem3D::setLameParameters(bool isMuConstant, bool useTensorLambda,
 void AdLem3D::setMu(ScalarImageType::Pointer inputMu)
 {
     mMu = inputMu;
+    mIsMuImageSet = true;
 }
 
 
@@ -110,6 +117,7 @@ void AdLem3D::setMu(ScalarImageType::Pointer inputMu)
 void AdLem3D::setLambda(TensorImageType::Pointer inputLambda)
 {
     mLambda = inputLambda;
+    mIsLambdaImageSet = true;
 }
 
 
@@ -150,26 +158,79 @@ AdLem3D::IntegerImageType::Pointer AdLem3D::getBrainMaskImage()
 #define __FUNCT__ "setDomainRegionFullImage"
 void AdLem3D::setDomainRegionFullImage()
 {
-    if(!mIsBrainMaskSet)
-        throw "must first set the brain mask image to obtain the largest possible region\n";
+    if(!mIsBrainMaskSet || !mIsAtrophySet)
+        throw "must first set brain mask and atrophy image before setting domainRegion.\n";
+    if(mUseMuImage && (!mIsMuImageSet))
+	throw "for the given choices, mu image is expected to be set. Domain region can be set only after setting this image!\n";
+    if(mUseTensorLambda && (!mIsLambdaImageSet))
+	throw "for the given choices, lambda image is expected to be set. Domain region can be set only after setting this image!\n";
     mDomainRegion = mBrainMask->GetLargestPossibleRegion();
+    // No need to extract when using the full image.
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "setDomainRegion"
 void AdLem3D::setDomainRegion(unsigned int origin[], unsigned int size[])
 {
-    if(!mIsBrainMaskSet)
-        throw "must first set the brain mask image to obtain the largest possible region\n";
+    // ---------- Set the region
     ScalarImageType::IndexType domainOrigin;
     ScalarImageType::SizeType domainSize;
-    for(int i=0;i<3;++i) {     //ADD error-guard to ensure that size
+    for(int i=0;i<3;++i) {     //FIXME: ADD error-guard to ensure that size
         domainSize.SetElement(i,size[i]);     //size!!
         domainOrigin.SetElement(i,origin[i]); //provided is less or equal to the input
     }
     mDomainRegion.SetIndex(domainOrigin);
     mDomainRegion.SetSize(domainSize);
     //    std::cout<<"domain size: "<<mDomainRegion.GetSize()<<std::endl;
+
+    // ---------- Extract the region from all the images and reset them to contain only this
+    // ---------- region.
+    typedef itk::ExtractImageFilter<IntegerImageType, IntegerImageType> ExtractIntegerImageFilterType;
+    typedef itk::ExtractImageFilter<ScalarImageType, ScalarImageType> ExtractScalarImageFilterType;
+    typedef itk::ExtractImageFilter<TensorImageType, TensorImageType> ExtractTensorImageFilterType;
+
+    if(mIsBrainMaskSet) {
+	ExtractIntegerImageFilterType::Pointer imageExtracter = ExtractIntegerImageFilterType::New();
+	imageExtracter->SetInput(mBrainMask);
+	imageExtracter->SetExtractionRegion(mDomainRegion);
+	imageExtracter->Update();
+	mBrainMask = imageExtracter->GetOutput();
+    }else
+        throw "must set brain mask image before setting domain region.\n";
+
+    if(mIsAtrophySet){
+	ExtractScalarImageFilterType::Pointer imageExtracter = ExtractScalarImageFilterType::New();
+	imageExtracter->SetInput(mAtrophy);
+	imageExtracter->SetExtractionRegion(mDomainRegion);
+	imageExtracter->Update();
+	mAtrophy = imageExtracter->GetOutput();
+	//FIXME: 1. Do I need disconnectPipeline() here ? 2. DirectionCollapse ?
+    }else
+	throw "must set atrophy image before setting domain region.\n";
+
+    if(mUseMuImage){
+	if(mIsMuImageSet){
+	    //std::cout<<"in muImage extract image"<<std::endl;
+	    ExtractScalarImageFilterType::Pointer imageExtracter = ExtractScalarImageFilterType::New();
+	    imageExtracter->SetInput(mMu);
+	    imageExtracter->SetExtractionRegion(mDomainRegion);
+	    imageExtracter->Update();
+	    mMu = imageExtracter->GetOutput();
+	}else
+	    throw "for the given choices, mu image is expected to be set. Domain region can be set only after setting this image!\n";
+    }
+
+    if(mUseTensorLambda){
+	if(mIsLambdaImageSet){
+	    //std::cout<<"in lamda extract image"<<std::endl;
+	    ExtractTensorImageFilterType::Pointer imageExtracter = ExtractTensorImageFilterType::New();
+	    imageExtracter->SetInput(mLambda);
+	    imageExtracter->SetExtractionRegion(mDomainRegion);
+	    imageExtracter->Update();
+	    mLambda = imageExtracter->GetOutput();
+	}else
+	    throw "for the given choices, lambda image is expected to be set. Domain region can be set only after setting this image!\n";
+    }
 }
 
 #undef __FUNCT__
@@ -231,9 +292,9 @@ double AdLem3D::muAt(int x, int y, int z) const
     }
     else {
 	ScalarImageType::IndexType pos;
-	pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
-        pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
-        pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+	pos.SetElement(0, mMu->GetLargestPossibleRegion().GetIndex()[0] + x);
+        pos.SetElement(1, mMu->GetLargestPossibleRegion().GetIndex()[1] + y);
+        pos.SetElement(2, mMu->GetLargestPossibleRegion().GetIndex()[2] + z);
         return (mMu->GetPixel(pos));
     }
 }
@@ -245,9 +306,9 @@ double AdLem3D::lambdaAt(int x, int y, int z,
 {
     if (mUseTensorLambda) {
         TensorImageType::IndexType pos;
-        pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
-        pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
-        pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+        pos.SetElement(0, mLambda->GetLargestPossibleRegion().GetIndex()[0] + x);
+        pos.SetElement(1, mLambda->GetLargestPossibleRegion().GetIndex()[1] + y);
+        pos.SetElement(2, mLambda->GetLargestPossibleRegion().GetIndex()[2] + z);
         return (mLambda->GetPixel(pos)(Li,Lj));
     }
     // If the model is initialized for scalar lambda then it is same as
@@ -269,10 +330,9 @@ double AdLem3D::lambdaAt(int x, int y, int z,
 double AdLem3D::aAt(int x, int y, int z) const
 {
     ScalarImageType::IndexType pos;
-    pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
-    pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
-    pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
-
+    pos.SetElement(0, mAtrophy->GetLargestPossibleRegion().GetIndex()[0] + x);
+    pos.SetElement(1, mAtrophy->GetLargestPossibleRegion().GetIndex()[1] + y);
+    pos.SetElement(2, mAtrophy->GetLargestPossibleRegion().GetIndex()[2] + z);
     return(mAtrophy->GetPixel(pos));
 
 }
@@ -282,9 +342,9 @@ double AdLem3D::aAt(int x, int y, int z) const
 double AdLem3D::brainMaskAt(int x, int y, int z) const
 {
     ScalarImageType::IndexType pos;
-    pos.SetElement(0, mDomainRegion.GetIndex()[0] + x);
-    pos.SetElement(1, mDomainRegion.GetIndex()[1] + y);
-    pos.SetElement(2, mDomainRegion.GetIndex()[2] + z);
+    pos.SetElement(0, mBrainMask->GetLargestPossibleRegion().GetIndex()[0] + x);
+    pos.SetElement(1, mBrainMask->GetLargestPossibleRegion().GetIndex()[1] + y);
+    pos.SetElement(2, mBrainMask->GetLargestPossibleRegion().GetIndex()[2] + z);
 
     return(mBrainMask->GetPixel(pos));
 
@@ -397,6 +457,7 @@ void AdLem3D::setAtrophy(std::string atrophyImageFile)
 void AdLem3D::setAtrophy(ScalarImageType::Pointer inputAtrophy)
 {
     mAtrophy = inputAtrophy;
+    mIsAtrophySet = true;
 }
 
 #undef __FUNCT__
@@ -418,7 +479,7 @@ void AdLem3D::scaleAtrophy(double factor)
 // This could be important when relaxIcIncsf is false, where compatibility condition is important.
 bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
     //Check if sum is zero:
-    itk::ImageRegionIterator<ScalarImageType> it(mAtrophy,mDomainRegion);
+    itk::ImageRegionIterator<ScalarImageType> it(mAtrophy, mAtrophy->GetLargestPossibleRegion());
     it.GoToBegin();
     double sum = 0;
     while(!it.IsAtEnd()) {
@@ -435,6 +496,8 @@ bool AdLem3D::isAtrophySumZero(double sumMaxValue) {
 
 #undef __FUNCT__
 #define __FUNCT__ "prescribeUniformExpansionInCsf"
+//FIXME: Need to make it work when domainRegion is not the full image!
+//i.e. Exclude boundary voxels from being considered for computing atrophy and expansion.
 void AdLem3D::prescribeUniformExpansionInCsf(){//Need to check this function!
 /*
     Set atrophy_in_csf  = - total_atrophy_elsewhere/num_of_csf_voxels.
@@ -444,8 +507,6 @@ void AdLem3D::prescribeUniformExpansionInCsf(){//Need to check this function!
     typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType, ScalarImageType> MaskFilterType;
     typedef itk::StatisticsImageFilter<ScalarImageType> StatisticsImageFilterType;
     typedef itk::LabelStatisticsImageFilter<ScalarImageType, IntegerImageType> LabelStatisticsImageFilterType;
-
-
     // ---------- First set atrophy in CSF region to zero before taking total sum of atrophy.
     {
 	MaskFilterType::Pointer maskFilter = MaskFilterType::New();
@@ -455,7 +516,6 @@ void AdLem3D::prescribeUniformExpansionInCsf(){//Need to check this function!
 	maskFilter->SetOutsideValue(0.);
 	maskFilter->Update();
 	setAtrophy(maskFilter->GetOutput());
-
     }
 
     StatisticsImageFilterType::Pointer statisticsImageFilter = StatisticsImageFilterType::New();
@@ -486,6 +546,8 @@ void AdLem3D::prescribeUniformExpansionInCsf(){//Need to check this function!
 #undef __FUNCT__
 #define __FUNCT__ "modifyAtrophy"
 void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy, bool relaxIcInCsf) {
+    redistributeAtrophy = false; //FIXME: seems there is bug when small domain regions are selected, so
+    // not going in there right now, need to figure out later.
     if(redistributeAtrophy) {
 	int rad = 1; 	// redistribution only on 3X3 neigborhood at present.
 	typedef itk::ConstShapedNeighborhoodIterator< ScalarImageType > ConstShapedNeighborhoodIteratorType;
@@ -534,7 +596,6 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAt
 	    }
 	}
     }
-
     if(relaxIcInCsf) { //If IC is relaxed, set atrophy values to maskValue in regions with label maskLabel.
         typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType,
 				      ScalarImageType> MaskFilterType;
@@ -547,45 +608,6 @@ void AdLem3D::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAt
         mAtrophy = maskFilter->GetOutput();
     } else //not relaxing IC => need to have uniformcsfexpansion!
 	prescribeUniformExpansionInCsf();
-    // else { //Previous code that works only when Dirichlet zero value is set only to
-      // 	//the image borders and not to the skull because here a layer of CSF (for expansion) is made at
-      // 	// the image walls.
-      //   ScalarImageType::RegionType innerRegion;
-      //   ScalarImageType::SizeType offset;
-      //   ScalarImageType::SizeType Size(mDomainRegion.GetSize());
-      //   offset.Fill(2);
-      //   innerRegion.SetIndex(mDomainRegion.GetIndex() + offset);
-      //   offset.Fill(4);
-      //   innerRegion.SetSize(Size - offset);
-      //   itk::ImageRegionIterator<ScalarImageType> itInner(mAtrophy,innerRegion);
-      //   double aSum = 0;
-      //   for(itInner.GoToBegin(); !itInner.IsAtEnd(); ++itInner)
-      //       aSum += itInner.Get();
-      //   unsigned int numOfPixels = (Size[0]-2)*(Size[1]-2) * (Size[2]-2)
-      // 	    -(Size[0]-4)*(Size[1]-4) * (Size[2]-4);
-      //   aSum/=(-1*(double)numOfPixels);
-
-      //   itk::ImageRegionIteratorWithIndex<ScalarImageType> itOuter(mAtrophy,mDomainRegion);
-      //   for(itOuter.GoToBegin(); !itOuter.IsAtEnd(); ++itOuter) {
-      //       ScalarImageType::IndexType pos = itOuter.GetIndex();
-      //       if(pos[0] == mDomainRegion.GetIndex()[0] ||
-      // 	       pos[1] == mDomainRegion.GetIndex()[1] ||
-      // 	       pos[2] == mDomainRegion.GetIndex()[2] ||
-      // 	       pos[0] == mDomainRegion.GetUpperIndex()[0] ||
-      // 	       pos[1] == mDomainRegion.GetUpperIndex()[1] ||
-      // 	       pos[2] == mDomainRegion.GetUpperIndex()[2]) {
-      //           itOuter.Set(0);
-      //       } else if (pos[0] == (mDomainRegion.GetIndex()[0] + 1) ||
-      //                  pos[1] == (mDomainRegion.GetIndex()[1] + 1) ||
-      //                  pos[2] == (mDomainRegion.GetIndex()[2] + 1) ||
-      //                  pos[0] == (mDomainRegion.GetUpperIndex()[0] - 1) ||
-      //                  pos[1] == (mDomainRegion.GetUpperIndex()[1] - 1) ||
-      //                  pos[2] == (mDomainRegion.GetUpperIndex()[2] - 1)
-      // 		) {
-      //           itOuter.Set(aSum);
-      //       }
-      //   }
-      //}
 }
 
 #undef __FUNCT__
@@ -625,7 +647,7 @@ AdLem3D::VectorImageType::Pointer AdLem3D::getVelocityImage()
         createVelocityImage();
     }
     if(!mVelocityLatest) {
-        updateVelocityImage();
+	updateImages("velocity");
     }
     return mVelocity;
 }
@@ -642,7 +664,7 @@ AdLem3D::ScalarImageType::Pointer AdLem3D::getPressureImage()
         createPressureImage();
     }
     if(!mPressureLatest) {
-        updatePressureImage();
+	updateImages("pressure");
     }
     return mPressure;
 }
@@ -659,7 +681,7 @@ AdLem3D::ScalarImageType::Pointer AdLem3D::getDivergenceImage()
         createDivergenceImage();
     }
     if(!mDivergenceLatest) {
-        updateDivergenceImage();
+	updateImages("divergence");
     }
     return mDivergence;
 }
@@ -676,7 +698,7 @@ AdLem3D::VectorImageType::Pointer AdLem3D::getForceImage()
         createForceImage();
     }
     if(!mForceLatest) {
-        updateForceImage();
+	updateImages("force");
     }
     return mForce;
 }
@@ -751,14 +773,8 @@ void AdLem3D::writeResidual(std::string resultsPath)
 #define __FUNCT__ "createVelocityImage"
 void AdLem3D::createVelocityImage()
 {
-    itk::Index<3>           outputImageStart;       //should be 0!
-    ScalarImageType::RegionType domainRegion;
-    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
-    domainRegion.SetSize(mDomainRegion.GetSize());
-    domainRegion.SetIndex(outputImageStart);
-
     mVelocity = VectorImageType::New();
-    mVelocity->SetRegions(domainRegion);
+    mVelocity->SetRegions(mAtrophy->GetLargestPossibleRegion());
     mVelocity->SetOrigin(mAtrophy->GetOrigin());
     mVelocity->SetSpacing(mAtrophy->GetSpacing());
     mVelocity->SetDirection(mAtrophy->GetDirection());
@@ -771,14 +787,8 @@ void AdLem3D::createVelocityImage()
 #define __FUNCT__ "createPressureImage"
 void AdLem3D::createPressureImage()
 {
-    itk::Index<3>           outputImageStart;       //should be 0!
-    ScalarImageType::RegionType domainRegion;
-    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
-    domainRegion.SetSize(mDomainRegion.GetSize());
-    domainRegion.SetIndex(outputImageStart);
-
     mPressure = ScalarImageType::New();
-    mPressure->SetRegions(domainRegion);
+    mPressure->SetRegions(mAtrophy->GetLargestPossibleRegion());
     mPressure->SetOrigin(mAtrophy->GetOrigin());
     mPressure->SetSpacing(mAtrophy->GetSpacing());
     mPressure->SetDirection(mAtrophy->GetDirection());
@@ -791,14 +801,8 @@ void AdLem3D::createPressureImage()
 #define __FUNCT__ "createForceImage"
 void AdLem3D::createForceImage()
 {
-    itk::Index<3>           outputImageStart;       //should be 0!
-    ScalarImageType::RegionType domainRegion;
-    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
-    domainRegion.SetSize(mDomainRegion.GetSize());
-    domainRegion.SetIndex(outputImageStart);
-
     mForce = VectorImageType::New();
-    mForce->SetRegions(domainRegion);
+    mForce->SetRegions(mAtrophy->GetLargestPossibleRegion());
     mForce->SetOrigin(mAtrophy->GetOrigin());
     mForce->SetSpacing(mAtrophy->GetSpacing());
     mForce->SetDirection(mAtrophy->GetDirection());
@@ -811,14 +815,8 @@ void AdLem3D::createForceImage()
 #define __FUNCT__ "createDivergenceImage"
 void AdLem3D::createDivergenceImage()
 {
-    itk::Index<3>           outputImageStart;       //should be 0!
-    ScalarImageType::RegionType domainRegion;
-    for (unsigned int i=0; i<3; ++i) outputImageStart.SetElement(i,0);
-    domainRegion.SetSize(mDomainRegion.GetSize());
-    domainRegion.SetIndex(outputImageStart);
-
     mDivergence = ScalarImageType::New();
-    mDivergence->SetRegions(domainRegion);
+    mDivergence->SetRegions(mAtrophy->GetLargestPossibleRegion());
     mDivergence->SetOrigin(mAtrophy->GetOrigin());
     mDivergence->SetSpacing(mAtrophy->GetSpacing());
     mDivergence->SetDirection(mAtrophy->GetDirection());
@@ -828,125 +826,86 @@ void AdLem3D::createDivergenceImage()
 }
 
 #undef __FUNCT__
-#define __FUNCT__ "updateVelocityImage"
-void AdLem3D::updateVelocityImage()
-{
-    typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
-    VectorIteratorType velocityIterator(mVelocity,mVelocity->GetLargestPossibleRegion());
-    VectorImageType::PixelType velocityPixel;
-    unsigned int pos[3];
-    unsigned int k = 0;
-    velocityIterator.GoToBegin();
-    while(k<mDomainRegion.GetSize()[2] && !velocityIterator.IsAtEnd()) {
-        pos[2] = k;
-        unsigned int j = 0;
-        while(j<mDomainRegion.GetSize()[1] && !velocityIterator.IsAtEnd()) {
-            pos[1] = j;
-            unsigned int i = 0;
-            while(i<mDomainRegion.GetSize()[0] && !velocityIterator.IsAtEnd()) {
-                pos[0] = i;
-                for(int cc = 0; cc<3; ++cc) {
-                    velocityPixel[cc] = mPetscSolverTaras->getSolVelocityAt(pos,cc);
+#define __FUNCT__ "updateImages"
+void AdLem3D::updateImages(const std::string& whichImage){
+    if (whichImage.compare("pressure") == 0 || whichImage.compare("divergence") == 0) {
+	ScalarImageType::Pointer img;
+	bool isPressure; //Create bool var because perhaps faster to check bool than doing
+	//string compare below inside the loop.
+	if(whichImage.compare("pressure")==0){
+	    isPressure = true;
+	    img = mPressure;
+	}else{
+	    isPressure = false;
+	    img = mDivergence;
+	}
+	ScalarImageType::RegionType roi = img->GetLargestPossibleRegion();
+	//std::cout<<whichImage<<" image region: "<<roi<<std::endl;
+	typedef itk::ImageRegionIterator<ScalarImageType> ImageIteratorType;
+	ImageIteratorType it(img, roi);
+	ScalarImageType::PixelType pix;
+	unsigned int pos[3];
+	it.GoToBegin();
+	// printf("From (0, 0, 0) to (%lu, %lu, %lu)\n", roi.GetSize()[2], roi.GetSize()[1], roi.GetSize()[0]);
+	for(unsigned int k = 0; k<roi.GetSize()[2]; ++k){
+	    pos[2] = k;
+	    for(unsigned int j = 0; j<roi.GetSize()[1]; ++j){
+		pos[1] = j;
+		for(unsigned int i = 0; i<roi.GetSize()[0]; ++i){
+		    pos[0] = i;
+		    if(isPressure)
+			pix = mPetscSolverTaras->getSolPressureAt(pos);
+		    else
+			pix = mPetscSolverTaras->getDivergenceAt(pos);
+		    it.Set(pix);
+		    ++it;
+		}
+	    }
+	}
+	if(isPressure)
+	    mPressureLatest = true;
+	else
+	    mDivergenceLatest = true;
+    }else if (whichImage.compare("velocity") == 0 || whichImage.compare("force") == 0){
+	VectorImageType::Pointer img;
+	bool isVelocity; //Create bool var because perhaps faster to check bool than doing
+	//string compare below inside the loop.
+	if(whichImage.compare("velocity")==0){
+	    isVelocity = true;
+	    img = mVelocity;
+	}else{
+	    isVelocity = false;
+	    img = mForce;
+	}
+	VectorImageType::RegionType roi = img->GetLargestPossibleRegion();
+	typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
+	//std::cout<<whichImage<<"  image region: "<<roi<<std::endl;
+	VectorIteratorType it(img, roi);
+	VectorImageType::PixelType pix;
+	unsigned int pos[3];
+	it.GoToBegin();
+	// printf("From (0, 0, 0) to (%lu, %lu, %lu)\n", roi.GetSize()[2], roi.GetSize()[1], roi.GetSize()[0]);
+	for(unsigned int k = 0; k<roi.GetSize()[2]; ++k){
+	    pos[2] = k;
+	    for(unsigned int j = 0; j<roi.GetSize()[1]; ++j){
+		pos[1] = j;
+		for(unsigned int i = 0; i<roi.GetSize()[0]; ++i){
+		    pos[0] = i;
+		    for(int cc = 0; cc<3; ++cc) {
+			if(isVelocity)
+			    pix[cc] = mPetscSolverTaras->getSolVelocityAt(pos, cc);
+			else
+			    pix[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
                 }
-                velocityIterator.Set(velocityPixel);
-                ++velocityIterator;
-                ++i;
-            }
-            ++j;
-        }
-        ++k;
-    }
-    mVelocityLatest = true;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "updatePressureImage"
-void AdLem3D::updatePressureImage()
-{
-    typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
-    ScalarIteratorType pressureIterator(mPressure,mPressure->GetLargestPossibleRegion());
-    ScalarImageType::PixelType pressurePixel;
-    unsigned int pos[3];
-    unsigned int k = 0;
-    pressureIterator.GoToBegin();
-    while(k<mDomainRegion.GetSize()[2] && !pressureIterator.IsAtEnd()) {
-        pos[2] = k;
-        unsigned int j = 0;
-        while(j<mDomainRegion.GetSize()[1] && !pressureIterator.IsAtEnd()) {
-            pos[1] = j;
-            unsigned int i = 0;
-            while(i<mDomainRegion.GetSize()[0] && !pressureIterator.IsAtEnd()) {
-                pos[0] = i;
-                pressurePixel = mPetscSolverTaras->getSolPressureAt(pos);
-                pressureIterator.Set(pressurePixel);
-                ++pressureIterator;
-                ++i;
-            }
-            ++j;
-        }
-        ++k;
-    }
-    mPressureLatest = true;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "updateForceImage"
-void AdLem3D::updateForceImage()
-{
-    typedef itk::ImageRegionIterator<VectorImageType> VectorIteratorType;
-    VectorIteratorType forceIterator(mForce,mForce->GetLargestPossibleRegion());
-    VectorImageType::PixelType forcePixel;
-    unsigned int pos[3];
-    unsigned int k = 0;
-    forceIterator.GoToBegin();
-    while(k<mDomainRegion.GetSize()[2] && !forceIterator.IsAtEnd()) {
-        pos[2] = k;
-        unsigned int j = 0;
-        while(j<mDomainRegion.GetSize()[1] && !forceIterator.IsAtEnd()) {
-            pos[1] = j;
-            unsigned int i = 0;
-            while(i<mDomainRegion.GetSize()[0] && !forceIterator.IsAtEnd()) {
-                pos[0] = i;
-                for(int cc = 0; cc<3; ++cc) {
-                    forcePixel[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
-                }
-                forceIterator.Set(forcePixel);
-                ++forceIterator;
-                ++i;
-            }
-            ++j;
-        }
-        ++k;
-    }
-    mForceLatest = true;
-}
-
-#undef __FUNCT__
-#define __FUNCT__ "udpateDivergenceImage"
-void AdLem3D::updateDivergenceImage()
-{
-    typedef itk::ImageRegionIterator<ScalarImageType> ScalarIteratorType;
-    ScalarIteratorType divergenceIterator(mDivergence,mDivergence->GetLargestPossibleRegion());
-    ScalarImageType::PixelType divergencePixel;
-    unsigned int pos[3];
-    unsigned int k = 0;
-    divergenceIterator.GoToBegin();
-    while(k<mDomainRegion.GetSize()[2] && !divergenceIterator.IsAtEnd()) {
-        pos[2] = k;
-        unsigned int j = 0;
-        while(j<mDomainRegion.GetSize()[1] && !divergenceIterator.IsAtEnd()) {
-            pos[1] = j;
-            unsigned int i = 0;
-            while(i<mDomainRegion.GetSize()[0] && !divergenceIterator.IsAtEnd()) {
-                pos[0] = i;
-                divergencePixel = mPetscSolverTaras->getDivergenceAt(pos);
-                divergenceIterator.Set(divergencePixel);
-                ++divergenceIterator;
-                ++i;
-            }
-            ++j;
-        }
-        ++k;
-    }
-    mDivergenceLatest = true;
+                it.Set(pix);
+                ++it;
+		}
+	    }
+	}
+	if(isVelocity)
+	    mVelocityLatest = true;
+	else
+	    mForceLatest = true;
+    }else
+	std::cout<<"invalid image type string: "<<whichImage<<" : for function updateImages"<<std::endl; //FIXME: Exception handling!
 }

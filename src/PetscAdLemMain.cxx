@@ -44,6 +44,10 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "-atrophyFile		: Filename of a valid existing atrophy file that prescribes desired volume change.\n\n"
     "-maskFile			: Segmentation file that segments the image into CSF, tissue and non-brain regions.\n\n"
     "-imageFile			: Input image filename.\n\n"
+    "-domainRegion		: Origin (in image coordinate => integer values) and size (in image coord => integer values) "
+    "of the image region selected as computational domain.\n"
+    "    x y z sx sy sz e.g. '0 0 0 30 40 50' Selects the region with origin at (0, 0, 0) and size (30, 40, 50) \n"
+    "    If not provided uses full image regions.\n\n"
     "--useTensorLambda		: true or false. If true must provide a DTI image for lame parameter lambda.\n\n"
     "-lambdaFile		: filename of the DTI lambda-value image. Used when -useTensorlambda is true.\n\n"
     "-numOfTimeSteps		: number of time-steps to run the model.\n\n"
@@ -123,7 +127,7 @@ int opsParser(UserOptions &ops) {
 	else ops.relaxIcCoeff = 0.;
 
 
-	// ---------- Set input image files and other options.
+	// ---------- Set input image files, computational region and other options.
 	ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) ops.atrophyFileName = optionString;
 
@@ -132,6 +136,14 @@ int opsParser(UserOptions &ops) {
 
         ierr = PetscOptionsGetString(NULL,"-imageFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) ops.baselineImageFileName = optionString;
+
+	ierr = PetscOptionsGetString(NULL,"-domainRegion",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+        if(optionFlag) {
+	    ops.isDomainFullSize = false;
+	    std::stringstream regionStream(optionString);
+	    for(int i=0; i<3; ++i) regionStream >> ops.domainOrigin[i];
+	    for(int i=0; i<3; ++i) regionStream >> ops.domainSize[i];
+	}else ops.isDomainFullSize = true;
 
         ierr = PetscOptionsGetString(NULL,"--useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
 	ops.useTensorLambda = (bool)optionFlag;
@@ -151,15 +163,6 @@ int opsParser(UserOptions &ops) {
 	}
 	else
 	    if(optionFlag) throw "-lambdaFile option can be used only when --useTensorLambda is provided.\n";
-
-	// ---------- Select region where the model is to be run.
-	// for(int i=0; i<3; ++i) {
-	//     ops.domainOrigin[i] = 0;
-	//     ops.domainSize[i] = 10;
-	// }
-        // ops.isDomainFullSize = false;
-	ops.isDomainFullSize = true; //TODO: Take this option and origin, size of the region from the user!
-
 
 	// ---------- Set output path and prefixes.
 	ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -244,13 +247,14 @@ int main(int argc,char **argv)
 		ops.isMuConstant, ops.useTensorLambda, ops.lameParas[0], ops.lameParas[1], ops.lameParas[2],
 		ops.lameParas[3], ops.lambdaFileName, ops.muFileName);
 	    AdLemModel.setBrainMask(baselineBrainMask, maskLabels::NBR, maskLabels::CSF);
-	    // ---------- Set the computational region (Can be set only after setting brain mask!)
+	    // ---------- Set up the atrophy map
+	    AdLemModel.setAtrophy(baselineAtrophy);
+
+	    // ---------- Set the computational region (Can be set only after setting all required images!)
 	    if(ops.isDomainFullSize)
 		AdLemModel.setDomainRegionFullImage();
 	    else
 		AdLemModel.setDomainRegion(ops.domainOrigin, ops.domainSize);
-	    // ---------- Set up the atrophy map
-	    AdLemModel.setAtrophy(baselineAtrophy);
 	    if (!ops.relaxIcInCsf) {
 		AdLemModel.prescribeUniformExpansionInCsf();
 		baselineAtrophy = AdLemModel.getAtrophyImage();
