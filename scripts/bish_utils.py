@@ -9,9 +9,10 @@ Copying a directory tree.
 import subprocess
 import shutil
 
-def print_and_execute(command):
-    """prints the command and executes it in the shell"""
-    print command + '\n'
+def print_and_execute(command, print_cmd=True):
+    """prints the command by default and executes it in the shell"""
+    if print_cmd:
+        print command + '\n'
     subprocess.call(command, shell=True)
 
 def copy_dir_tree(src, dest):
