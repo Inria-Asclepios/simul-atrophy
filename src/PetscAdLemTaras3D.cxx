@@ -1371,11 +1371,25 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                             ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,2)*gradAz)
                             );
                     } else {
-                        rhs[k][j][i].vx = Hy*Hz*(
-                                    user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
-                                    user->lambdaC(i+1,j+1,k+1,0,0) +
-                                    user->lambdaC(i,j+1,k+1,0,0)
-                                    ) * gradAx / 2.0;
+                        // rhs[k][j][i].vx = Hy*Hz*(
+                        //             user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
+                        //             user->lambdaC(i+1,j+1,k+1,0,0) +
+                        //             user->lambdaC(i,j+1,k+1,0,0)
+                        //             ) * gradAx / 2.0;
+			//If we use force in CSF as above, and if we set lambda_csf = lambda_tissue
+			// changing mu (= mu_csf = mu_tissue) will have absolutely no impact on
+			// the deformation field obtained and it only scales the pressure values in the tissue.
+			// But once we comment out above and use no force in CSF, lambda_csf is never used and
+			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
+			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
+			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
+			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
+			    rhs[k][j][i].vx = 0; //no force in CSF.
+			else {
+			    rhs[k][j][i].vx = Hy*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAx;
+			    //make force independent of mu and see what happens.
+			    //rhs[k][j][i].vx = Hy*Hz*(user->lambdaC(i,j,k,0,0)) * gradAx;
+			}
                     }
                 }
 
@@ -1408,11 +1422,26 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,2)*gradAz)
 			    );
                     }else {
-                        rhs[k][j][i].vy = Hx*Hz*(
-                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1) +
-                                    user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
-                                             )*gradAy/2.0;
-                    }
+                    //     rhs[k][j][i].vy = Hx*Hz*(
+                    //                 user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1) +
+                    //                 user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j,k+1,0,0)
+                    //                          )*gradAy/2.0;
+                    // }
+			//If we use force in CSF as above, and if we set lambda_csf = lambda_tissue
+			// changing mu (= mu_csf = mu_tissue) will have absolutely no impact on
+			// the deformation field obtained and it only scales the pressure values in the tissue.
+			// But once we comment out above and use no force in CSF, lambda_csf is never used and
+			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
+			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
+			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
+			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
+			    rhs[k][j][i].vy = 0; //no force in CSF.
+			else {
+			    rhs[k][j][i].vy = Hx*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAy;
+			    //make force independent of mu and see what happens.--> Changes slightly the magnitude of displacement.
+			    //rhs[k][j][i].vy = Hx*Hz*(user->lambdaC(i,j,k,0,0)) * gradAy;
+			}
+		    }
                 }
 
                 //--*********************** z-momentum equation *******************--//
@@ -1445,11 +1474,26 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,2)*gradAz)
 			    );
                     } else {
-                        rhs[k][j][i].vz = Hx*Hy*(
-                                    user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k) +
-                                    user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
-                                                )*gradAz/2.0;
-                    }
+                    //     rhs[k][j][i].vz = Hx*Hy*(
+                    //                 user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k) +
+                    //                 user->lambdaC(i+1,j+1,k+1,0,0) + user->lambdaC(i+1,j+1,k,0,0)
+                    //                             )*gradAz/2.0;
+                    // }
+			//If we use force in CSF as above, and if we set lambda_csf = lambda_tissue
+			// changing mu (= mu_csf = mu_tissue) will have absolutely no impact on
+			// the deformation field obtained and it only scales the pressure values in the tissue.
+			// But once we comment out above and use no force in CSF, lambda_csf is never used and
+			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
+			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
+			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
+			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
+			    rhs[k][j][i].vz = 0; //no force in CSF.
+			else {
+			    rhs[k][j][i].vz = Hx*Hy*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAz;
+			    //make force independent of mu and see what happens. --> Changes slightly the magnitude of displacement.
+			    //rhs[k][j][i].vz = Hx*Hy*(user->lambdaC(i,j,k,0,0)) * gradAz;
+			}
+		    }
                 }
 
                 //  ********************** continuity equation *********************

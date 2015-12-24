@@ -315,8 +315,9 @@ double AdLem3D::lambdaAt(int x, int y, int z,
     // lamda times identity matrix. So all non-diagonal elements are zero
     // while diagonal elements are the scalar value.
     if (Li == Lj) {
-	if (brainMaskAt(x, y, z) == maskLabels::CSF)
+	if (brainMaskAt(x, y, z) == maskLabels::CSF){
 	    return mLambdaCsf;
+	}
 	else
 	    return mLambdaBrain;
 
