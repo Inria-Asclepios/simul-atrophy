@@ -1,5 +1,5 @@
-#include "AdLem3D.hxx"
-#include "GlobalConstants.hxx"
+#include "AdLem3D.h"
+#include "GlobalConstants.h"
 
 #include <iostream>
 #include <sstream>
@@ -188,6 +188,8 @@ int opsParser(UserOptions &ops) {
 #define __FUNCT__ "main"
 int main(int argc,char **argv)
 {
+
+    const unsigned int dim = 3;
     std::vector<double> wallVelocities(18);
     //TODO: Set from the user when dirichlet_at_walls boundary condition is used.
         /*0,1,2,		//south wall
@@ -211,25 +213,25 @@ int main(int argc,char **argv)
 	    return EXIT_FAILURE;
 	}
         // ---------- Read input baseline image
-        AdLem3D::ScalarImageType::Pointer baselineImage = AdLem3D::ScalarImageType::New();
+        AdLem3D<dim>::ScalarImageType::Pointer baselineImage = AdLem3D<dim>::ScalarImageType::New();
         {
-            AdLem3D::ScalarImageReaderType::Pointer   imageReader = AdLem3D::ScalarImageReaderType::New();
+            AdLem3D<dim>::ScalarImageReaderType::Pointer   imageReader = AdLem3D<dim>::ScalarImageReaderType::New();
             imageReader->SetFileName(ops.baselineImageFileName);
             imageReader->Update();
             baselineImage = imageReader->GetOutput();
         }
         // ---------- Read input baseline brainMask image
-        AdLem3D::IntegerImageType::Pointer baselineBrainMask = AdLem3D::IntegerImageType::New();
+        AdLem3D<dim>::IntegerImageType::Pointer baselineBrainMask = AdLem3D<dim>::IntegerImageType::New();
         {
-            AdLem3D::IntegerImageReaderType::Pointer   imageReader = AdLem3D::IntegerImageReaderType::New();
+            AdLem3D<dim>::IntegerImageReaderType::Pointer   imageReader = AdLem3D<dim>::IntegerImageReaderType::New();
             imageReader->SetFileName(ops.maskFileName);
             imageReader->Update();
             baselineBrainMask = imageReader->GetOutput();
         }
         // ---------- Read input atrophy map
-        AdLem3D::ScalarImageType::Pointer baselineAtrophy = AdLem3D::ScalarImageType::New();
+        AdLem3D<dim>::ScalarImageType::Pointer baselineAtrophy = AdLem3D<dim>::ScalarImageType::New();
         {
-            AdLem3D::ScalarImageReaderType::Pointer   imageReader = AdLem3D::ScalarImageReaderType::New();
+            AdLem3D<dim>::ScalarImageReaderType::Pointer   imageReader = AdLem3D<dim>::ScalarImageReaderType::New();
             imageReader->SetFileName(ops.atrophyFileName);
             imageReader->Update();
             baselineAtrophy = imageReader->GetOutput();
@@ -238,10 +240,10 @@ int main(int argc,char **argv)
 	// ---------- Set up output prefix with proper path
 	std::string filesPref(ops.resultsPath+ops.resultsFilenamesPrefix);
 
-	AdLem3D		AdLemModel;
+	AdLem3D<dim>		AdLemModel;
 	try { // ---------- Set up the model parameters
 	    AdLemModel.setBoundaryConditions(ops.boundaryCondition, ops.relaxIcInCsf, ops.relaxIcCoeff);
-	    if(AdLemModel.getBcType() == AdLem3D::DIRICHLET_AT_WALLS)
+	    if(AdLemModel.getBcType() == AdLem3D<dim>::DIRICHLET_AT_WALLS)
 		AdLemModel.setWallVelocities(wallVelocities);
 	    AdLemModel.setLameParameters(
 		ops.isMuConstant, ops.useTensorLambda, ops.lameParas[0], ops.lameParas[1], ops.lameParas[2],
@@ -268,15 +270,15 @@ int main(int argc,char **argv)
 
 
         // ---------- Define itk types required for the warping of the mask and atrophy map:
-        //typedef InverseDisplacementImageFilter<AdLem3D::VectorImageType> FPInverseType;
-        typedef itk::WarpImageFilter<AdLem3D::ScalarImageType,AdLem3D::ScalarImageType,AdLem3D::VectorImageType> WarpFilterType;
-	typedef itk::WarpImageFilter<AdLem3D::IntegerImageType,AdLem3D::IntegerImageType,AdLem3D::VectorImageType> IntegerWarpFilterType;
-        typedef itk::NearestNeighborInterpolateImageFunction<AdLem3D::IntegerImageType> InterpolatorFilterNnType;
-	typedef itk::LabelImageGenericInterpolateImageFunction<AdLem3D::ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
-        typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D::IntegerImageType,AdLem3D::IntegerImageType,AdLem3D::ScalarImageType> DiffImageFilterType;
-        typedef itk::StatisticsImageFilter<AdLem3D::ScalarImageType> StatisticsImageFilterType;
-        typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D::VectorImageType, AdLem3D::VectorImageType> VectorComposerType;
-        AdLem3D::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
+        //typedef InverseDisplacementImageFilter<AdLem3D<dim>::VectorImageType> FPInverseType;
+        typedef itk::WarpImageFilter<AdLem3D<dim>::ScalarImageType,AdLem3D<dim>::ScalarImageType,AdLem3D<dim>::VectorImageType> WarpFilterType;
+	typedef itk::WarpImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::VectorImageType> IntegerWarpFilterType;
+        typedef itk::NearestNeighborInterpolateImageFunction<AdLem3D<dim>::IntegerImageType> InterpolatorFilterNnType;
+	typedef itk::LabelImageGenericInterpolateImageFunction<AdLem3D<dim>::ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
+        typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::ScalarImageType> DiffImageFilterType;
+        typedef itk::StatisticsImageFilter<AdLem3D<dim>::ScalarImageType> StatisticsImageFilterType;
+        typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D<dim>::VectorImageType, AdLem3D<dim>::VectorImageType> VectorComposerType;
+        AdLem3D<dim>::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
 
 
 	bool		isMaskChanged(true); //tracker flag to see if the brain mask is changed or not after the previous warp and NN interpolation.
@@ -300,7 +302,7 @@ int main(int argc,char **argv)
             // ---------- Compose velocity fields before inversion and the subsequent warping
             if(t == 1) { //Warp baseline image and write because won't be written later if ops.numOfTimeSteps=1.
                 composedDisplacementField = AdLemModel.getVelocityImage();
-		typedef itk::BSplineInterpolateImageFunction<AdLem3D::ScalarImageType> InterpolatorFilterType;
+		typedef itk::BSplineInterpolateImageFunction<AdLem3D<dim>::ScalarImageType> InterpolatorFilterType;
 		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
 		interpolatorFilter->SetSplineOrder(3);
                 WarpFilterType::Pointer warper3 = WarpFilterType::New();
@@ -311,7 +313,7 @@ int main(int argc,char **argv)
                 warper3->SetOutputOrigin(baselineImage->GetOrigin());
                 warper3->SetOutputDirection(baselineImage->GetDirection());
                 warper3->Update();
-                AdLem3D::ScalarImageWriterType::Pointer imageWriter1 = AdLem3D::ScalarImageWriterType::New();
+                AdLem3D<dim>::ScalarImageWriterType::Pointer imageWriter1 = AdLem3D<dim>::ScalarImageWriterType::New();
                 imageWriter1->SetFileName(filesPref + "WarpedImageBspline" + stepString+ ".nii.gz");
                 imageWriter1->SetInput(warper3->GetOutput());
                 imageWriter1->Update();
@@ -333,10 +335,10 @@ int main(int argc,char **argv)
 //                inverter1->SetMaximumNumberOfIterations(50);
 //                inverter1->Update();
 //                std::cout<<"tolerance not reached for "<<inverter1->GetNumberOfErrorToleranceFailures()<<" pixels"<<std::endl;
-//                AdLem3D::VectorImageType::Pointer warperField = inverter1->GetOutput();
+//                AdLem3D<dim>::VectorImageType::Pointer warperField = inverter1->GetOutput();
                 //----------------*** Let's not invert the field, rather assume the atrophy is provided to be negative
                 //---------------- so that we can use the field obtained from the model itself as being already inverted.//
-                AdLem3D::VectorImageType::Pointer warperField = composedDisplacementField;
+                AdLem3D<dim>::VectorImageType::Pointer warperField = composedDisplacementField;
 
                 // ---------- Warp baseline brain mask with an itk warpFilter, nearest neighbor.
                 // ---------- Using the inverted composed field.
@@ -386,7 +388,7 @@ int main(int argc,char **argv)
 		AdLemModel.writeAtrophyToFile(filesPref+stepString+"AtrophyModified.nii.gz");
 
                 // ---------- Warp the baseline image with the inverted composed field with BSpline interpolation
-                typedef itk::BSplineInterpolateImageFunction<AdLem3D::ScalarImageType> InterpolatorFilterType;
+                typedef itk::BSplineInterpolateImageFunction<AdLem3D<dim>::ScalarImageType> InterpolatorFilterType;
 		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
 		interpolatorFilter->SetSplineOrder(3);
 		WarpFilterType::Pointer baselineWarper = WarpFilterType::New();
@@ -397,7 +399,7 @@ int main(int argc,char **argv)
                 baselineWarper->SetOutputOrigin(baselineImage->GetOrigin());
                 baselineWarper->SetOutputDirection(baselineImage->GetDirection());
                 baselineWarper->Update();
-                AdLem3D::ScalarImageWriterType::Pointer imageWriter = AdLem3D::ScalarImageWriterType::New();
+                AdLem3D<dim>::ScalarImageWriterType::Pointer imageWriter = AdLem3D<dim>::ScalarImageWriterType::New();
                 //Write with the stepString lying at the end of the filename so that other tool can combine all the images
                 //into 4D by using the number 1, 2, 3 ... at the end.
                 imageWriter->SetFileName(filesPref + "WarpedImageBspline" + stepString+ ".nii.gz");
@@ -405,7 +407,7 @@ int main(int argc,char **argv)
                 imageWriter->Update();
             }
         }
-        AdLem3D::VectorImageWriterType::Pointer   displacementWriter = AdLem3D::VectorImageWriterType::New();
+        AdLem3D<dim>::VectorImageWriterType::Pointer   displacementWriter = AdLem3D<dim>::VectorImageWriterType::New();
         displacementWriter->SetFileName(filesPref+"ComposedField.nii.gz");
         displacementWriter->SetInput(composedDisplacementField);
         displacementWriter->Update();
