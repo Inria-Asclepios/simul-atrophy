@@ -17,15 +17,6 @@ add_executable(AdLemMain
 target_link_libraries(AdLemMain ${PETSC_LIBRARIES} ${ITK_LIBRARIES})
 
 
-add_executable(HhDecompose
-  PoissonSolver.cxx
-  PoissonProblem.cxx
-  HelmHoltzDecomposer.cxx
-  HhDecomposeMain.cxx
-  )
-target_link_libraries(HhDecompose ${PETSC_LIBRARIES} ${ITK_LIBRARIES})
-
-
 add_executable(UpdateMaskAndAtrophy
   UpdateMaskAndAtrophyMain.cxx
   )
