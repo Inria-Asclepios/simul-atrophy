@@ -12,6 +12,7 @@ if(IS_CLUSTER)
 else(IS_CLUSTER)
   set(MY_HOME /home/bkhanal)
   set(ITK_DIR ${MY_HOME}/Documents/softwares/ITK-build)
+  set(CMAKE_EXPORT_COMPILE_COMMANDS on) #Will generate compile_commands.json file used by irony-mode in emacs code completion.
   message("setting up for delorme")
 endif(IS_CLUSTER)
 MESSAGE("The directory is: ${CMAKE_SOURCE_DIR}")
