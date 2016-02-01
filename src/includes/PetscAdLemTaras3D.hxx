@@ -34,9 +34,9 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool writeParaToFile):
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint not relaxed anywhere.\n");
 
     if(mIsMuConstant)
-        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!\n");
+        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!\n muBrain=%f, muCsf=%f, lambdaBrain=%f, lambdaCsf=%f\n", model->getMuBrain(), model->getMuCsf(), model->getLambdaBrain(), model->getLambdaCsf());
     else
-        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for variable viscosity case!\n");
+        PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver takes viscosity values from the image. Note that I still use the discretization for constant/piecewise constant viscosity. The variable viscosity discretization is not supported yet!\n");
 
     if (model->isLambdaTensor())
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"First Lame Parameter (lambda) is a tensor.\n");
@@ -232,9 +232,12 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
             //below solved this problem.
             ierr = KSPSetComputeOperators(mKsp,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
             ierr = KSPSetComputeRHS(mKsp,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
-        } else {
-            ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
-            ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
+        } else {// TODO: Need to check the correctness of the code discretizing for the variable viscosity case. Commented
+	    //below, and using discretization of the (piecewise) constant viscosity case.
+            // ierr = DMKSPSetComputeOperators(mDa,computeMatrixTaras3d,this);CHKERRQ(ierr);
+            // ierr = DMKSPSetComputeRHS(mDa,computeRHSTaras3d,this);CHKERRQ(ierr);
+	    ierr = KSPSetComputeOperators(mKsp,computeMatrixTaras3dConstantMu,this);CHKERRQ(ierr);
+            ierr = KSPSetComputeRHS(mKsp,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
         }
         ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
 	ierr = KSPSetUp(mKsp);CHKERRQ(ierr); //register the fieldsplits obtained from options.

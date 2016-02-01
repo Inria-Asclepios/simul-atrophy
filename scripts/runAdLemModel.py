@@ -16,8 +16,8 @@ def get_input_options():
     parser.add_argument(
         'res_prefix', help='prefix to be added to all the output filenames')
     parser.add_argument(
-        'lame_paras', help='input lame parameters: Format: "muTissue muCsf '
-        'lambdaTissue lambdaCsf" If both --mu_image and --in_dti used, '
+        'lame_paras', help='input lame parameters: Format: muTissue,muCsf,'
+        'lambdaTissue,lambdaCsf \n If both --mu_image and --in_dti used, '
         'lame_paras wont be used and those images will be used instead.')
     parser.add_argument('boundary_condition', help='Possible values: '
                         'dirichlet_at_walls dirichlet_at_skull')
@@ -101,7 +101,7 @@ def main():
     if ops.wrt_residual:
         bool_args.append('--writeResidual')
 
-    cmd = ('%s -parameters "%s" -boundary_condition %s -atrophyFile %s '
+    cmd = ('%s -parameters %s -boundary_condition %s -atrophyFile %s '
            '-maskFile %s -imageFile %s -numOfTimeSteps %s -resPath %s '
            '-resultsFilenamesPrefix %s %s'
            % (target, ops.lame_paras, ops.boundary_condition, atrophy,

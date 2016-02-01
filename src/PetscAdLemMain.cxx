@@ -32,10 +32,10 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "Arguments: \n"
     "-muFile			: Lame parameter mu image file. Use this if mu is spatially varying\n"
     "         If piecewise constant in tissue and in CSF, use -parameters instead.\n\n"
-    "-parameters		: String that provides Lame parameters separated by a space in the "
+    "-parameters		: Lame parameters separated by comma WITHOUT SPACE in the "
     "following order		:\n"
-    "             muBrain muCsf lambdaBrain lambdaCsf. E.g. -parameters "
-    "'2.4 4.5 1.2 3'\n\n"
+    "             muBrain,muCsf,lambdaBrain,lambdaCsf. E.g. -parameters "
+    "2.4,4.5,1.2,3\n\n"
     "-boundary_condition	: Possible values: dirichlet_at_walls dirichlet_at_skull.\n\n"
     "--relax_ic_in_csf		: If given, relaxes IC, that is non-zero k. If not given, modifies"
     "\natrophy map distributing uniform volume change in CSF to compensate global volume change in"
@@ -108,8 +108,9 @@ int opsParser(UserOptions &ops) {
 	}
 	else {//Set values that will be used instead of the image.
 	    std::stringstream parStream(optionString);
+	    char dummy; //for comma
 	    for(int i=0; i<4; ++i){
-		parStream >> ops.lameParas[i];
+		parStream >> ops.lameParas[i] >> dummy;
 	    }
 	}
 

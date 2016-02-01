@@ -405,6 +405,40 @@ double AdLem3D<DIM>::dataAt(std::string dType, int x, int y, int z, unsigned int
     return 0;
 }
 
+
+#undef __FUNCT__
+#define __FUNCT__ "getMuBrain"
+template <unsigned int DIM>
+double AdLem3D<DIM>::getMuBrain()
+{
+    return mMuBrain;
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "getMuCsf"
+template <unsigned int DIM>
+double AdLem3D<DIM>::getMuCsf()
+{
+    return mMuCsf;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getLambdaBrain"
+template <unsigned int DIM>
+double AdLem3D<DIM>::getLambdaBrain()
+{
+    return mLambdaBrain;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "getLambdaCsf"
+template <unsigned int DIM>
+double AdLem3D<DIM>::getLambdaCsf()
+{
+    return mLambdaCsf;
+}
+
 #undef __FUNCT__
 #define __FUNCT__ "getXnum"
 template <unsigned int DIM>
