@@ -1,165 +1,235 @@
 #!/usr/bin/env python
 import subprocess
-import optparse
+import argparse as ag
 import os
 import os.path as op
 import time as tm
+import bish_utils as bu
 
-def print_and_execute(cmd):
+# Paths of required binaries
+adlem_dir, ants_dir = None, None
+# Required binaries
+img_math, binarize, get_dist = None, None, None
+img_from_label_img = None
+
+def get_input_options():
+    """Parse command line inputs """
+    parser = ag.ArgumentParser(
+        'Generate segmented images, mask and atrophy map that are adapted to be'
+        ' inputs for AdLemModel.')
+    parser.add_argument('t1_img', help='MRI T1 image. A cropped version of'
+                        ' this image will be created ')
+    parser.add_argument('in_seg', help='input freesurfer aparc+aseg file in '
+                        'the same space as the input MR image.')
+    parser.add_argument('dist_thres', help='distance from the tissue up to '
+                        'which  to fill CSF')
+    parser.add_argument(
+        'pad_rad', help='Pad radius to use when cropping using the boun'
+        'ding box of the region that included newly added CSF regions.')
+    parser.add_argument(
+        'atrophy_tables', help='filenames of the tables having label values and'
+        'the corresponding desired atrophy values. Separate individual files '
+        'with comma WITHOUT space.')
+    parser.add_argument('res_dir', help='path to save results')
+    ops = parser.parse_args()
+    if not op.exists(ops.res_dir):
+        os.makedirs(ops.res_dir)
+    return ops
+
+def set_binaries_and_paths():
+    """ Set all the required executables in this module and make them global.
+    envirionment variable. The paths set for the following environment variables
+    are returned (respecting the order) :
+    ADLEM_DIR
+    ANTS_BIN
     """
-    Prints the command and executes it in the shell
+    global adlem_dir, ants_dir
+    global img_math, binarize, get_dist, img_from_label_img
+    adlem_dir = os.getenv('ADLEM_DIR')
+    ants_dir = os.getenv('ANTS_BIN')
+    if adlem_dir is None:
+        raise ValueError('environment variable ADLEM_DIR not found')
+    if ants_dir is None:
+        raise ValueError('environment variable ANTS_BIN not found.')
+    img_math = ants_dir + '/ImageMath'
+    binarize = adlem_dir + '/build/src/BinarizeThreshold'
+    get_dist = adlem_dir + '/build/src/signedDanielssonDistance'
+    img_from_label_img = adlem_dir + '/build/src/createImageFromLabelImage'
+    return
+
+def crop_by_mask(dim, in_img, out_img, label_mask_img, label='1', padRadius='0'):
+    '''
+    Run Ants ExtractRegionFromImageByMask command
+    '''
+    crop = '%s/ExtractRegionFromImageByMask %s' % (ants_dir, dim)
+    cmd = ('%s %s %s %s %s %s'
+           % (crop, in_img, out_img, label_mask_img, label, padRadius))
+    bu.print_and_execute(cmd)
+    return
+
+
+def create_csf_mask_images(ops):
+    '''
+    Create binary images (masks) with various csf images.
+    Create image files (that are also returned) are (in the order)
+    fs_brain_csf_mask: binary mask with foreground = brain + csf
+    fs_brain_no_csf_mask: binary mask, foreground = brain only
+    fs_csf_mask: binary mask, foreground = FS segmented csf only
+    sulcal_csf: binary mask, foreground = sulcal CSF computed using distance map
+    '''
+    # Binarize input FreeSurfer segmentation in following two ways
+    # 1. with brain + FS segmeted CSF : fs_brain_csf_mask
+    # 2. Only tissue excluding CSF (fs_brain_no_csf_mask)
+    # The sulcal CSF region is obtained by using distance map on fs_brain_no_csf_mask
+    # Mask with foreground = all FS brain and CSF segmented regions.
+    fl_pref = op.join(ops.res_dir, 'create_csf_mask_images_')
+    fs_brain_csf_mask = fl_pref + 'tmp++InBinaryWithCsf.nii.gz'
+    cmd = ('%s -i %s -o %s -l 1 -u 15000'
+           % (binarize, ops.in_seg, fs_brain_csf_mask))
+    bu.print_and_execute(cmd)
+
+    # Mask with foreground = Only FS segmented CSF regions.
+    fs_csf_mask = fl_pref + 'tmp++fs_csf_mask.nii.gz'
+    cmd = ('%s -t %s/configFiles/freeSurferCsfLabels -l %s -o %s'
+           % (img_from_label_img, adlem_dir, ops.in_seg, fs_csf_mask))
+    bu.print_and_execute(cmd)
+    # Make FS CSF regions to have label values > largest FS CSF label
+    fs_csf_mask_mult = fl_pref + 'tmp++fs_csf_mask_mult.nii.gz'
+    # max CSF label = 221. So multiply with say 300 (but -ve)
+    cmd = '%s 3 %s m %s -300' % (img_math, fs_csf_mask_mult, fs_csf_mask)
+    bu.print_and_execute(cmd)
+
+    # Mask with foreground = only FS segmented tissue and no CSF at all
+    fs_brain_no_csf_mask = fl_pref + 'tmp++InBinary.nii.gz'
+    cmd = ('%s 3 %s + %s %s'
+           % (img_math, fs_brain_no_csf_mask, ops.in_seg, fs_csf_mask_mult))
+    bu.print_and_execute(cmd) #Results in -ve values for all CSF regions.
+    # Binarize by excluding FS CSF
+    cmd = ('%s -i %s -o %s -l 1 -u 15000'
+           % (binarize, fs_brain_no_csf_mask, fs_brain_no_csf_mask))
+    bu.print_and_execute(cmd)
+
+    # get the distance of the binary input
+    dist_img = fl_pref + 'tmp++dist_img.nii.gz'
+    cmd = '%s %s %s' % (get_dist, fs_brain_no_csf_mask, dist_img)
+    bu.print_and_execute(cmd)
+    # Extract desired CSF region input distance threshold
+    sulcal_csf_mask = fl_pref + 'tmp++sulcal_csf_mask.nii.gz'
+    cmd = ('%s -i %s -o %s -l 0 -u %s'
+           % (binarize, dist_img, sulcal_csf_mask, ops.dist_thres))
+    bu.print_and_execute(cmd)
+    return fs_brain_no_csf_mask, fs_brain_csf_mask, fs_csf_mask, sulcal_csf_mask
+
+def create_seg_for_model(fs_brain_no_csf_mask, fs_csf_mask, sulcal_csf_mask, out_seg):
+    '''
+    Create segmentation image with the following labels:
+    Non brain region (NBR) - 0
+    CSF - 1  and Tissue - 2
+    '''
+    # Make tissue as 2
+    cmd = '%s 3 %s m %s 2' % (img_math, out_seg, fs_brain_no_csf_mask)
+    bu.print_and_execute(cmd)
+    # Include freesurfer csf regions
+    cmd = ('%s 3 %s + %s %s'
+           % (img_math, out_seg, out_seg, fs_csf_mask))
+    bu.print_and_execute(cmd)
+    # Now combine sulcal CSF regions with CSF label as 1
+    # Add only at those places where freesurfer had zero labels.
+    cmd = ('%s 3 %s addtozero %s %s'
+           % (img_math, out_seg, out_seg, sulcal_csf_mask))
+    bu.print_and_execute(cmd)
+
+
+def create_seg_for_atrophy(ops, sulcal_csf_mask, out_seg):
+    '''
+    Create segmentation image with all the FreeSurfer labels intact +
+    additional sulcal CSF added where the label asssinged to the CSF
+    is the same as the CSF label of FreeSurfer (24)
+    '''
+    fl_pref = op.join(ops.res_dir, 'create_seg_for_atrophy_')
+    # Make sulcal CSF regions to have label 24.
+    sulcal_csf_mask_mult = fl_pref + 'tmp++sulcal_csf_mask_mult.nii.gz'
+    cmd = '%s 3 %s m %s 24' % (img_math, sulcal_csf_mask_mult, sulcal_csf_mask)
+    bu.print_and_execute(cmd)
+    # Add this to input FS seg only at those places where it had zero labels.
+    cmd = ('%s 3 %s addtozero %s %s'
+           % (img_math, out_seg, ops.in_seg, sulcal_csf_mask_mult))
+    bu.print_and_execute(cmd)
+
+
+def create_atrophy_map(ops, seg_for_atrophy, out_atrophy_map):
+    '''
+    Create atrophy map from input tables and the input segmentation image.
+    '''
+    # Now create atrophy map: The first atrophy table is used to create while
+    # the subsequent ones modify the one created with the first one.
+    cmd_pref = ('%s -l %s -o %s -t '
+                % (img_from_label_img, seg_for_atrophy, out_atrophy_map))
+    tables = ops.atrophy_tables.split(',') # files separated by comma
+    # print('list of tables: ')
+    # print tables
+    cmd = cmd_pref + tables[0]
+    bu.print_and_execute(cmd)
+    for table in tables[1:]: # from the remaining tables modify the output file
+        cmd = cmd_pref + table + ' -m ' + out_atrophy_map
+        bu.print_and_execute(cmd)
+        tm.sleep(0.2) # wait cmd to write file before launching another one.
+
+
+def create_crop_mask(fs_brain_csf_mask, sulcal_csf_mask, out_seg):
+    '''
+    Create output crop mask.
+    Mask foreground = sulcal CSF regions + foreground of fs_brain_csf_mask.
+    '''
+    # Add sulcal_csf_mask to fs_brain_csf_mask only where fs_brain_csf_mask = 0
+    cmd = ('%s 3 %s addtozero %s %s'
+           % (img_math, out_seg, fs_brain_csf_mask, sulcal_csf_mask))
+    bu.print_and_execute(cmd)
+
+
+def main():
+    """ Generate segmented images, mask and atrophy map that are adapted to be
+    inputs for AdLemModel.
     """
-    print cmd + '\n'
-    subprocess.call(cmd, shell=True)
+    ops = get_input_options()
+    set_binaries_and_paths()
+    # Output filenames
+    crop_info = 'D%sR%s' % (ops.dist_thres, ops.pad_rad)
+    out_seg_for_model = op.join(ops.res_dir, 'maskwithCsf%s.nii.gz'
+                                % (crop_info))
+    out_seg_for_atrophy = op.join(ops.res_dir, 'labelsWithCsf%s.nii.gz'
+                                  % (crop_info))
+    out_atrophy = op.join(ops.res_dir, 'atrophyMap%s.nii.gz' % (crop_info))
+    out_t1 = op.join(ops.res_dir, 't1%s.nii.gz' % (crop_info))
+    out_crop_mask = op.join(ops.res_dir, 'cropMaskD%sPadRadius%s.nii.gz'
+                            % (ops.dist_thres, ops.pad_rad))
 
-#parse the command line inputs
-parser = optparse.OptionParser()
-parser.add_option('-m', '--mrOriginal', dest='mrOriginal', help='MRI T1 image. A cropped version of this image will be created ')
-parser.add_option('-i', '--inImage', dest='inImage', help='input freesurfer aparc+aseg file in the same space as the input MR image.')
-parser.add_option('-d', '--distThreshold', dest='distThreshold', help='distance from the tissue up to which  to fill CSF')
-parser.add_option('-c', '--cropPadRadius', dest='cropPadRadius', help='Pad radius to use when cropping using the bounding box of the region that included newly added CSF regions.')
-parser.add_option('-t', '--atrophyTables', dest='atrophyTables', help='a file that contains table with label values and the corresponding desired atrophy values')
-parser.add_option('-r', '--resPath', dest='resPath', help='path to save results. Use . for current working directory.')
-(options, args) = parser.parse_args()
+    # Create different temporary mask images
+    (fs_brain_no_csf_mask, fs_brain_csf_mask,
+     fs_csf_mask, sulcal_csf_mask) = create_csf_mask_images(ops)
 
-AdLemModelPath = os.getenv('ADLEM_DIR')
-antsPath = os.getenv('ANTS_BIN')
-if AdLemModelPath is None:
-    raise ValueError('environment variable ADLEM_DIR not found')
-if antsPath is None:
-    raise ValueError('environment variable ANTS_BIN not found.')
+    # Create output segmentation image for the model
+    create_seg_for_model(fs_brain_no_csf_mask, fs_csf_mask, sulcal_csf_mask,
+                         out_seg_for_model)
+    # Create output segmentation image for atrophy generation purposes.
+    create_seg_for_atrophy(ops, sulcal_csf_mask, out_seg_for_atrophy)
+    # Create atrophy map:
+    create_atrophy_map(ops, out_seg_for_atrophy, out_atrophy)
+    # create crop mask
+    create_crop_mask(fs_brain_csf_mask, sulcal_csf_mask, out_crop_mask)
 
-# Set required paths and binary aliases
-# if options.isCluster is True:
-#     antsPath = '/epi/asclepios2/bkhanal/antsbin/bin'
-#     AdLemModelPath = '/epi/asclepios2/bkhanal/works/AdLemModel'
-# else:
-#     antsPath = '/home/bkhanal/Documents/softwares/antsbin/bin'
-#     AdLemModelPath = '/home/bkhanal/works/AdLemModel'
+    # Crop all the images:
+    crop_by_mask(3, out_atrophy, out_atrophy, out_crop_mask, padRadius='0')
+    crop_by_mask(3, out_seg_for_model, out_seg_for_model, out_crop_mask,
+                 padRadius='0')
+    crop_by_mask(3, out_seg_for_atrophy, out_seg_for_atrophy,
+                 out_crop_mask, padRadius='0')
+    crop_by_mask(3, ops.t1_img, out_t1, out_crop_mask, padRadius='0')
 
-if options.inImage is None:
-    options.inImage = raw_input('Enter a valid aparc+aseg freesurfer segmentation')
-inImage = options.inImage
+    # Delete all tmp++ prefixed files from the result directory.
+    cmd = 'rm ' + op.join(ops.res_dir, '*tmp++*')
+    bu.print_and_execute(cmd)
 
-if options.distThreshold is None:
-    options.distThreshold = raw_input('distance from the tissue up to which  to fill CSF')
-distThreshold = options.distThreshold
 
-if options.resPath is None:
-    options.resPath = raw_input('Enter directory where results will be saved; Use . to use current working directory')
-resPath = options.resPath
-if not op.exists(resPath):
-    os.makedirs(resPath)
-
-if options.cropPadRadius is None:
-    options.cropPadRadius = raw_input('Enter pad radius for cropping. See help: -h for more info.')
-cropPadRadius = options.cropPadRadius
-
-if options.atrophyTables is None:
-    options.atrophyTables = raw_input('Enter existing filename with a valid labels and corresponding atrophy values.')
-atrophyTables = options.atrophyTables
-
-if options.mrOriginal is None:
-    options.mrOriginal = raw_input('Enter original T1 input structural MRI.')
-t1Image = options.mrOriginal
-
-# Output filenames
-outMaskForModel = op.join(resPath, 'maskwithCsfD' + distThreshold + 'R' + cropPadRadius + '.nii.gz')
-outLabelForAtrophy = op.join(resPath, 'labelsWithCsfD' + distThreshold + 'R' + cropPadRadius + '.nii.gz')
-outAtrophyMap = op.join(resPath, 'atrophyMapD' + distThreshold + 'R' + cropPadRadius + '.nii.gz')
-t1Cropped = op.join(resPath, 't1D' + distThreshold + 'R' + cropPadRadius + '.nii.gz')
-
-# Binaries aliases
-ImageMath = antsPath + '/ImageMath 3 '
-binarize = AdLemModelPath + '/build/src/BinarizeThreshold -i '
-getDistance = AdLemModelPath + '/build/src/signedDanielssonDistance '
-crop = antsPath + '/ExtractRegionFromImageByMask 3 '
-
-# Binarize input with 1. only tissue excluding all CSF to create distance map. 2. tissue with csf from freesurfer.
-# With freesurfer csf
-inBinaryWithCsf = op.join(resPath, 'tmp++InBinaryWithCsf.nii.gz')
-command = binarize + inImage + ' -o ' + inBinaryWithCsf + ' -l 1 -u 15000'
-print_and_execute(command)
-# Now binary input excluding CSF (i.e. just tissue no CSF at all)
-inBinary = op.join(resPath, 'tmp++InBinary.nii.gz')
-# Extract freesurferCsf labels
-freesurferCsf =op.join(resPath, 'tmp++freesurferCsf.nii.gz')
-command = AdLemModelPath + '/build/src/createImageFromLabelImage -t ' + AdLemModelPath + '/configFiles/freeSurferCsfLabels -l ' \
-          + inImage + ' -o ' + freesurferCsf
-print_and_execute(command)
-# Change freesurfer csf labels to prepare for binarization of input excluding freesurferCSF.
-freesurferCsfMult = op.join(resPath, 'tmp++freesurferCsfMult.nii.gz')
-command = ImageMath + freesurferCsfMult + ' m ' + freesurferCsf + ' -300 '  # 221 is max label for CSF region.
-print_and_execute(command)
-command = ImageMath + inBinary + ' + ' + inImage + ' ' + freesurferCsfMult
-print_and_execute(command)
-# Binarize by excluding freesurfer csf
-command = binarize + inBinary + ' -o ' + inBinary + ' -l 1 -u 15000'
-print_and_execute(command)
-
-# get the distance of the binary input
-distImage = op.join(resPath, 'tmp++distImage.nii.gz')
-command = getDistance + inBinary + ' ' + distImage
-print_and_execute(command)
-# Extract desired CSF region input distance threshold
-sulcalCsf = op.join(resPath, 'tmp++sulcalCsf.nii.gz')
-command = binarize + distImage + ' -o ' + sulcalCsf + ' -l 0 -u ' + distThreshold
-print_and_execute(command)
-
-# Create a mask for the model i.e. labels as: NBR - 0  , CSF - 1, Tissue - 2
-# Make tissue as 2
-command = ImageMath + outMaskForModel + ' m ' + inBinary + ' 2'
-print_and_execute(command)
-# Include freesurfer csf regions
-command = ImageMath + outMaskForModel + ' + ' + outMaskForModel + ' ' + freesurferCsf
-print_and_execute(command)
-# Now combine sulcal CSF regions with CSF label as 1 ( add only at those places where freesurfer had zero labels.)
-command = ImageMath + outMaskForModel + ' addtozero ' + outMaskForModel + ' ' + sulcalCsf
-print_and_execute(command)
-
-# Combine CSF to the input image with CSF label AS 24.
-command = ImageMath + sulcalCsf + ' m ' + sulcalCsf + ' 24 '
-print_and_execute(command)
-# Now combine sulcal CSF regions with CSF label as 1 ( add only at those places where freesurfer had zero labels.)
-command = ImageMath + outLabelForAtrophy + ' addtozero ' + inImage + ' ' + sulcalCsf
-print_and_execute(command)
-
-# Now create atrophy map:
-# The first atrophy table is used to create while the subsequent ones modify the
-# one created with the first one.
-commandPrefix = AdLemModelPath + '/build/src/createImageFromLabelImage -l ' + \
-                outLabelForAtrophy + ' -o ' + outAtrophyMap + ' -t '
-tables = atrophyTables.split()
-# print('list of tables: ')
-# print tables
-command = commandPrefix + tables[0]
-print_and_execute(command)
-for table in tables[1:]: # from the remaining tables modify the output file
-    command = commandPrefix + table + ' -m ' + outAtrophyMap
-    print_and_execute(command)
-    tm.sleep(0.2) # wait the command to write the file before launching another one.
-
-# Crop all the images:
-# Make a mask of including CSF regions with distance one more than the input distance.
-cropMask = op.join(resPath, 'cropMaskD' + distThreshold + 'PadRadius' + cropPadRadius + '.nii.gz')
-command = getDistance + inBinaryWithCsf + ' ' + distImage
-print_and_execute(command)
-command = binarize + distImage + ' -o ' + cropMask + ' -l -1000 -u ' + distThreshold
-print_and_execute(command)
-
-# Use this mask to crop the images.
-command = crop + outAtrophyMap + ' ' + outAtrophyMap + ' ' + cropMask + ' 1 ' + cropPadRadius
-print_and_execute(command)
-
-command = crop + outMaskForModel + ' ' + outMaskForModel + ' ' + cropMask + ' 1 ' + cropPadRadius
-print_and_execute(command)
-
-command = crop + outLabelForAtrophy + ' ' + outLabelForAtrophy + ' ' + cropMask + ' 1 ' + cropPadRadius
-print_and_execute(command)
-
-command = crop + t1Image + ' ' + t1Cropped + ' ' + cropMask + ' 1 ' + cropPadRadius
-print_and_execute(command)
-
-# Delete all tmp++ prefixed files from the result directory.
-command = 'rm ' + op.join(resPath, 'tmp++*')
-print_and_execute(command)
+if __name__ == "__main__":
+    main()
