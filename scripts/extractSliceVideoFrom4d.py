@@ -24,6 +24,9 @@ def get_input_options():
         'time_unit is also used. Default 1.0', type=float)
     parser.add_argument(
         'delay', help='time delay between frames in milliseconds')
+    parser.add_argument(
+        '-rotate', help='If given overrides the default rotation used for '
+        'proper orientation of the slice.')
 
     ops = parser.parse_args()
     return ops
@@ -57,7 +60,10 @@ def main():
             extract_slice, tmp3DImage, axis, ops.slice_num, tmp2DImage)
         bu.print_and_execute(cmd, False)
         # Rotate the image for proper orientation.
-        cmd = 'convert -rotate 180 %s %s' % (tmp2DImage, tmp2DImage)
+        if ops.rotate is None:
+            cmd = 'convert -rotate 180 %s %s' % (tmp2DImage, tmp2DImage)
+        else:
+            cmd = 'convert -rotate %s %s %s' % (ops.rotate, tmp2DImage, tmp2DImage)
         bu.print_and_execute(cmd, False)
         # Write time-point info
         if ops.time_unit is not None:

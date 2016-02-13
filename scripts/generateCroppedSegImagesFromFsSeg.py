@@ -31,6 +31,12 @@ def get_input_options():
         'the corresponding desired atrophy values. Separate individual files '
         'with comma WITHOUT space.')
     parser.add_argument('res_dir', help='path to save results')
+    parser.add_argument(
+        '--only_sulcal_csf', action='store_true', help='If given considers '
+        'all the ventricles as tissue + all CSF segmented by FS as tissue. Only'
+        ' sulcal CSF computed in this script will be considered as CSF and the '
+        ' output segmentation for the model will be created accordingly. That '
+        'is all the ventricles will be set the same label as that of tissue')
     ops = parser.parse_args()
     if not op.exists(ops.res_dir):
         os.makedirs(ops.res_dir)
@@ -89,29 +95,36 @@ def create_csf_mask_images(ops):
     bu.print_and_execute(cmd)
 
     # Mask with foreground = Only FS segmented CSF regions.
-    fs_csf_mask = fl_pref + 'tmp++fs_csf_mask.nii.gz'
-    cmd = ('%s -t %s/configFiles/freeSurferCsfLabels -l %s -o %s'
-           % (img_from_label_img, adlem_dir, ops.in_seg, fs_csf_mask))
-    bu.print_and_execute(cmd)
-    # Make FS CSF regions to have label values > largest FS CSF label
-    fs_csf_mask_mult = fl_pref + 'tmp++fs_csf_mask_mult.nii.gz'
-    # max CSF label = 221. So multiply with say 300 (but -ve)
-    cmd = '%s 3 %s m %s -300' % (img_math, fs_csf_mask_mult, fs_csf_mask)
-    bu.print_and_execute(cmd)
+    if ops.only_sulcal_csf:
+        fs_csf_mask = None
+        fs_brain_no_csf_mask = None
+    else:
+        fs_csf_mask = fl_pref + 'tmp++fs_csf_mask.nii.gz'
+        cmd = ('%s -t %s/configFiles/freeSurferCsfLabels -l %s -o %s'
+               % (img_from_label_img, adlem_dir, ops.in_seg, fs_csf_mask))
+        bu.print_and_execute(cmd)
+        # Make FS CSF regions to have label values > largest FS CSF label
+        fs_csf_mask_mult = fl_pref + 'tmp++fs_csf_mask_mult.nii.gz'
+        # max CSF label = 221. So multiply with say 300 (but -ve)
+        cmd = '%s 3 %s m %s -300' % (img_math, fs_csf_mask_mult, fs_csf_mask)
+        bu.print_and_execute(cmd)
 
-    # Mask with foreground = only FS segmented tissue and no CSF at all
-    fs_brain_no_csf_mask = fl_pref + 'tmp++InBinary.nii.gz'
-    cmd = ('%s 3 %s + %s %s'
-           % (img_math, fs_brain_no_csf_mask, ops.in_seg, fs_csf_mask_mult))
-    bu.print_and_execute(cmd) #Results in -ve values for all CSF regions.
-    # Binarize by excluding FS CSF
-    cmd = ('%s -i %s -o %s -l 1 -u 15000'
-           % (binarize, fs_brain_no_csf_mask, fs_brain_no_csf_mask))
-    bu.print_and_execute(cmd)
+        # Mask with foreground = only FS segmented tissue and no CSF at all
+        fs_brain_no_csf_mask = fl_pref + 'tmp++InBinary.nii.gz'
+        cmd = ('%s 3 %s + %s %s'
+               % (img_math, fs_brain_no_csf_mask, ops.in_seg, fs_csf_mask_mult))
+        bu.print_and_execute(cmd) #Results in -ve values for all CSF regions.
+        # Binarize by excluding FS CSF
+        cmd = ('%s -i %s -o %s -l 1 -u 15000'
+               % (binarize, fs_brain_no_csf_mask, fs_brain_no_csf_mask))
+        bu.print_and_execute(cmd)
 
     # get the distance of the binary input
     dist_img = fl_pref + 'tmp++dist_img.nii.gz'
-    cmd = '%s %s %s' % (get_dist, fs_brain_no_csf_mask, dist_img)
+    if ops.only_sulcal_csf: # Here we consider all FS segmented CSF as tissue
+        cmd = '%s %s %s' % (get_dist, fs_brain_csf_mask, dist_img)
+    else: # Here FS segmented CSF (and ventricles are taken as CSF)
+        cmd = '%s %s %s' % (get_dist, fs_brain_no_csf_mask, dist_img)
     bu.print_and_execute(cmd)
     # Extract desired CSF region input distance threshold
     sulcal_csf_mask = fl_pref + 'tmp++sulcal_csf_mask.nii.gz'
@@ -120,19 +133,19 @@ def create_csf_mask_images(ops):
     bu.print_and_execute(cmd)
     return fs_brain_no_csf_mask, fs_brain_csf_mask, fs_csf_mask, sulcal_csf_mask
 
-def create_seg_for_model(fs_brain_no_csf_mask, fs_csf_mask, sulcal_csf_mask, out_seg):
+def create_seg_for_model(fs_tissue_mask, fs_csf_mask, sulcal_csf_mask, out_seg):
     '''
     Create segmentation image with the following labels:
     Non brain region (NBR) - 0
     CSF - 1  and Tissue - 2
     '''
     # Make tissue as 2
-    cmd = '%s 3 %s m %s 2' % (img_math, out_seg, fs_brain_no_csf_mask)
+    cmd = '%s 3 %s m %s 2' % (img_math, out_seg, fs_tissue_mask)
     bu.print_and_execute(cmd)
-    # Include freesurfer csf regions
-    cmd = ('%s 3 %s + %s %s'
-           % (img_math, out_seg, out_seg, fs_csf_mask))
-    bu.print_and_execute(cmd)
+    if fs_csf_mask is not None: #Include freesurfer csf regions
+        cmd = ('%s 3 %s + %s %s'
+               % (img_math, out_seg, out_seg, fs_csf_mask))
+        bu.print_and_execute(cmd)
     # Now combine sulcal CSF regions with CSF label as 1
     # Add only at those places where freesurfer had zero labels.
     cmd = ('%s 3 %s addtozero %s %s'
@@ -209,7 +222,11 @@ def main():
      fs_csf_mask, sulcal_csf_mask) = create_csf_mask_images(ops)
 
     # Create output segmentation image for the model
-    create_seg_for_model(fs_brain_no_csf_mask, fs_csf_mask, sulcal_csf_mask,
+    if ops.only_sulcal_csf:
+        fs_tissue_mask = fs_brain_csf_mask
+    else:
+        fs_tissue_mask = fs_brain_no_csf_mask
+    create_seg_for_model(fs_tissue_mask, fs_csf_mask, sulcal_csf_mask,
                          out_seg_for_model)
     # Create output segmentation image for atrophy generation purposes.
     create_seg_for_atrophy(ops, sulcal_csf_mask, out_seg_for_atrophy)
