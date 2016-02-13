@@ -126,10 +126,10 @@ add_executable(signedDanielssonDistance
 target_link_libraries(signedDanielssonDistance ${ITK_LIBRARIES}
   )
 
-add_executable(regionalJacobians
-  regionalJacobians.cxx
+add_executable(uniformizeWithRegionalMeans
+  uniformizeWithRegionalMeans.cxx
   )
-target_link_libraries(regionalJacobians ${ITK_LIBRARIES}
+target_link_libraries(uniformizeWithRegionalMeans ${ITK_LIBRARIES}
   ${Boost_SYSTEM_LIBRARY}
   ${Boost_PROGRAM_OPTIONS_LIBRARY}
   )
