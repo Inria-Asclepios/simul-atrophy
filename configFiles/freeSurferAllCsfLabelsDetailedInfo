@@ -1,0 +1,12 @@
+4   Left-Lateral-Ventricle                  120 18  134 0
+5   Left-Inf-Lat-Vent                       196 58  250 0
+14  3rd-Ventricle                           204 182 142 0
+15  4th-Ventricle                           42  204 164 0
+24  CSF                                     60  60  60  0
+43  Right-Lateral-Ventricle                 120 18  134 0
+44  Right-Inf-Lat-Vent                      196 58  250 0
+72  5th-Ventricle                           120 190 150 0
+122 CSF-SA                                  74  255 74  0
+213 lateral_ventricle                       121 17  136 0
+221 Inf_Lat_Vent                            197 58  250 0
+701 CSF-FSL-FAST                            120 18  134 0
