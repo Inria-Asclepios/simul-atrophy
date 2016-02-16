@@ -11,6 +11,13 @@
 //#include<petscdmda.h>
 #include<petscdmcomposite.h>
 
+namespace PetscAdLemTaras3D_SolverOps
+{
+
+    const bool sUse12pointStencilForDivergence = false;
+    //const bool sUse12pointStencilForDivergence = true;
+}
+
 //template <unsigned int DIM>
 class PetscAdLemTaras3D : public PetscAdLem3D<3u> {
 public:
