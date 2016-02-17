@@ -1,0 +1,25 @@
+# data_base_dir     sim_base_dir
+/proj/asclepios/cluster/asclepios2/mhadjham/Emotivity/Emotivity_All_N4     /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients
+
+# crop_img     tpts
+cropMaskD2_FS.nii.gz     1,2,3,4,5
+
+# real_img_dir     seg_dir     reg_dir     table_dir
+Rigid_reg_intra     Segmentation_subject/mri     Non_Rigid_reg_intra_robex Atrophy_tables
+
+
+# bl_prefix     fl_prefix     svf_prefix     svf_suffix     div_prefix
+Final_S0MNI_spline_     Final_S1MNI_spline_recall_S0_     output_stationary_velocity_field_     2.0_0.15_3.0.mha     Minus_Div_SVF_longi_native_
+
+
+# seg_file     seg_file_of
+aseg_in_rawavg.nii.gz     baseline
+
+
+# patients
+Patient_000098205180,Patient_000042288666,Patient_000068674859
+
+Use following paths for running the script from cluster or from nef.
+/epi/asclepios2/mhadjham/Emotivity/Emotivity_All_N4     /epi/asclepios2/bkhanal/works/AdLemModel/results/patients
+#End
+
