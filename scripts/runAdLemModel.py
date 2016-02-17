@@ -118,7 +118,9 @@ def main():
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         #print cmd
         bu.qsub_job(name=job_name, queue='parlong', walltime='12:00:00',
-                    procs='nodes=3:xeon:ppn=20', mem='mem=180gb',
+                    procs='nodes=3:xeon:ppn=20', mem='mem=540gb',
+                    #procs='nodes=4:xeon:ppn=20', mem='mem=720gb',
+                    #procs='nodes=5:xeon:ppn=20', mem='mem=900gb',
                     dest_dir=res_dir, cmd=cmd)
     else:
         #print cmd
