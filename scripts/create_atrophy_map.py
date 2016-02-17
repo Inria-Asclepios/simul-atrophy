@@ -27,18 +27,22 @@ def get_input_options():
     parser = ag.ArgumentParser('Write atrophy map either from given tables'
                                ' or from input intensity image.')
     parser.add_argument('out_atrophy', help='output atrophy map image')
-    parser.add_argument('seg_for_atrophy', help='Input label image with all the'
-                        ' ROIs where atrophy values are to be set.')
-    # parser.add_argument('-seg_for_model', help='Input label image with CSF '
-    #                     'labels as 1, and non-brain regions as 0. In these '
-    #                     'regions I will put atrophy values as 0, if given!')
-    in_atrophy = parser.add_mutually_exclusive_group(required=True)
-    in_atrophy.add_argument(
+    parser.add_argument(
+        '-seg_for_atrophy', help='Input label image with all ROIs where atrophy '
+        'values are to be set. If you provide -atrophy_img and -crop_img, Make '
+        'sure that seg_for_atrophy has the same size as that of the one output '
+        'atrophy map will have when cropped with given options')
+    parser.add_argument(
         '-atrophy_tables', help='filenames of the tables having label values '
         'and the corresponding desired atrophy values. Separate individual '
-        'files with comma WITHOUT space.')
-    in_atrophy.add_argument(
-        '-atrophy_img', help='Image file to adapt as atrophy map. ')
+        'files with comma WITHOUT space. Tables from this option are used at '
+        'very end. So for e.g. if you use -atrophy_img also, the values of '
+        'output atrophy computed can be modified by this table!')
+    parser.add_argument(
+        '-atrophy_img', help='Input image file to adapt as atrophy map. If not'
+        ' given, starts from image with 0 everywhere. The tables with option '
+        '-atrophy_tables will be used after using the atrophy_img and related '
+        'other options.')
     parser.add_argument(
         '--negate_atrophy_vals', action='store_true', help='Input atrophy vals '
         'from  will be multiplied by -1 for the final output.')
@@ -56,10 +60,18 @@ def get_input_options():
         'in seg_for_atrophy to compute mean. Relevant only when --uniform_'
         'regional_means is provided.')
     atrophy_img.add_argument(
-        '--start_from_atrophy_img', action='store_true', help='If given, all '
-        'regions not present in uniformize_labels will have the same value as '
-        'in the -atrophy_img')
+        '-seg_for_uniformize', help='Input label image with all the labels '
+        'defining the ROIs present in -uniformize_labels to compute mean. '
+        'Relevant only when --uniform_regional_means is provided.')
+    atrophy_img.add_argument(
+        '--start_from_atrophy_img', action='store_true', help='If given, '
+        'uniformized image will have  values copied from atrophy_img for all '
+        'ROIs not covered by -uniformize labels; otherwise these non selected '
+        'regions will be set to zero value.')
     ops = parser.parse_args()
+    if (ops.atrophy_tables and not ops.seg_for_atrophy) or (ops.seg_for_atrophy and not ops.atrophy_tables):
+        parser.error('Either both or none of -seg_for_atrophy and '
+                     '-atrophy_tables options are required')
     if ops.uniform_regional_means and not ops.uniformize_labels:
         parser.error('-uniformize_labels needed for --uniform_regional_means')
     if ops.uniformize_labels and not ops.uniform_regional_means:
@@ -108,6 +120,7 @@ def crop_by_mask(dim, in_img, out_img, label_mask_img, label='1', padRadius='0')
 def atrophy_map_from_tables(ops):
     '''
     Create atrophy map from input tables and the input segmentation image.
+    Returns created output atrophy image filename.
     '''
     # Now create atrophy map: The first atrophy table is used to create while
     # the subsequent ones modify the one created with the first one.
@@ -117,11 +130,16 @@ def atrophy_map_from_tables(ops):
     # print('list of tables: ')
     # print tables
     cmd = cmd_pref + tables[0]
+    if ops.atrophy_img:
+        cmd += ' -m ' + ops.out_atrophy
     bu.print_and_execute(cmd)
     for table in tables[1:]: # from the remaining tables modify the output file
-        cmd = cmd_pref + table + ' -m ' + ops.out_atrophy
+        cmd = cmd_pref + table
+        if not ops.atrohy_img:
+            cmd += ' -m ' + ops.out_atrophy
         bu.print_and_execute(cmd)
-        tm.sleep(0.2) # wait cmd to write file before launching another one.
+        tm.sleep(0.2) # wait cmd to write file before writing another one.
+    return ops.out_atrophy
 
 
 
@@ -129,6 +147,9 @@ def atrophy_map_from_img(ops):
     '''
     Create atrophy map from input image.
     '''
+    if not ops.crop_mask and not ops.uniform_regional_means:
+        cmd = 'cp %s %s' % (ops.atrophy_img, ops.out_atrophy)
+        return
     in_atrophy = ops.atrophy_img
     if ops.crop_mask:
         crop_by_mask(3, in_atrophy, ops.out_atrophy,
@@ -137,19 +158,20 @@ def atrophy_map_from_img(ops):
     if ops.uniform_regional_means:
         cmd = ('%s -t %s -i %s -l %s -u %s'
                % (uniformize_regionally, ops.uniformize_labels, in_atrophy,
-                  ops.seg_for_atrophy, ops.out_atrophy))
+                  ops.seg_for_uniformize, ops.out_atrophy))
         if ops.start_from_atrophy_img:
-            cmd = cmd + ' -s'
+            cmd += ' -s'
         bu.print_and_execute(cmd)
+    return
 
 def main():
     """ Generate atrophy maps. Run with -h to see options."""
     ops = get_input_options()
     set_binaries_and_paths()
+    if ops.atrophy_img:
+        atrophy_map_from_img(ops)
     if ops.atrophy_tables:
         atrophy_map_from_tables(ops)
-    else:
-        atrophy_map_from_img(ops)
     if ops.negate_atrophy_vals:
         im.mult_scalar_imgs([ops.out_atrophy], [ops.out_atrophy], -1)
 

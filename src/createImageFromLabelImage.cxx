@@ -9,6 +9,9 @@
 #include <itkImageFileWriter.h>
 #include <itkImageRegionIterator.h>
 #include <itkImageRegionConstIterator.h>
+#include <itkMaskImageFilter.h>
+#include <itkBinaryImageToLabelMapFilter.h>
+#include <itkLabelStatisticsImageFilter.h>
 
 int main(int argc,char **argv)
 {
@@ -20,11 +23,11 @@ int main(int argc,char **argv)
 	("help,h", "display help message")
 	("table,t", boost::program_options::value< std::string >(&labelTableFile), "label table with two columns: labels and corresponding pixel values to be assigned to the output image.")
 	("labelImage,l", boost::program_options::value< std::string >(&labelImageFile), "input label image file from which the regions matching the labels in the table will be extracted"
-	                                                                                "New pixel values will be put to only these extracted regions.")
+	 "New pixel values will be put to only these extracted regions.")
 	("outputImage,o",boost::program_options::value< std::string >(&outImageFile), "Output image")
 	("fileToModify,m",boost::program_options::value< std::string >(&fileToModify), " The image that is to be modified to produce output image."
-	                                                                               " If not provided, creates a new image with zero value everywhere"
-	                                                                               " and then updates the extracted regions.")
+	 " If not provided, creates a new image with zero value everywhere"
+	 " and then updates the extracted regions.")
 	;
 
     boost::program_options::variables_map options;
@@ -96,9 +99,9 @@ int main(int argc,char **argv)
     }
     labelTable.close();
 
-// for (LabelWithValueIteratorType labelWithValueIt = labelWithValue.begin(); labelWithValueIt != labelWithValue.end(); ++labelWithValueIt) {
-// 	std::cout<<labelWithValueIt->first<<" ** "<<labelWithValueIt->second<<std::endl;
-// }
+    for (LabelWithValueIteratorType labelWithValueIt = labelWithValue.begin(); labelWithValueIt != labelWithValue.end(); ++labelWithValueIt) {
+	std::cout<<labelWithValueIt->first<<" ** "<<labelWithValueIt->second<<std::endl;
+    }
 
 // Read label image
     typedef itk::ImageFileReader< LabelImageType > LabelImageReaderType;
@@ -122,30 +125,75 @@ int main(int argc,char **argv)
 	outImage->FillBuffer(0.);
     }
 
-// L : labelImage     A : outImage      out(I) : out value for the corresponding label I read from the table.
-// if ( L(x) != 0 ) then A(x) = out(L(x))
 
+
+    //L:labelImage A:outImage  out(I):out value for the corresponding label I read from the table.
+    //if ( L(x) != 0 ) then A(x) = out(L(x)) or just A(x) = out(L(x)) without if; when you want for label 0 also.
     typedef itk::ImageRegionConstIterator< LabelImageType > LabelIteratorType;
     typedef itk::ImageRegionIterator< OutImageType > ValueIteratorType;
-
     LabelIteratorType labelIt(labelImage, labelImage->GetLargestPossibleRegion());
     ValueIteratorType outIt(outImage, outImage->GetLargestPossibleRegion());
-
     labelIt.GoToBegin();
     outIt.GoToBegin();
-    while(!labelIt.IsAtEnd()){
+    while(!labelIt.IsAtEnd())
+    {
 	LabelImageType::PixelType currLabel = labelIt.Get();
-	if(currLabel) {  //for all non-zero labels
-	    for (LabelWithValueIteratorType labelWithValueIt = labelWithValue.begin(); labelWithValueIt != labelWithValue.end(); ++labelWithValueIt) {
-		if (currLabel == labelWithValueIt->first) {
-		    outIt.Set(labelWithValueIt->second);
-		    break;
-		}
+	//std::cout<<"LabelImage[x]="<<currLabel<<std::endl;
+	// if(currLabel) //for all non-zero labels
+	// {
+	for (LabelWithValueIteratorType labelWithValueIt = labelWithValue.begin(); labelWithValueIt != labelWithValue.end(); ++labelWithValueIt)
+	{
+	    //std::cout<<"LabelImage[x]="<<currLabel<<",  labelTable[current]="<<labelWithValueIt->first<<std::endl;
+	    if (currLabel == labelWithValueIt->first)
+	    {
+		//std::cout<<"LabelImage[x]="<<currLabel<<",  labelTable[current]="<<labelWithValueIt->first<<std::endl;
+		outIt.Set(labelWithValueIt->second);
+		break;
 	    }
 	}
+	//}
 	++labelIt;
 	++outIt;
     }
+
+// //Label Statistics Filter to write to only those labels which are present in the input label image.
+// typedef itk::BinaryImageToLabelMapFilter< LabelImageType > ImageToLabelMapFilterType;
+// ImageToLabelMapFilterType::Pointer labelMap = ImageToLabelMapFilterType::New();
+// labelMap->SetInput(labelImage);
+// labelMap->Update();
+// std::cout<<"There are originally "<< labelMap->GetOutput()->GetNumberOfLabelObjects() << " objects"<<std::endl;
+
+// //Label Statistics Filter to compute mean of each regions:
+// typedef itk::LabelStatisticsImageFilter< OutImageType, LabelImageType > LabelStatsFilterType;
+// LabelStatsFilterType::Pointer labelStats = LabelStatsFilterType::New();
+// labelStats->SetLabelInput( labelImage);
+// labelStats->SetInput(outImage);
+// labelStats->Update();
+// std::cout << "Number of labels in the input label image: " << labelStats->GetNumberOfLabels() << std::endl;
+
+// typedef itk::MaskImageFilter<OutImageType, LabelImageType, OutImageType> MaskImageFilterType;
+// MaskImageFilterType::Pointer maskImageFilter = MaskImageFilterType::New();
+// maskImageFilter->SetMaskImage(labelImage);
+// for (LabelWithValueIteratorType labelWithValueIt = labelWithValue.begin(); labelWithValueIt != labelWithValue.end(); ++labelWithValueIt)
+// {
+// 	LabelImageType::PixelType label = labelWithValueIt->first;
+// 	OutImageType::PixelType val = labelWithValueIt->second;
+// 	std::cout<<"Testing for label "<<label<<" with value "<<val<<std::endl;
+// 	if(labelStats->HasLabel(label))//if(labelMap->GetOutput()->HasLabel(label))
+// 	{
+// 	    maskImageFilter->SetInput(outImage);
+// 	    //if (pixel_from_mask_image != masking_value)     pixel_output_image = pixel_input_image
+// 	    //else pixel_output_image = outside_value
+// 	    maskImageFilter->SetMaskingValue(label);
+// 	    maskImageFilter->SetOutsideValue(val);
+// 	    maskImageFilter->Update();
+// 	    outImage = maskImageFilter->GetOutput();
+// 	    outImage->DisconnectPipeline();
+// 	}
+// 	else {
+// 	    std::cout<<" Label Id "<<label<<" not present in the label image"<<std::endl;
+// 	}
+// }
 
 // Write the out output.
     typedef itk::ImageFileWriter< OutImageType > ValueImageWriterType;
