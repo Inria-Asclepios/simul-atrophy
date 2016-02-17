@@ -490,11 +490,11 @@ double AdLem3D<DIM>::getZspacing() const
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
 template <unsigned int DIM>
-void AdLem3D<DIM>::solveModel(bool operatorChanged)
+void AdLem3D<DIM>::solveModel(bool operatorChanged, bool tarasUse12pointStencilForDiv)
 {
     if(!mPetscSolverTarasUsed) {
         mPetscSolverTarasUsed = true;
-        mPetscSolverTaras = new PetscAdLemTaras3D(this,false);
+	mPetscSolverTaras = new PetscAdLemTaras3D(this,tarasUse12pointStencilForDiv,false);
     }
     mPetscSolverTaras->solveModel(operatorChanged);
     updateStateAfterSolveCall();

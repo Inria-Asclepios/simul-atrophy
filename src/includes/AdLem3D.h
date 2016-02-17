@@ -116,7 +116,7 @@ void setDomainRegionFullImage(); //sets largestPossibleRegion.
 void setDomainRegion(unsigned int origin[3], unsigned int size[3]);
 
 //solver related functions
-void solveModel(bool operatorChanged = false);
+void solveModel(bool operatorChanged = false, bool tarasUse12pointStencilForDiv=false);
 typename VectorImageType::Pointer getVelocityImage();
 typename ScalarImageType::Pointer getPressureImage();
 typename ScalarImageType::Pointer getDivergenceImage();

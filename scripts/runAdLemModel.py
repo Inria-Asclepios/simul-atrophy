@@ -29,6 +29,8 @@ def get_input_options():
     parser.add_argument('petsc_op_file', help='file with petsc options')
     parser.add_argument('time_steps', help='(integer) '
                         'number of time steps you want to solve the system.')
+    parser.add_argument('--div12pt_stencil', action='store_true',
+                        help='If given, use 12pt stencil for divergence.')
     parser.add_argument(
         '--relax_ic_in_csf', action='store_true', help='If given, relaxes IC.')
     parser.add_argument(
@@ -85,6 +87,8 @@ def main():
             line.strip() for line in fil if not line.startswith('#')]
 
     optional_args, bool_args = [], []
+    if ops.div12pt_stencil:
+        bool_args.append('--div12pt_stencil')
     if ops.relax_ic_in_csf:
         bool_args.append('--relax_ic_in_csf')
         if ops.relax_ic_coeff is not None:

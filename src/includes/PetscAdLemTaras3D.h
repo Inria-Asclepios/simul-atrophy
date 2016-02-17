@@ -14,8 +14,8 @@
 namespace PetscAdLemTaras3D_SolverOps
 {
 
-    const bool sUse12pointStencilForDivergence = false;
-    //const bool sUse12pointStencilForDivergence = true;
+    const bool RELAX_IC_WITH_ZERO_ROWS = false;
+    //const bool RELAX_IC_WITH_ZERO_ROWS = true;
 }
 
 //template <unsigned int DIM>
@@ -24,8 +24,9 @@ public:
     typedef struct {
         PetscScalar vx, vy, vz, p;
     } Field;
-    PetscAdLemTaras3D(AdLem3D<3u> *model ,bool writeParaToFile);
+    PetscAdLemTaras3D(AdLem3D<3u> *model ,bool set12pointStencilForDiv, bool writeParaToFile);
     virtual ~PetscAdLemTaras3D();
+    PetscBool isDiv12pointStencil();
 
     MatNullSpace getNullSpace();
     PetscReal muC(PetscInt x, PetscInt y, PetscInt z);
@@ -57,11 +58,12 @@ public:
     PetscReal bMaskAt(PetscInt x, PetscInt y, PetscInt z);
 
 protected:
-    PetscBool           mParaVecsCreated; //by default false but,
+    PetscBool	mIsDiv12pointStencil;
+    PetscBool   mParaVecsCreated;	//by default false but,
     //should be set to true by any non-static method
     //that creates them, so that destructor can destroy them.
-    PetscBool           mWriteParaToFile;  //set by the constructor; used in the method writeToMatFile.
-    Vec                 mAtrophy, mMu;
+    PetscBool   mWriteParaToFile;	//set by the constructor; used in the method writeToMatFile.
+    Vec         mAtrophy, mMu;
 
     PetscBool       mOperatorComputed;
     PC              mPc;

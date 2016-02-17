@@ -36,6 +36,11 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "following order		:\n"
     "             muBrain,muCsf,lambdaBrain,lambdaCsf. E.g. -parameters "
     "2.4,4.5,1.2,3\n\n"
+    "--div12pt_stencil           : If given, uses 12 point Stencil for divergence in Staggered grid. This stencil is compatible "
+    "with the way most atrophy measurement tools compute divergence from the transformation field in image space. Thus use this "
+    "option if you want the divergence of the velocity field obtained from the model has to exactly match the divergenc/atrophy "
+    "you prescribe when computed with following stencil: (vx(i+1,j)-vx(i-1,j))/(2*hx) + (vy(i,j+1)-vy(i,j-1)/(2*hy)). \n"
+    "If NOT provided, the output velocity field will have divergence compatible to the one computed internally in the staggered grid."
     "-boundary_condition	: Possible values: dirichlet_at_walls dirichlet_at_skull.\n\n"
     "--relax_ic_in_csf		: If given, relaxes IC, that is non-zero k. If not given, modifies"
     "\natrophy map distributing uniform volume change in CSF to compensate global volume change in"
@@ -53,9 +58,9 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "-numOfTimeSteps		: number of time-steps to run the model.\n\n"
     "-resPath			: Path where all the results are to be placed.\n\n"
     "-resultsFilenamesPrefix	: Prefix to be added to all output files.\n\n"
-    "--writePressure		: true or false; write/not write the pressure image file output.\n\n"
-    "--writeForce		: true or false; write/not write the force image file output.\n\n"
-    "--writeResidual		: true or false; write/not write the residual image file output.\n\n"
+    "--writePressure		: If given, writes the pressure image file output.\n\n"
+    "--writeForce		: If given, writes the force image file output.\n\n"
+    "--writeResidual		: If given, writes the residual image file output.\n\n"
     ;
 
 struct UserOptions {
@@ -66,6 +71,7 @@ struct UserOptions {
     bool		isDomainFullSize;
 
     std::string boundaryCondition;
+    bool	div12ptStencil;
     float	lameParas[4];	//muBrain, muCsf, lambdaBrain, lambdaCsf
     bool	relaxIcInCsf;
     float	relaxIcCoeff;	//compressibility coefficient k for CSF region.
@@ -113,6 +119,10 @@ int opsParser(UserOptions &ops) {
 		parStream >> ops.lameParas[i] >> dummy;
 	    }
 	}
+
+	// --------- Set divergence Stencil option
+	ierr = PetscOptionsGetString(NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+	ops.div12ptStencil = (bool)optionFlag;
 
 	// ---------- Set boundary condition option
 	ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -282,17 +292,17 @@ int main(int argc,char **argv)
         AdLem3D<dim>::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
 
 
-	bool		isMaskChanged(true); //tracker flag to see if the brain mask is changed or not after the previous warp and NN interpolation.
+	bool isMaskChanged(true);	//tracker flag to see if the brain mask is changed or not after the previous warp and NN interpolation.
         for (int t=1; t<=ops.numOfTimeSteps; ++t) {
             //-------------- Get the string for the current time step and add it to the prefix of all the files to be saved -----//
-            std::stringstream timeStep;
+            std::stringstream	timeStep;
             timeStep << t;
-            std::string stepString("T"+timeStep.str());
+            std::string		stepString("T"+timeStep.str());
             //------------- Modify atrophy map to adapt to the provided mask. ----------------//
 	    // ---------- do the modification after the first step. That means I expect the atrophy map to be valid
 	    // ---------- when input by the user. i.e. only GM/WM has atrophy and 0 on CSF and NBR regions.
             // ---------- Solve the system of equations
-            AdLemModel.solveModel(isMaskChanged);
+            AdLemModel.solveModel(isMaskChanged, ops.div12ptStencil);
             // ---------- Write the solutions and residuals
             AdLemModel.writeVelocityImage(filesPref+stepString+"vel.nii.gz");
             AdLemModel.writeDivergenceImage(filesPref+stepString+"div.nii.gz");

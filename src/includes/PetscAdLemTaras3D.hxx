@@ -6,8 +6,9 @@
 
 #undef __FUNCT__
 #define __FUNCT__ "PetscAdLemTaras3D"
-PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool writeParaToFile):
+PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilForDiv, bool writeParaToFile):
     PetscAdLem3D(model, std::string("Taras Method")),
+    mIsDiv12pointStencil((PetscBool)set12pointStencilForDiv),
     mWriteParaToFile((PetscBool)writeParaToFile)
 {
     PetscErrorCode ierr;
@@ -49,7 +50,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool writeParaToFile):
     //MUST CREATE THE DMDA of stencil width 2 instead of 1 in that case.
     //Easy fix: just put the conditional creation of dmda in the above if(mIsMuConstant) condition!
     //DMDA for only pressure field that is used in Schur Complement solve Sp=rhs.
-    const PetscInt stencil_width = (PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence) ? 2 : 1;
+    const PetscInt stencil_width = (mIsDiv12pointStencil) ? 2 : 1;
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,stencil_width,0,0,0,&mDaP);CHKERRXX(ierr);
@@ -105,6 +106,13 @@ PetscAdLemTaras3D::~PetscAdLemTaras3D()
     }
     //    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
     ierr = DMDestroy(&mDaP);CHKERRXX(ierr);
+}
+
+#undef __FUNCT__
+#define __FUNCT__
+PetscBool PetscAdLemTaras3D::isDiv12pointStencil()
+{
+    return mIsDiv12pointStencil;
 }
 
 #undef __FUNCT__
@@ -1030,7 +1038,7 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscErrorCode  ierr;
     PetscInt        i,j,k,mx,my,mz,xm,ym,zm,xs,ys,zs;
     PetscReal       Hx,Hy,Hz,HyHzdHx,HxHzdHy,HxHydHz;
-    const unsigned int nnz = (PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence) ? 13 : 9;
+    const unsigned int nnz = (user->isDiv12pointStencil()) ? 13 : 9;
     PetscScalar     v[nnz];
     MatStencil      row, col[nnz];
     DM              da;
@@ -1038,7 +1046,11 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscReal       kCont = 1.0; //need to change it to scale the coefficients.
 
     PetscFunctionBeginUser;
-    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for the linear solve \n");
+    PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for linear solve with %d point stencil for divergence\n", (nnz-1));
+    if (PetscAdLemTaras3D_SolverOps::RELAX_IC_WITH_ZERO_ROWS)
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Relax IC with zero rows corresponding to cells where IC is to be relaxed.\n", (nnz-1));
+    else
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Relax IC with div(u) + kp = 0 on relax cells\n", (nnz-1));
     ierr = KSPGetDM(ksp,&da);CHKERRQ(ierr);
     ierr = DMDAGetInfo(da,0,&mx,&my,&mz,0,0,0,0,0,0,0,0,0);CHKERRQ(ierr);
     Hx = user->getProblemModel()->getXspacing();
@@ -1244,92 +1256,76 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                 }
                 else {
 		    PetscReal common_coeff;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence)
+		    if(user->isDiv12pointStencil())
 			common_coeff = kCont/4.;
 		    else
 			common_coeff = kCont;
 		    int nm = 0;
 		    //vx-coefficients, two or four terms
 		    PetscReal coeff = common_coeff/Hx;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && i<mx-2)
+		    if(user->isDiv12pointStencil() && i<mx-2)
 		    {
 			col[nm].c = 0; col[nm].i = i+1;   col[nm].j=j-1;   col[nm].k=k-1;
 			v[nm++] = coeff;
 		    }
                     col[nm].c = 0; col[nm].i = i;   col[nm].j=j-1;   col[nm].k=k-1; v[nm++] = coeff;
 		    col[nm].c = 0; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k-1; v[nm++] = -1*coeff;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && i>2)
+		    if(user->isDiv12pointStencil() && i>2)
 		    {
 			col[nm].c = 0; col[nm].i = i-2; col[nm].j=j-1;   col[nm].k=k-1; v[nm++] = -1*coeff;
 		    }
 
                     //vy-coefficients, two or four terms
 		    coeff = common_coeff/Hy;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && j<my-2)
+		    if(user->isDiv12pointStencil() && j<my-2)
 		    {
 			col[nm].c = 1; col[nm].i = i-1; col[nm].j=j+1;     col[nm].k=k-1;
 			v[nm++] = coeff;
 		    }
                     col[nm].c = 1; col[nm].i = i-1; col[nm].j=j;     col[nm].k=k-1; v[nm++] = coeff;
 		    col[nm].c = 1; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k-1; v[nm++] = -1 * coeff;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && j>2)
+		    if(user->isDiv12pointStencil() && j>2)
 		    {
 			col[nm].c = 1; col[nm].i = i-1; col[nm].j=j-2;   col[nm].k=k-1; v[nm++] = -1 * coeff;
 		    }
                     //vz-coefficients, two or four terms
 		    coeff = common_coeff/Hz;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && k<mz-2)
+		    if(user->isDiv12pointStencil() && k<mz-2)
 		    {
 			col[nm].c = 2; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k+1;
 			v[nm++] = coeff;
 		    }
                     col[nm].c = 2; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k; v[nm++] = coeff;
 		    col[nm].c = 2; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k-1; v[nm++] = -1*coeff;
-		    if(PetscAdLemTaras3D_SolverOps::sUse12pointStencilForDivergence && k>2)
+		    if(user->isDiv12pointStencil() && k>2)
 		    {
 			col[nm].c = 2; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k-2; v[nm++] = -1*coeff;
 		    }
 
                     //If IC is to be relaxed and if the position is in the region where IC is to be relaxed:
                     if((user->getProblemModel()->relaxIcInCsf()) &&
-                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())) {
-                            //(   (user->bMaskAt(i,j,k) >= user->getProblemModel()->getRelaxIcLabel()) &&
-                            //    user->bMaskAt(i,j,k) < 2)
-                            //) { TODO: Need to recheck why exactly this did not give the desired effect.
-                        // This <2 condition was a test for non-integer type brainMask to allow
-                        // different compressibilty value to the partial volumes of CSF and tissue.
-                        // Because when the mask is warped with small displacement fields obtained from the
-                        //first step, we must use interpolation other than nearest neigbhour if we do not
-                        // want to end up with the same original mask (since the maximum magnitude of the field
-                        // was less than one voxel). So when using for e.g. bilinear interpolation, the resulting
-                        // brain mask for the second step would have non-integer values signifying partial volumes.
-                        // Now the above commented condition is to select those volumes which are CSF or contain
-                        // CSF partially.
-
-                        // Relax incompressibility in selected regions by setting a non-zero coefficient of pressure variable.
-			col[nm].c = 3; col[nm].i = i;   col[nm].j = j;   col[nm].k = k;
-			if (fabs(user->getProblemModel()->getRelaxIcPressureCoeff()) < 1e-6)
-			    v[nm++] = 1./user->lambdaC(i, j, k, 0, 0);
-			else
-			    v[nm++] = user->getProblemModel()->getRelaxIcPressureCoeff();
-
-                        // The following line is commented in sync with the comment above for partial volume case.
-                        // The test was to allow coefficient fo the pressure variable to depend on the amount of
-                        // partial volume present in the given voxel. This way we thought we could make any voxel
-                        // compressibility proportional to the partial volume of CSF present in that volume.
-                        // But this doesn't seem to do what I desired, i.e expansion in partial volume CSF
-			// did not change much from when not using partial volume!
-//                        v[6] = 2-user->bMaskAt(i,j,k);
-
-			//FIXME: Seems to work even without setting this row!! Setting or unsetting these rows at CSF only
-			// changes divergence values in CSF regions. They are slightly different in two cases but not much.
-			// Not setting these rows makes the solver converge in fewer iterations. So could be better for us.
-			// However for now I will set these rows to be consistent with previous results I have for some experiments.
-			// If you start new sets of experiments, first try commenting the following line to no set anything in CSF nodes for continuity equation.
-                        ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                    } else{
-                        ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
+                            (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel()))
+		    {
+			// Non-integer type RelaxIcLabel could be used to adapt the compressibilty based on partial volumes
+			// However, the variation in k in the eqn div(u) + kp = 0 required to have desirable effect is so big
+			// that this would perhaps only work if the partial volumes are scaled with some function to get desired
+			// big change in k. that is k = vol_fraction_of_IClabel * f(vol_fraction) might work if we find
+			// suitable f(vol_fraction). This is not done here currently, need to test several cases to make this work.
+			if (!PetscAdLemTaras3D_SolverOps::RELAX_IC_WITH_ZERO_ROWS)
+			{   // Relax IC by setting a non-zero coeff. of pressure variable.
+			    col[nm].c = 3; col[nm].i = i;   col[nm].j = j;   col[nm].k = k;
+			    if (fabs(user->getProblemModel()->getRelaxIcPressureCoeff()) < 1e-6)
+				v[nm++] = 1./user->lambdaC(i, j, k, 0, 0);
+			    else
+				v[nm++] = user->getProblemModel()->getRelaxIcPressureCoeff();
+			    ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
+			}
+			// else simply not set the row, so Relax IC with zero rows i.e. NO div(u) + kp = 0!
                     }
+		    else
+		    {
+			ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		    }
                 }
             }
         }
