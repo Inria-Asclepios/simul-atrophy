@@ -15,6 +15,18 @@ def print_and_execute(command, print_cmd=True):
         print command + '\n'
     subprocess.call(command, shell=True)
 
+def update_or_execute_cmd(cmd, cmd_n, execute):
+    '''
+    Either update or execute cmd.
+    If execute is True executes cmd_n command, returns cmd.
+    otherwise returns cmd + cmd_n.
+    '''
+    if execute:
+        print_and_execute(cmd_n)
+        return cmd
+    else:
+        return cmd + cmd_n
+
 def copy_dir_tree(src, dest):
     """ Copy entire directory tree rooted at the src directory.
     Uses shutil interface."""

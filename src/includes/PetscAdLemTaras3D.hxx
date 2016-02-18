@@ -9,7 +9,8 @@
 PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilForDiv, bool writeParaToFile):
     PetscAdLem3D(model, std::string("Taras Method")),
     mIsDiv12pointStencil((PetscBool)set12pointStencilForDiv),
-    mWriteParaToFile((PetscBool)writeParaToFile)
+    mWriteParaToFile((PetscBool)writeParaToFile),
+    mNumOfSolveCalls(0)
 {
     PetscErrorCode ierr;
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dmda of size: (%d,%d,%d)\n",
@@ -226,6 +227,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
 {
     PetscErrorCode ierr;
     PetscFunctionBeginUser;
+    ++mNumOfSolveCalls;
 
     if(!mOperatorComputed || operatorChanged) { //FIXME: Currently, everytime the operator
         //is changed pc is recomputed. Later see if this is to be done only when null space
@@ -249,10 +251,18 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
             ierr = KSPSetComputeRHS(mKsp,computeRHSTaras3dConstantMu,this);CHKERRQ(ierr);
         }
         ierr = KSPSetFromOptions(mKsp);CHKERRQ(ierr);
+	//ierr = KSPSetReusePreconditioner(mKsp, PETSC_FALSE); //This should be called by default when operator changes.
 	ierr = KSPSetUp(mKsp);CHKERRQ(ierr); //register the fieldsplits obtained from options.
 	// ---------- MUST CALL kspsetfromoptions() and kspsetup() before kspgetoperators and matsetnullspace
 	// otherwise I'm getting a runtime error of mat object type not set (for mA!!)
 	ierr = KSPGetOperators(mKsp,&mA,NULL);CHKERRQ(ierr);
+	// Write the matrix to file: Useful for debugging purpose. Uncomment it if you need to see the matrix.
+	// PetscViewer viewer;
+	// ierr = PetscViewerCreate(PETSC_COMM_WORLD, &viewer);CHKERRQ(ierr);
+	// std::string mat_file("operatorA"+std::to_string(mNumOfSolveCalls)+".output");
+	// ierr = PetscViewerASCIIOpen(PETSC_COMM_WORLD, mat_file.c_str(),&viewer);CHKERRQ(ierr);
+	// MatView(mA, viewer);
+	// ierr = PetscViewerDestroy(&viewer);CHKERRQ(ierr);
         if(mPressureNullspacePresent) {
             //ierr = KSPSetNullSpace(mKsp,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system
 	    ierr = MatSetNullSpace(mA,mNullSpace);CHKERRQ(ierr);//nullSpace for the main system, updated for petsc3.6
@@ -1302,10 +1312,11 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 			col[nm].c = 2; col[nm].i = i-1; col[nm].j=j-1;   col[nm].k=k-2; v[nm++] = -1*coeff;
 		    }
 
-                    //If IC is to be relaxed and if the position is in the region where IC is to be relaxed:
+		    // Pressure coefficient k whose value depends on whether IC is to be relaxed in this row or not.
+		    col[nm].c = 3; col[nm].i = i;   col[nm].j = j;   col[nm].k = k;
                     if((user->getProblemModel()->relaxIcInCsf()) &&
                             (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel()))
-		    {
+		    { //If relax IC option set and if this row corresponds to the IC relaxation cell.
 			// Non-integer type RelaxIcLabel could be used to adapt the compressibilty based on partial volumes
 			// However, the variation in k in the eqn div(u) + kp = 0 required to have desirable effect is so big
 			// that this would perhaps only work if the partial volumes are scaled with some function to get desired
@@ -1313,17 +1324,24 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 			// suitable f(vol_fraction). This is not done here currently, need to test several cases to make this work.
 			if (!PetscAdLemTaras3D_SolverOps::RELAX_IC_WITH_ZERO_ROWS)
 			{   // Relax IC by setting a non-zero coeff. of pressure variable.
-			    col[nm].c = 3; col[nm].i = i;   col[nm].j = j;   col[nm].k = k;
 			    if (fabs(user->getProblemModel()->getRelaxIcPressureCoeff()) < 1e-6)
 				v[nm++] = 1./user->lambdaC(i, j, k, 0, 0);
 			    else
 				v[nm++] = user->getProblemModel()->getRelaxIcPressureCoeff();
 			    ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
 			}
-			// else simply not set the row, so Relax IC with zero rows i.e. NO div(u) + kp = 0!
+			else
+			{ //Relax IC with zero rows i.e. NO div(u) + kp = 0!
+			    //Set the row explicitly to zero. DON'T leave by just skipping setting zero because this can create problem for  multiple time-step solve.
+			    //Some of the rows corresponding to non-relax_ic cells in the previous solve might be a relax_ic cell now. In these cells the previous non-zero
+			    //values are not modified if I don't explicitly set them to zero!!!
+			    SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_PLIB,"Relax IC by setting zero rows not supported yet.\n");
+			    //I need to figure out a safer way to set the whole row to zero without disturbing the non-zero pattern first.
+			}
                     }
 		    else
 		    {
+			v[nm++] = 0; //Must set 0 since when doing multiple solves, there can be non-zero rows in previous time-step that now corrsponds to relax_ic cells
 			ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
 		    }
                 }

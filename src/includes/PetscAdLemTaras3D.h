@@ -59,6 +59,7 @@ public:
 
 protected:
     PetscBool	mIsDiv12pointStencil;
+    PetscInt	mNumOfSolveCalls;
     PetscBool   mParaVecsCreated;	//by default false but,
     //should be set to true by any non-static method
     //that creates them, so that destructor can destroy them.

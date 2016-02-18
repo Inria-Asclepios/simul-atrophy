@@ -286,7 +286,7 @@ int main(int argc,char **argv)
 	typedef itk::WarpImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::VectorImageType> IntegerWarpFilterType;
         typedef itk::NearestNeighborInterpolateImageFunction<AdLem3D<dim>::IntegerImageType> InterpolatorFilterNnType;
 	typedef itk::LabelImageGenericInterpolateImageFunction<AdLem3D<dim>::ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
-        typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::ScalarImageType> DiffImageFilterType;
+        typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::ScalarImageType> AbsDiffImageFilterType;
         typedef itk::StatisticsImageFilter<AdLem3D<dim>::ScalarImageType> StatisticsImageFilterType;
         typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D<dim>::VectorImageType, AdLem3D<dim>::VectorImageType> VectorComposerType;
         AdLem3D<dim>::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
@@ -367,13 +367,13 @@ int main(int argc,char **argv)
                 brainMaskWarper->Update();
 
                 // ---------- Compare warped mask with the previous mask
-                DiffImageFilterType::Pointer diffImageFilter = DiffImageFilterType::New();
-                diffImageFilter->SetInput1(AdLemModel.getBrainMaskImage());
-                diffImageFilter->SetInput2(brainMaskWarper->GetOutput());
-                diffImageFilter->Update();
+                AbsDiffImageFilterType::Pointer absDiffImageFilter = AbsDiffImageFilterType::New();
+                absDiffImageFilter->SetInput1(AdLemModel.getBrainMaskImage());
+                absDiffImageFilter->SetInput2(brainMaskWarper->GetOutput());
+                absDiffImageFilter->Update();
 
                 StatisticsImageFilterType::Pointer statisticsImageFilter = StatisticsImageFilterType::New();
-                statisticsImageFilter->SetInput(diffImageFilter->GetOutput());
+                statisticsImageFilter->SetInput(absDiffImageFilter->GetOutput());
                 statisticsImageFilter->Update();
                 if(statisticsImageFilter->GetSum() < 1) {
                     isMaskChanged = false;
