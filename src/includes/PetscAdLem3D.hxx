@@ -8,8 +8,10 @@
 #define __FUNCT__ "PetscAdLem3D"
 
 template <unsigned int DIM>
-PetscAdLem3D<DIM>::PetscAdLem3D(AdLem3D<DIM> *model, const std::string & description):
-    mProblemModel(model), mContextDesc(description)
+PetscAdLem3D<DIM>::PetscAdLem3D(AdLem3D<DIM> *model, bool set12pointStencilForDiv, const std::string & description):
+    mProblemModel(model),
+    mIsDiv12pointStencil((PetscBool)set12pointStencilForDiv),
+    mContextDesc(description)
 {
     mSolAllocated = PETSC_FALSE;
     mRhsAllocated = PETSC_FALSE;
@@ -47,6 +49,15 @@ AdLem3D<DIM>* PetscAdLem3D<DIM>::getProblemModel() const
 {
     return mProblemModel;
 }
+
+#undef __FUNCT__
+#define __FUNCT__ "isDiv12pointStencil"
+template <unsigned int DIM>
+PetscBool PetscAdLem3D<DIM>::isDiv12pointStencil()
+{
+    return mIsDiv12pointStencil;
+}
+
 
 #undef __FUNCT__
 #define __FUNCT__ "writeResidual"
@@ -199,6 +210,11 @@ template <unsigned int DIM>
 double PetscAdLem3D<DIM>::getDivergenceAt(unsigned int pos[])
 {
     PetscFunctionBeginUser;
+    if(mIsDiv12pointStencil)
+    {
+	SETERRQ(PETSC_COMM_WORLD,PETSC_ERR_SUP,"Divergence computation  not supported yet for 12 point stencil option.\n");
+	return 0;
+    }
     PetscInt x,y,z,xn,yn,zn;
     x = pos[0]; y=pos[1];   z=pos[2];
     //Adapt for the staggered grid DM which has one greater dimension.
@@ -226,6 +242,4 @@ double PetscAdLem3D<DIM>::getDivergenceAt(unsigned int pos[])
     PetscFunctionReturn(divergence);
 }
 
-// template class PetscAdLem3D<3>;
-// template class PetscAdLem3D<2>;
 #endif // PETSCADLEM3D_HXX

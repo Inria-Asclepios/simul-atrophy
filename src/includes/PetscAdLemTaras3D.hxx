@@ -7,8 +7,7 @@
 #undef __FUNCT__
 #define __FUNCT__ "PetscAdLemTaras3D"
 PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilForDiv, bool writeParaToFile):
-    PetscAdLem3D(model, std::string("Taras Method")),
-    mIsDiv12pointStencil((PetscBool)set12pointStencilForDiv),
+    PetscAdLem3D(model, set12pointStencilForDiv, std::string("Taras Method")),
     mWriteParaToFile((PetscBool)writeParaToFile),
     mNumOfSolveCalls(0)
 {
@@ -107,13 +106,6 @@ PetscAdLemTaras3D::~PetscAdLemTaras3D()
     }
     //    ierr = MatDestroy(&mPcForSc);CHKERRXX(ierr);
     ierr = DMDestroy(&mDaP);CHKERRXX(ierr);
-}
-
-#undef __FUNCT__
-#define __FUNCT__
-PetscBool PetscAdLemTaras3D::isDiv12pointStencil()
-{
-    return mIsDiv12pointStencil;
 }
 
 #undef __FUNCT__

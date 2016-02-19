@@ -932,6 +932,11 @@ void AdLem3D<DIM>::updateImages(const std::string& whichImage){
 	}else{
 	    isPressure = false;
 	    img = mDivergence;
+	    if(mPetscSolverTaras->isDiv12pointStencil())
+	    {
+		std::cerr<<"Taras solver doesn't write divergence when using 12 point stencil for it."<<std::endl;
+		return;
+	    }
 	}
 	typename ScalarImageType::RegionType roi = img->GetLargestPossibleRegion();
 	//std::cout<<whichImage<<" image region: "<<roi<<std::endl;

@@ -26,7 +26,6 @@ public:
     } Field;
     PetscAdLemTaras3D(AdLem3D<3u> *model ,bool set12pointStencilForDiv, bool writeParaToFile);
     virtual ~PetscAdLemTaras3D();
-    PetscBool isDiv12pointStencil();
 
     MatNullSpace getNullSpace();
     PetscReal muC(PetscInt x, PetscInt y, PetscInt z);
@@ -58,7 +57,6 @@ public:
     PetscReal bMaskAt(PetscInt x, PetscInt y, PetscInt z);
 
 protected:
-    PetscBool	mIsDiv12pointStencil;
     PetscInt	mNumOfSolveCalls;
     PetscBool   mParaVecsCreated;	//by default false but,
     //should be set to true by any non-static method

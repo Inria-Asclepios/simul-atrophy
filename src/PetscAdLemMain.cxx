@@ -305,7 +305,8 @@ int main(int argc,char **argv)
             AdLemModel.solveModel(isMaskChanged, ops.div12ptStencil);
             // ---------- Write the solutions and residuals
             AdLemModel.writeVelocityImage(filesPref+stepString+"vel.nii.gz");
-            AdLemModel.writeDivergenceImage(filesPref+stepString+"div.nii.gz");
+	    if(!ops.div12ptStencil) //Div computation from within Adlem3d supported only for 9 point div stencil.
+		AdLemModel.writeDivergenceImage(filesPref+stepString+"div.nii.gz");
             if (ops.writeForce) AdLemModel.writeForceImage(filesPref+stepString+"force.nii.gz");
             if (ops.writePressure) AdLemModel.writePressureImage(filesPref+stepString+"press.nii.gz");
             if (ops.writeResidual) AdLemModel.writeResidual(filesPref+stepString);

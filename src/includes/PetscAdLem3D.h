@@ -17,11 +17,12 @@
 template <unsigned int DIM>
 class PetscAdLem3D {
 public:
-    PetscAdLem3D(AdLem3D<DIM>*, const std::string&);
+    PetscAdLem3D(AdLem3D<DIM>*, bool set12pointStencilForDiv, const std::string&);
     virtual ~PetscAdLem3D();
     void setContextName(const std::string&);
 
     AdLem3D<DIM>* getProblemModel() const;
+    PetscBool isDiv12pointStencil();
 
     double getRhsAt(unsigned int pos[3], unsigned int component);
 //    double getAtrophyGradientAt(unsigned int pos[3], unsigned int component);
@@ -34,9 +35,10 @@ protected:
     AdLem3D<DIM>*            mProblemModel;
     std::string         mContextDesc;
 
-    PetscBool           mIsMuConstant;
-    PetscBool           mSolAllocated;
-    PetscBool           mRhsAllocated;
+    PetscBool	mIsDiv12pointStencil;
+    PetscBool   mIsMuConstant;
+    PetscBool   mSolAllocated;
+    PetscBool   mRhsAllocated;
 
     //Global system i.e for Ax=b, with x containing all the velocity components and pressure nodes.
     Mat         mA;
