@@ -1,0 +1,11 @@
+# Configuration file with all the options that are common to all patients. The order for the compulsory arguments must be respected!
+# Individual patient directories are found by adlemwithfs_simulate.py and will read this file for all common options.
+# ----------- Compulsory arguments ----------
+# res_prefix lame_paras boundary_condition
+div12pt_atrophyMapD2R0 1,1,0,0 dirichlet_at_skull
+#
+# atrophy in_seg in_img petsc_op_file time_steps
+atrophyMapD2R0.nii.gz maskwithCsfD2R0.nii.gz t1D2R0.nii.gz /epi/asclepios2/bkhanal/works/AdLemModel/configFiles/petsc_options/KSPfgmresPCfsSchurSelfUpper_FS0PCsor_FS1KSPpreonly_detailedSummary 1
+#
+# ---------- Optional arguments ----------
+--div12pt_stencil --relax_ic_in_csf -k 1.0 --in_cluster
