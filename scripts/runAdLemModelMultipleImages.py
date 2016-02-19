@@ -19,6 +19,8 @@ def get_input_options():
     parser.add_argument(
         'ops_file', help='File containing all the options required by '
         'runAdLemModel.py except the patients_list.')
+    parser.add_argument('--print_only', action='store_true', help='just print'
+                        ', dont do anything!')
     ops = parser.parse_args()
     return ops
 
@@ -41,11 +43,13 @@ def main():
     adlem_ops = get_lines_as_list(ops.ops_file, '#')
     sim_ids = get_lines_as_list(ops.simdir_list, '#')
     for sim_id in sim_ids:
-        cmd = ('%s %s %s'
+        cmd = ('%s %s %s\n'
                % (run_adlem, sim_id, ' '.join(adlem_ops)))
-        #bu.print_and_execute(cmd)
-        #tm.sleep(0.1)
-        print cmd
+        if ops.print_only:
+            print cmd
+        else:
+            bu.print_and_execute(cmd)
+            tm.sleep(0.1)
 
 if __name__ == "__main__":
     main()
