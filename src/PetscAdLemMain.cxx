@@ -392,6 +392,8 @@ int main(int argc,char **argv)
                 atrophyWarper->SetOutputDirection(baselineAtrophy->GetDirection());
                 atrophyWarper->Update();
                 AdLemModel.setAtrophy(atrophyWarper->GetOutput());
+		//AdLemModel.writeAtrophyToFile(filesPref+stepString+"AtrophyWarpedNotModified.nii.gz"); //Useful to see
+		// how i) warping  ii) modifying affects the total atrophy in the image.
                 //Atrophy present at the newly created CSF regions are redistributed to the nearest GM/WM tissues voxels.
 		// And in CSF put the values as the ops.relaxIcInCsf dictates.
 	        AdLemModel.modifyAtrophy(maskLabels::CSF, 0, true, ops.relaxIcInCsf);

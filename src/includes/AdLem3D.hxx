@@ -13,6 +13,7 @@
 #include "itkConstNeighborhoodIterator.h"
 #include "itkShapedNeighborhoodIterator.h"
 #include "itkNeighborhoodAlgorithm.h"
+#include "itkConstantBoundaryCondition.h"
 #include "itkExtractImageFilter.h"
 #include<iostream>
 
@@ -59,8 +60,8 @@ template <unsigned int DIM>
 void
 AdLem3D<DIM>::setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff) {
     if((boundaryCondition.compare("dirichlet_at_walls") != 0) &&
-	   (boundaryCondition.compare("dirichlet_at_skull") != 0))
-	    throw "Invalid boundary condition.";
+       (boundaryCondition.compare("dirichlet_at_skull") != 0))
+	throw "Invalid boundary condition.";
     else {
 	if(boundaryCondition.compare("dirichlet_at_skull") == 0)
 	    mBc = DIRICHLET_AT_SKULL;
@@ -87,9 +88,9 @@ void AdLem3D<DIM>::setWallVelocities(std::vector<double>& wallVelocities) {
 #define __FUNCT__ "setLameParameters"
 template <unsigned int DIM>
 void AdLem3D<DIM>::setLameParameters(bool isMuConstant, bool useTensorLambda,
-                                double muBrain, double muCsf,
-                                double lambdaBrain, double lambdaCsf,
-				std::string lambdaImageFile, std::string muImageFile)
+				     double muBrain, double muCsf,
+				     double lambdaBrain, double lambdaCsf,
+				     std::string lambdaImageFile, std::string muImageFile)
 {
     mIsMuConstant	= isMuConstant;
     mUseMuImage		=  !isMuConstant; //Currently constant mu means don't use mu image.
@@ -327,7 +328,7 @@ double AdLem3D<DIM>::muAt(int x, int y, int z) const
 #define __FUNCT__ "lambdaAt"
 template <unsigned int DIM>
 double AdLem3D<DIM>::lambdaAt(int x, int y, int z,
-                         unsigned int Li, unsigned int Lj) const
+			      unsigned int Li, unsigned int Lj) const
 {
     if (mUseTensorLambda) {
         typename TensorImageType::IndexType pos;
@@ -576,10 +577,10 @@ template <unsigned int DIM>
 //i.e. Exclude boundary voxels from being considered for computing atrophy and expansion.
 void AdLem3D<DIM>::prescribeUniformExpansionInCsf(){//Need to check this function!
 /*
-    Set atrophy_in_csf  = - total_atrophy_elsewhere/num_of_csf_voxels.
-      // 	//And CHECK how Dirichlet condition at the skull creates issues because CSF voxels touching
-      // 	//skull voxels possibly won't get the desired expansion. But hopefully it shouldn't cause problems!
-      */
+  Set atrophy_in_csf  = - total_atrophy_elsewhere/num_of_csf_voxels.
+  // 	//And CHECK how Dirichlet condition at the skull creates issues because CSF voxels touching
+  // 	//skull voxels possibly won't get the desired expansion. But hopefully it shouldn't cause problems!
+  */
     typedef itk::MaskImageFilter< ScalarImageType, IntegerImageType, ScalarImageType> MaskFilterType;
     typedef itk::StatisticsImageFilter<ScalarImageType> StatisticsImageFilterType;
     typedef itk::LabelStatisticsImageFilter<ScalarImageType, IntegerImageType> LabelStatisticsImageFilterType;
@@ -623,12 +624,11 @@ void AdLem3D<DIM>::prescribeUniformExpansionInCsf(){//Need to check this functio
 #define __FUNCT__ "modifyAtrophy"
 template <unsigned int DIM>
 void AdLem3D<DIM>::modifyAtrophy(int maskLabel, double maskValue, bool redistributeAtrophy, bool relaxIcInCsf) {
-    redistributeAtrophy = false; //FIXME: seems there is bug when small domain regions are selected, so
-    // not going in there right now, need to figure out later.
     if(redistributeAtrophy) {
 	int rad = 1; 	// redistribution only on 3X3 neigborhood at present.
 	typedef itk::ConstShapedNeighborhoodIterator< ScalarImageType > ConstShapedNeighborhoodIteratorType;
-	typedef itk::ConstNeighborhoodIterator<	IntegerImageType > ConstNeighborhoodIteratorType;
+	typedef itk::ConstantBoundaryCondition<IntegerImageType>  BoundaryConditionType; //to prevent outside border voxels of mBrainMask to be considred as tissue label.
+	typedef itk::ConstNeighborhoodIterator<	IntegerImageType, BoundaryConditionType > ConstNeighborhoodIteratorType;
 	typedef itk::ShapedNeighborhoodIterator< ScalarImageType > ShapedNeighborhoodIteratorType;
 
 	typename ConstShapedNeighborhoodIteratorType::RadiusType radius;
@@ -640,14 +640,17 @@ void AdLem3D<DIM>::modifyAtrophy(int maskLabel, double maskValue, bool redistrib
 	faceList = faceCalculator( mAtrophy, mAtrophy->GetRequestedRegion(), radius );
 	typename FaceCalculatorType::FaceListType::iterator fit;
 	for ( fit=faceList.begin(); fit != faceList.end(); ++fit) {
+	    BoundaryConditionType constBoundaryCondition;
+	    constBoundaryCondition.SetConstant(maskLabels::CSF); //Set outside image label to be of CSF.
 	    ConstNeighborhoodIteratorType maskIt( radius, mBrainMask, *fit); //iterate over brain mask to find CSF voxel and its neighboring tissue voxels.
+	    maskIt.SetBoundaryCondition(constBoundaryCondition); //Outside image boundary consider labels to be of CSF. This ensures we don't try to modify
+	    //values in these invalid position since we modify only tissue label voxels.
 	    ShapedNeighborhoodIteratorType atrophyIt (radius, mAtrophy, *fit); //iterate over atrophy map to change neighborhood values if required.
 	    for (maskIt.GoToBegin(), atrophyIt.GoToBegin(); !maskIt.IsAtEnd(); ++maskIt, ++atrophyIt) {
 		double eps = 1e-6;
 		if ( (int)maskIt.GetCenterPixel() == maskLabels::CSF) {
 		    typename ScalarImageType::PixelType atrophyCurrentPixel = atrophyIt.GetCenterPixel();
 		    if (std::abs(atrophyCurrentPixel) > eps) {
-			int adjacentTissueVolume = 0;
 			atrophyIt.ClearActiveList();
 			for (int z = -rad; z <= rad; z++) { //activateIndex is protected so must create offset!
 			    for (int y = -rad; y <= rad; y++) {
@@ -655,18 +658,33 @@ void AdLem3D<DIM>::modifyAtrophy(int maskLabel, double maskValue, bool redistrib
 				    typename ConstShapedNeighborhoodIteratorType::OffsetType off;
 				    off[0] = x; off[1] = y; off[2] = z;
 				    int neighbMaskPixel = maskIt.GetPixel(off);
-				    if (neighbMaskPixel == maskLabels::GM || neighbMaskPixel == maskLabels::WM) {
-					++adjacentTissueVolume;
+				    if (neighbMaskPixel == maskLabels::GM || neighbMaskPixel == maskLabels::WM)
+				    { //When atrophyIt is at the image border, the offsets can go outside the image. But I have set the
+					// boundary condition s.t. values outside the border of the mask image = maskLabels::CSF which means
+					// in this if condition, they won't get activated.
+					// This way I will not try to redistribute values to these invalid regions below.
 					atrophyIt.ActivateOffset(off);
 				    }
 				}
 			    }
 			}
-			if (adjacentTissueVolume > 0) {
-			    double inc = atrophyCurrentPixel/adjacentTissueVolume;
-			    typename ShapedNeighborhoodIteratorType::Iterator neighbTissueIt;
-			    for (neighbTissueIt = atrophyIt.Begin(); neighbTissueIt != atrophyIt.End(); neighbTissueIt++)
-				neighbTissueIt.Set(neighbTissueIt.Get() + inc);
+			if (atrophyIt.GetActiveIndexListSize() > 0)
+			{  //There is at least one neighboring tissue voxel.
+			    float inc = atrophyCurrentPixel/(float)atrophyIt.GetActiveIndexListSize();
+			    // std::cout <<std::endl << "Redistributing atrophy in CSF at " << atrophyIt.GetIndex()
+			    // 	      << " by adding " << inc << " to each of " << atrophyIt.GetActiveIndexListSize()
+			    // 	      << " neighboring tissue voxels " << std::endl;
+			    typename ShapedNeighborhoodIteratorType::Iterator neighbTissueIt = atrophyIt.Begin();
+			    while(! neighbTissueIt.IsAtEnd())
+			    {
+				// std::cout << "offset " << neighbTissueIt.GetNeighborhoodOffset()
+				// 	  << ", old value = " << neighbTissueIt.Get()
+				// 	  << ", new value = " << (neighbTissueIt.Get()+inc)
+				// 	  << ". The real index = " << atrophyIt.GetIndex() + neighbTissueIt.GetNeighborhoodOffset() << std::endl;
+				neighbTissueIt.Set(neighbTissueIt.Get() + inc); //The offsets of bordering voxels lying outside the image are never activated
+				// so it's safe to set here without checking if the position pointed by neighbTissueIt is valid or not.
+				++neighbTissueIt;
+			    }
 			}
 		    }
 		}
@@ -995,9 +1013,9 @@ void AdLem3D<DIM>::updateImages(const std::string& whichImage){
 			    pix[cc] = mPetscSolverTaras->getSolVelocityAt(pos, cc);
 			else
 			    pix[cc] = mPetscSolverTaras->getRhsAt(pos,cc);
-                }
-                it.Set(pix);
-                ++it;
+		    }
+		    it.Set(pix);
+		    ++it;
 		}
 	    }
 	}
