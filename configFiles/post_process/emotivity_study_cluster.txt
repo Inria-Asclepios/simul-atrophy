@@ -1,3 +1,6 @@
+# data_base
+emotivity
+
 # data_base_dir     sim_base_dir
 /epi/asclepios2/mhadjham/Emotivity/Emotivity_All_N4     /epi/asclepios2/bkhanal/works/AdLemModel/results/patients
 

@@ -24,14 +24,6 @@ def get_input_options():
     ops = parser.parse_args()
     return ops
 
-def get_lines_as_list(fname, delim):
-    '''
-    Return a list that contains all the lines present in the file fname
-    except those line that starts with delim.
-    '''
-    with open(fname, 'r') as fil:
-        return [line.strip() for line in fil if not line.startswith(delim)]
-
 def main():
     """ Runs the script. Run with -h to see options.
     """
@@ -40,8 +32,8 @@ def main():
     run_adlem = 'python ' + op.join(adlem_dir, 'scripts/runAdLemModel.py')
     if adlem_dir is None:
         raise ValueError('environment variable ADLEM_DIR not set.')
-    adlem_ops = get_lines_as_list(ops.ops_file, '#')
-    sim_ids = get_lines_as_list(ops.simdir_list, '#')
+    adlem_ops = bu.get_lines_as_list(ops.ops_file, '#')
+    sim_ids = bu.get_lines_as_list(ops.simdir_list, '#')
     for sim_id in sim_ids:
         cmd = ('%s %s %s\n'
                % (run_adlem, sim_id, ' '.join(adlem_ops)))

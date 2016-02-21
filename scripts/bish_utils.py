@@ -26,6 +26,13 @@ def update_or_execute_cmd(cmd, cmd_n, execute):
         return cmd
     else:
         return cmd + cmd_n
+def get_lines_as_list(fname, delim):
+    '''
+    Return a list that contains all the lines present in the file fname
+    except those line that starts with delim.
+    '''
+    with open(fname, 'r') as fil:
+        return [line.strip() for line in fil if not line.startswith(delim)]
 
 def copy_dir_tree(src, dest):
     """ Copy entire directory tree rooted at the src directory.
