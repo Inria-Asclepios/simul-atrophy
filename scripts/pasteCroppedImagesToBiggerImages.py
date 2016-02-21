@@ -47,7 +47,7 @@ def main():
         pasted_sf = op.join(res_dir, sim_id, ops.pasted_img)
         crop_mask = op.join(res_dir, sim_id, ops.crop_mask)
         if op.exists(cropped_sf) and op.exists(rb) and op.exists(crop_mask):
-            if not op.exists(ops.pasted_img) or ops.overwrite:
+            if not op.exists(pasted_sf) or ops.overwrite:
                 cmd = ('%s %s %s %s %s\n\n'
                        % (paste_img, cropped_sf, rb, crop_mask, pasted_sf))
                 if ops.print_only:
