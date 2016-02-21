@@ -8,4 +8,4 @@ div12pt_atrophyMapD2R0 1,1,0,0 dirichlet_at_skull
 atrophyMapD2R0.nii.gz maskwithCsfD2R0.nii.gz t1D2R0.nii.gz /epi/asclepios2/bkhanal/works/AdLemModel/configFiles/petsc_options/KSPfgmresPCfsSchurSelfUpper_FS0PCsor_FS1KSPpreonly_detailedSummary 1
 #
 # ---------- Optional arguments ----------
---div12pt_stencil --relax_ic_in_csf -k 1.0 --in_legacy_cluster
+--div12pt_stencil --relax_ic_in_csf -k 1.0 --in_legacy_cluster -queue_walltime parshort,03:00:00

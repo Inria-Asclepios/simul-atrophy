@@ -49,8 +49,15 @@ def get_input_options():
         '--wrt_force', action='store_true', help='Write force file.')
     parser.add_argument(
         '--wrt_residual', action='store_true', help='Write residual file.')
-    parser.add_argument(
-        '--in_cluster', action='store_true', help='launch as a job in cluster.')
+    parser.add_argument('--in_legacy_cluster', action='store_true',
+                        help='launch as a job in legacy nef cluster.')
+    legacy_cluster = parser.add_argument_group('when using --in_legacy_cluster')
+    legacy_cluster.add_argument(
+        '-queue_walltime', help='qsub queue and walltime (PBS -l) separated by '
+        ' comma. Default is parlong,12:00:00')
+    legacy_cluster.add_argument(
+        '-procs_mem', help='qsub (PBS -l) processor types/resources and memory '
+        'separated by comma. Default is: nodes=3:xeon:ppn=20,mem=540gb')
 
     ops = parser.parse_args()
     if not ops.relax_ic_in_csf:
@@ -112,13 +119,21 @@ def main():
               in_seg, in_img, ops.time_steps, res_path, ops.res_prefix,
               ' '.join(bool_args + optional_args + petsc_ops)))
 
-    if ops.in_cluster is True:
+    if ops.in_legacy_cluster is True:
         cluster_mpi = '/opt/openmpi-gcc/current/bin/mpiexec '
         cmd = bu.sophia_nef_pbs_setting() + cluster_mpi + cmd
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         #print cmd
-        bu.qsub_job(name=job_name, queue='parlong', walltime='12:00:00',
-                    procs='nodes=3:xeon:ppn=20', mem='mem=540gb',
+        if ops.queue_walltime:
+            queue, _, walltime = ops.queue_walltime.partition(',')
+        else:
+            queue, walltime = 'parlong', '12:00:00'
+        if ops.procs_mem:
+            procs, _, mem = ops.procs_mem.partition(',')
+        else:
+            procs, mem = 'nodes=3:xeon:ppn=20', 'mem=540gb'
+        bu.qsub_job(name=job_name, queue=queue, walltime=walltime,
+                    procs=procs, mem=mem,
                     #procs='nodes=4:xeon:ppn=20', mem='mem=720gb',
                     #procs='nodes=5:xeon:ppn=20', mem='mem=900gb',
                     dest_dir=res_dir, cmd=cmd)
