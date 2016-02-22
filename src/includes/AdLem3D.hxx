@@ -309,18 +309,18 @@ int AdLem3D<DIM>::getSkullLabel()
 template <unsigned int DIM>
 double AdLem3D<DIM>::muAt(int x, int y, int z) const
 {
-    if (mIsMuConstant) {
-	if (brainMaskAt(x, y, z) == maskLabels::CSF)
-	    return mMuCsf;
-	else
-	    return mMuBrain;
-    }
-    else {
+    if (mUseMuImage) {
 	typename ScalarImageType::IndexType pos;
 	pos.SetElement(0, mMu->GetLargestPossibleRegion().GetIndex()[0] + x);
         pos.SetElement(1, mMu->GetLargestPossibleRegion().GetIndex()[1] + y);
         pos.SetElement(2, mMu->GetLargestPossibleRegion().GetIndex()[2] + z);
         return (mMu->GetPixel(pos));
+    }
+    else {
+	if (brainMaskAt(x, y, z) == maskLabels::CSF)
+	    return mMuCsf;
+	else
+	    return mMuBrain;
     }
 }
 

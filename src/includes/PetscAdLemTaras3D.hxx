@@ -1229,6 +1229,8 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 
                     ierr=MatSetValuesStencil(jac,1,&row,9,col,v,INSERT_VALUES);CHKERRQ(ierr);
                 }
+		// PetscSynchronizedPrintf(PETSC_COMM_WORLD,"(%d,%d,%d): s=%d, m=%d\n",
+		// 			i, j, k, (int)user->bMaskAt(i, j, k), (int)user->muC(i, j, k));
 
                 //********************** continuity equation *********************
                 row.c = 3;
@@ -1437,7 +1439,9 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
 			    rhs[k][j][i].vx = 0; //no force in CSF.
 			else {
-			    rhs[k][j][i].vx = Hy*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAx;
+			    //rhs[k][j][i].vx = Hy*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAx;
+			    rhs[k][j][i].vx = Hy*Hz*((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.)
+						     +user->lambdaC(i,j,k,0,0)) * gradAx;
 			    //make force independent of mu and see what happens.
 			    //rhs[k][j][i].vx = Hy*Hz*(user->lambdaC(i,j,k,0,0)) * gradAx;
 			}
@@ -1488,7 +1492,9 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
 			    rhs[k][j][i].vy = 0; //no force in CSF.
 			else {
-			    rhs[k][j][i].vy = Hx*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAy;
+			    //rhs[k][j][i].vy = Hx*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAy;
+			    rhs[k][j][i].vy = Hx*Hz*((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.)
+						     +user->lambdaC(i,j,k,0,0)) * gradAy;
 			    //make force independent of mu and see what happens.--> Changes slightly the magnitude of displacement.
 			    //rhs[k][j][i].vy = Hx*Hz*(user->lambdaC(i,j,k,0,0)) * gradAy;
 			}
@@ -1540,7 +1546,9 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
 			    rhs[k][j][i].vz = 0; //no force in CSF.
 			else {
-			    rhs[k][j][i].vz = Hx*Hy*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAz;
+			    //rhs[k][j][i].vz = Hx*Hy*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAz;
+			    rhs[k][j][i].vz = Hx*Hy*((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.)
+						     + user->lambdaC(i,j,k,0,0)) * gradAz;
 			    //make force independent of mu and see what happens. --> Changes slightly the magnitude of displacement.
 			    //rhs[k][j][i].vz = Hx*Hy*(user->lambdaC(i,j,k,0,0)) * gradAz;
 			}
