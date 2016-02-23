@@ -49,8 +49,11 @@ def get_input_options():
         '--wrt_force', action='store_true', help='Write force file.')
     parser.add_argument(
         '--wrt_residual', action='store_true', help='Write residual file.')
-    parser.add_argument('--in_legacy_cluster', action='store_true',
-                        help='launch as a job in legacy nef cluster.')
+    cluster = parser.add_mutually_exclusive_group()
+    cluster.add_argument('--in_legacy_cluster', action='store_true',
+                         help='launch as a job in legacy nef cluster.')
+    cluster.add_argument('--in_new_cluster', action='store_true',
+                         help='launch as a job in new nef cluster.')
     legacy_cluster = parser.add_argument_group('when using --in_legacy_cluster')
     legacy_cluster.add_argument(
         '-queue_walltime', help='qsub queue and walltime (PBS -l) separated by '
@@ -58,6 +61,12 @@ def get_input_options():
     legacy_cluster.add_argument(
         '-procs_mem', help='qsub (PBS -l) processor types/resources and memory '
         'separated by comma. Default is: nodes=3:xeon:ppn=20,mem=540gb')
+    new_cluster = parser.add_argument_group('when using --in_new_cluster')
+    #new_cluster.add_argument('-q', help='-q arg to oarsub. Default: ')
+    new_cluster.add_argument('-l', '--res', help='-l arg to oarsub. Default: '
+                             '/nodes=3/core=24,walltime=02:00:00')
+    new_cluster.add_argument(
+        '-p', '--prop', help='-p arg to oarsub. Default: cputype=xeon')
 
     ops = parser.parse_args()
     if not ops.relax_ic_in_csf:
@@ -119,7 +128,7 @@ def main():
               in_seg, in_img, ops.time_steps, res_path, ops.res_prefix,
               ' '.join(bool_args + optional_args + petsc_ops)))
 
-    if ops.in_legacy_cluster is True:
+    if ops.in_legacy_cluster:
         cluster_mpi = '/opt/openmpi-gcc/current/bin/mpiexec '
         cmd = bu.sophia_nef_pbs_setting() + cluster_mpi + cmd
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
@@ -137,10 +146,22 @@ def main():
                     #procs='nodes=4:xeon:ppn=20', mem='mem=720gb',
                     #procs='nodes=5:xeon:ppn=20', mem='mem=900gb',
                     dest_dir=res_dir, cmd=cmd)
+    elif ops.in_new_cluster:
+        # oarsub inline requires job command to be in quotes.
+        cmd = '"%s"' % (cmd)
+        job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
+        if not ops.res:
+            ops.res = '/nodes=3/core=24,walltime=02:00:00'
+        if not ops.prop:
+            ops.prop = 'cputype=xeon'
+        bu.oarsub_job(ops.res, ops.prop, res_dir, job_name, cmd)
     else:
         #print cmd
         bu.print_and_execute(cmd)
-
+    # new_cluster.add_argument('-l', '--res', help='-l arg to oarsub. Default: '
+    #                          '/nodes=3/core=24,walltime=02:00:00')
+    # new_cluster.add_argument(
+    #     '-p', '--prop', help='-p arg to oarsub. Default: cputype=xeon')
 
 if __name__ == "__main__":
     main()

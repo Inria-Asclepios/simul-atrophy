@@ -139,3 +139,18 @@ export OMPI_MCA_mpi_paffinity_alone=1
 export LD_LIBRARY_PATH=/opt/openmpi/current/lib64
 
 """
+
+def oarsub_job(l, p, d, n, job, run_from_file=False):
+    '''
+    Submit an oarsub job. Single letter args corresponds to oarsub arg.
+    -l l (resource), -p p (resource property), -d d (directory to launch
+    command from.), -n n (job name).
+    E.g. l corresponds to arguments to be given to -l of oarsub.
+    If run_from_file, job is a script file name so uses -S, else inline string.
+    '''
+    cmd = 'oarsub -l %s -p %s -d %s -n %s ' % (l, p, d, n)
+    if run_from_file:
+        cmd += '-S %s' % (job)
+    else:
+        cmd += job
+    print cmd
