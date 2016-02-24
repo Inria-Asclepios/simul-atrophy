@@ -19,25 +19,31 @@ def get_input_options():
         'lame_paras', help='input lame parameters: Format: muTissue,muCsf,'
         'lambdaTissue,lambdaCsf \n If both --mu_image and --in_dti used, '
         'lame_paras wont be used and those images will be used instead.')
-    parser.add_argument('boundary_condition', help='Possible values: '
-                        'dirichlet_at_walls dirichlet_at_skull')
-    parser.add_argument('atrophy', help='input atrophy file.')
-    parser.add_argument('in_seg', help='input brain seg ')
+    parser.add_argument(
+        'boundary_condition', help='Possible values: dirichlet_at_walls '
+        'dirichlet_at_skull')
+    parser.add_argument(
+        'atrophy', help='input atrophy file.')
+    parser.add_argument(
+        'in_seg', help='input brain seg ')
     parser.add_argument(
         'in_img', help='valid input image that will be warped by the obtained'
         ' displacement fields from the model.')
-    parser.add_argument('petsc_op_file', help='file with petsc options')
-    parser.add_argument('time_steps', help='(integer) '
-                        'number of time steps you want to solve the system.')
-    parser.add_argument('--div12pt_stencil', action='store_true',
-                        help='If given, use 12pt stencil for divergence.')
+    parser.add_argument(
+        'petsc_op_file', help='file with petsc options')
+    parser.add_argument(
+        'time_steps', help='(int) num of time steps to solve the system.')
+    parser.add_argument(
+        '--div12pt_stencil', action='store_true',
+        help='If given, use 12pt stencil for divergence.')
     parser.add_argument(
         '--relax_ic_in_csf', action='store_true', help='If given, relaxes IC.')
     parser.add_argument(
         '-k', '--relax_ic_coeff', help='relaxation coeff. Relevant only when '
         'using --relax_ic_in_csf. If --relax_ic_in_csf given and this option is'
         ' not provided, uses reciprocal of lamda as coefficient.')
-    parser.add_argument('-m', '--mu_file', help='input mu image file: ')
+    parser.add_argument(
+        '-m', '--mu_file', help='input mu image file: ')
     parser.add_argument(
         '--use_dti', dest='use_dti', action='store_true', help='If the option '
         'is provided, input DTI must be given with the option -d')
@@ -50,10 +56,12 @@ def get_input_options():
     parser.add_argument(
         '--wrt_residual', action='store_true', help='Write residual file.')
     cluster = parser.add_mutually_exclusive_group()
-    cluster.add_argument('--in_legacy_cluster', action='store_true',
-                         help='launch as a job in legacy nef cluster.')
-    cluster.add_argument('--in_new_cluster', action='store_true',
-                         help='launch as a job in new nef cluster.')
+    cluster.add_argument(
+        '--in_legacy_cluster', action='store_true',
+        help='launch as a job in legacy nef cluster.')
+    cluster.add_argument(
+        '--in_new_cluster', action='store_true',
+        help='launch as a job in new nef cluster.')
     legacy_cluster = parser.add_argument_group('when using --in_legacy_cluster')
     legacy_cluster.add_argument(
         '-queue_walltime', help='qsub queue and walltime (PBS -l) separated by '
@@ -63,8 +71,9 @@ def get_input_options():
         'separated by comma. Default is: nodes=3:xeon:ppn=20,mem=540gb')
     new_cluster = parser.add_argument_group('when using --in_new_cluster')
     #new_cluster.add_argument('-q', help='-q arg to oarsub. Default: ')
-    new_cluster.add_argument('-l', '--res', help='-l arg to oarsub. Default: '
-                             '/nodes=3/core=24,walltime=02:00:00')
+    new_cluster.add_argument(
+        '-l', '--res', help='-l arg to oarsub. Default: '
+        '/nodes=3/core=24,walltime=02:00:00')
     new_cluster.add_argument(
         '-p', '--prop', help='-p arg to oarsub. Default: cputype=xeon')
 
@@ -148,12 +157,11 @@ def main():
                     dest_dir=res_dir, cmd=cmd)
     elif ops.in_new_cluster:
         # oarsub inline requires job command to be in quotes.
-        cmd = '"%s"' % (cmd)
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         if not ops.res:
             ops.res = '/nodes=3/core=24,walltime=02:00:00'
-        if not ops.prop:
-            ops.prop = 'cputype=xeon'
+        # if not ops.prop:
+        #     ops.prop = '"cputype=\'xeon\'"'
         bu.oarsub_job(ops.res, ops.prop, res_dir, job_name, cmd)
     else:
         #print cmd

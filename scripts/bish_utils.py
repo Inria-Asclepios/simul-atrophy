@@ -148,9 +148,23 @@ def oarsub_job(l, p, d, n, job, run_from_file=False):
     E.g. l corresponds to arguments to be given to -l of oarsub.
     If run_from_file, job is a script file name so uses -S, else inline string.
     '''
-    cmd = 'oarsub -l %s -p %s -d %s -n %s ' % (l, p, d, n)
+    cmd = 'oarsub'
+    if l:
+        cmd += (' -l %s' % (l))
+    if p:
+        cmd += (' -p %s' % (p))
+    if d:
+        cmd += (' -d %s' % (d))
+    if n:
+        cmd += (' -n %s' % (n))
+    #cmd = 'oarsub -l %s -p %s -d %s -n %s ' % (l, p, d, n)
+    #cmd = 'oarsub -l %s -d %s -n %s ' % (l, d, n)
+    # job_prefx = ('export OMPI_MCA_mpi_paffinity_alone=1\n'
+    #              'export LD_LIBRARY_PATH=/opt/openmpi/current/lib64\n')
+    job_prefx = ''
     if run_from_file:
-        cmd += '-S %s' % (job)
+        cmd += ' -S %s' % (job)
     else:
-        cmd += job
-    print cmd
+        cmd += ' "%s%s"' % (job_prefx, job)
+    #print cmd
+    print_and_execute(cmd)
