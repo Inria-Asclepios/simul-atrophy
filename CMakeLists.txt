@@ -19,8 +19,7 @@ set(CMAKE_CXX_COMPILER ${PETSC_COMPILER})
 #Home directory
 if(IS_CLUSTER)
   if(IS_NEW_CLUSTER)
-    set(MY_HOME /data/asclepios/user/bkhanal/softwares)
-    set(ITK_DIR ${MY_HOME}/ITK-build)
+    set(ITK_DIR /data/asclepios/user/bkhanal/softwares/ITK-build)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
     # This part taken from: http://stackoverflow.com/questions/10851247/how-to-activate-c-11-in-cmake
     include(CheckCXXCompilerFlag)
@@ -36,14 +35,12 @@ if(IS_CLUSTER)
     message("setting up for new cluster")
 
   else(IS_NEW_CLUSTER)
-    set(MY_HOME /epi/asclepios2/bkhanal)
-    set(ITK_DIR ${MY_HOME}/ITK-build)
+    set(ITK_DIR /epi/asclepios2/bkhanal/ITK-build)
     message("setting up for legacy cluster")
   endif(IS_NEW_CLUSTER)
 
 else(IS_CLUSTER)
-  set(MY_HOME /home/bkhanal)
-  set(ITK_DIR ${MY_HOME}/Documents/softwares/ITK-build)
+  set(ITK_DIR /home/bkhanal/Documents/softwares/ITK-build)
   set(CMAKE_EXPORT_COMPILE_COMMANDS on) #Will generate compile_commands.json file used by irony-mode in emacs code completion.
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   # This part taken from: http://stackoverflow.com/questions/10851247/how-to-activate-c-11-in-cmake

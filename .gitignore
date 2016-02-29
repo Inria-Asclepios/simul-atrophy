@@ -5,6 +5,7 @@
 results/
 diagnostics/
 build/
+buildNewNef/
 
 /src/Makefile
 /GPATH

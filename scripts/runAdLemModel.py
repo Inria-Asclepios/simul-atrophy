@@ -96,9 +96,11 @@ def main():
     work_dir = os.getenv('ADLEM_DIR')
     if work_dir is None:
         raise ValueError('environment variable ADLEM_DIR not set.')
-    target = op.join(work_dir, 'build/src/AdLemMain')
-
     ops = get_input_options()
+    if ops.in_new_cluster:
+        target = op.join(work_dir, 'buildNewNef/src/AdLemMain')
+    else:
+        target = op.join(work_dir, 'build/src/AdLemMain')
     res_dir = op.join(work_dir, 'results/patients', ops.patient)
     in_img = op.join(res_dir, ops.in_img)
     atrophy = op.join(res_dir, ops.atrophy)
@@ -156,10 +158,11 @@ def main():
                     #procs='nodes=5:xeon:ppn=20', mem='mem=900gb',
                     dest_dir=res_dir, cmd=cmd)
     elif ops.in_new_cluster:
-        # oarsub inline requires job command to be in quotes.
+        cluster_mpi = '/opt/openmpi/gcc/current/bin/mpiexec '
+        cmd = cluster_mpi + cmd
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         if not ops.res:
-            ops.res = '/nodes=3/core=24,walltime=02:00:00'
+            ops.res = '/nodes=6/core=24,walltime=01:30:00'
         # if not ops.prop:
         #     ops.prop = '"cputype=\'xeon\'"'
         bu.oarsub_job(ops.res, ops.prop, res_dir, job_name, cmd)
