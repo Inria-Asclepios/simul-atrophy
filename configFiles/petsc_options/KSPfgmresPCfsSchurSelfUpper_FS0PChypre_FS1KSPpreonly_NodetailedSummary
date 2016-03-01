@@ -3,15 +3,14 @@
 -ksp_type fgmres
 -pc_type fieldsplit -pc_fieldsplit_dm_splits 0 -pc_fieldsplit_0_fields 0,1,2 -pc_fieldsplit_1_fields 3
 -pc_fieldsplit_type schur -pc_fieldsplit_schur_precondition self -pc_fieldsplit_schur_fact_type upper
--fieldsplit_0_pc_type sor
+-fieldsplit_0_pc_type hypre
 -fieldsplit_1_ksp_type preonly
-#-fieldsplit_1_ksp_max_it 3 -fieldsplit_1_ksp_rtol 1.0e-3
 #monitor options
--fieldsplit_0_ksp_converged_reason
+#-fieldsplit_0_ksp_converged_reason
 #-fieldsplit_0_ksp_max_it 100
 -fieldsplit_1_ksp_converged_reason -ksp_converged_reason
 #-fieldsplit_1_ksp_max_it 3 -ksp_max_it 3 -ksp_rtol 1.0e-8
 -fieldsplit_1_ksp_monitor_true_residual -ksp_monitor_true_residual
 #-fieldsplit_1_ksp_monitor -ksp_monitor
--ksp_view
--log_summary 
+#-ksp_view
+#-log_summary 
