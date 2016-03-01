@@ -73,7 +73,7 @@ def get_input_options():
     #new_cluster.add_argument('-q', help='-q arg to oarsub. Default: ')
     new_cluster.add_argument(
         '-l', '--res', help='-l arg to oarsub. Default: '
-        '/nodes=3/core=24,walltime=02:00:00')
+        '/nodes=6/core=24,walltime=01:30:00')
     new_cluster.add_argument(
         '-p', '--prop', help='-p arg to oarsub. Default: cputype=xeon')
 
@@ -141,7 +141,7 @@ def main():
 
     if ops.in_legacy_cluster:
         cluster_mpi = '/opt/openmpi-gcc/current/bin/mpiexec '
-        cmd = bu.sophia_nef_pbs_setting() + cluster_mpi + cmd
+        cmd = bu.sophia_nef_pbs_setting(False) + cluster_mpi + cmd
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         #print cmd
         if ops.queue_walltime:
@@ -159,7 +159,7 @@ def main():
                     dest_dir=res_dir, cmd=cmd)
     elif ops.in_new_cluster:
         cluster_mpi = '/opt/openmpi/gcc/current/bin/mpiexec '
-        cmd = cluster_mpi + cmd
+        cmd = bu.sophia_nef_pbs_setting(True) + cluster_mpi + cmd
         job_name = '%sSteps%s' % (ops.res_prefix, ops.time_steps)
         if not ops.res:
             ops.res = '/nodes=6/core=24,walltime=01:30:00'
@@ -169,10 +169,6 @@ def main():
     else:
         #print cmd
         bu.print_and_execute(cmd)
-    # new_cluster.add_argument('-l', '--res', help='-l arg to oarsub. Default: '
-    #                          '/nodes=3/core=24,walltime=02:00:00')
-    # new_cluster.add_argument(
-    #     '-p', '--prop', help='-p arg to oarsub. Default: cputype=xeon')
 
 if __name__ == "__main__":
     main()

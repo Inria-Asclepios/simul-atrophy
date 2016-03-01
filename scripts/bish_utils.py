@@ -128,17 +128,27 @@ def qsub_job(name, queue, walltime, procs, mem, dest_dir, cmd, add_atrb=None):
     return job_id
 
 
-def sophia_nef_pbs_setting():
+def sophia_nef_pbs_setting(is_new_nef):
     """ Some commands to custom set-up the inria sophia nef cluster. These are
     suggested set ups before your commands in a job script.
     """
-    return """
+    if is_new_nef:
+        cmd = '''
+
+source /etc/profile.d/modules.sh
+module load mpi/openmpi-1.10.1-gcc
+
+'''
+    else:
+        cmd = """
 
 # bind a mpi process to a cpu
 export OMPI_MCA_mpi_paffinity_alone=1
-export LD_LIBRARY_PATH=/opt/openmpi/current/lib64
+export LD_LIBRARY_PATH=/opt/openmpi-gcc/current/lib64
 
 """
+    return cmd
+
 
 def oarsub_job(l, p, d, n, job, run_from_file=False):
     '''

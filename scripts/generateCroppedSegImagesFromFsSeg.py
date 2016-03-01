@@ -45,12 +45,14 @@ def get_input_options():
         ' created for the model. Useful if you want to know which regions are '
         'considered as CSF regions which depends on the labels present in the '
         'file you provided with -fs_csf_labels. ')
+    parser.add_argument(
+        'in_new_cluster', action='store_true', help='Env variables for new nef')
     ops = parser.parse_args()
     if not op.exists(ops.res_dir):
         os.makedirs(ops.res_dir)
     return ops
 
-def set_binaries_and_paths():
+def set_binaries_and_paths(ops):
     """ Set all the required executables in this module and make them global.
     envirionment variable. The paths set for the following environment variables
     are returned (respecting the order) :
@@ -66,9 +68,14 @@ def set_binaries_and_paths():
     if ants_dir is None:
         raise ValueError('environment variable ANTS_BIN not found.')
     img_math = ants_dir + '/ImageMath'
-    binarize = adlem_dir + '/build/src/BinarizeThreshold'
-    get_dist = adlem_dir + '/build/src/signedDanielssonDistance'
-    img_from_label_img = adlem_dir + '/build/src/createImageFromLabelImage'
+    if ops.in_new_cluster:
+        build_dir = 'buildNewNef'
+    else:
+        build_dir = 'build'
+    binarize = op.join(adlem_dir, build_dir, 'src/BinarizeThreshold')
+    get_dist = op.join(adlem_dir, build_dir, 'src/signedDanielssonDistance')
+    img_from_label_img = op.join(
+        adlem_dir, build_dir, 'src/createImageFromLabelImage')
     return
 
 def crop_by_mask(dim, in_img, out_img, label_mask_img, label='1', padRadius='0'):
@@ -186,7 +193,7 @@ def main():
     inputs for AdLemModel.
     """
     ops = get_input_options()
-    set_binaries_and_paths()
+    set_binaries_and_paths(ops)
     # Output filenames
     crop_info = 'D%sR%s' % (ops.dist_thres, ops.pad_rad)
     out_seg_for_model = op.join(
