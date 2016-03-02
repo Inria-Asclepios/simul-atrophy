@@ -421,10 +421,13 @@ int main(int argc,char **argv)
                 imageWriter->Update();
             }
         }
-        AdLem3D<dim>::VectorImageWriterType::Pointer   displacementWriter = AdLem3D<dim>::VectorImageWriterType::New();
-        displacementWriter->SetFileName(filesPref+"ComposedField.nii.gz");
-        displacementWriter->SetInput(composedDisplacementField);
-        displacementWriter->Update();
+	if(ops.numOfTimeSteps > 1) //Write composed field only if num_of_time_steps > 1
+	{
+	    AdLem3D<dim>::VectorImageWriterType::Pointer   displacementWriter = AdLem3D<dim>::VectorImageWriterType::New();
+	    displacementWriter->SetFileName(filesPref+"ComposedField.nii.gz");
+	    displacementWriter->SetInput(composedDisplacementField);
+	    displacementWriter->Update();
+	}
     }
     PetscErrorCode ierr;
     ierr = PetscFinalize();CHKERRQ(ierr);
