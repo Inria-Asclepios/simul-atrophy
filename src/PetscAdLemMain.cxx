@@ -46,6 +46,9 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "\natrophy map distributing uniform volume change in CSF to compensate global volume change in"
     "\n other regions. \n\n"
     "-relax_ic_coeff		: value of k. If not given when using --relax_ic_in_csf, reciprocal of lambda is used.\n\n"
+    "--zero_vel_at_falx		: If given, makes Falx cerebri labeled voxels rigid and won't move.\n\n"
+    "--sliding_at_falx		: If given, sets sliding boundary condition at Falx cerebri. Must also provide -falx_zero_vel_dir if this option is provided.\n\n"
+    "-falx_zero_vel_dir	        : Possible values: 0, 1 or 2. Relevant only when --sliding_at_falx used. Sets the vel in the given dir as zero in the voxels labels as Falx Cerebri in the given maskFile. \n\n"
     "-atrophyFile		: Filename of a valid existing atrophy file that prescribes desired volume change.\n\n"
     "-maskFile			: Segmentation file that segments the image into CSF, tissue and non-brain regions.\n\n"
     "-imageFile			: Input image filename.\n\n"
@@ -73,8 +76,9 @@ struct UserOptions {
     std::string boundaryCondition;
     bool	div12ptStencil;
     float	lameParas[4];	//muBrain, muCsf, lambdaBrain, lambdaCsf
-    bool	relaxIcInCsf;
+    bool	relaxIcInCsf, zeroVelAtFalx, slidingAtFalx;
     float	relaxIcCoeff;	//compressibility coefficient k for CSF region.
+    int		falxZeroVelDir; //Component of the velocity to be set to zero in the Falx sliding boundary condition.
     bool        useTensorLambda, isMuConstant;
     int         numOfTimeSteps;
 
@@ -137,6 +141,23 @@ int opsParser(UserOptions &ops) {
 	if(optionFlag) ops.relaxIcCoeff = (float)optionReal;
 	else ops.relaxIcCoeff = 0.;
 
+	ierr = PetscOptionsGetString(NULL,"--zero_vel_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+	ops.zeroVelAtFalx = (bool)optionFlag;
+
+	ierr = PetscOptionsGetString(NULL,"--sliding_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+	ops.slidingAtFalx = (bool)optionFlag;
+
+	if(ops.slidingAtFalx)
+	{
+	    if(ops.zeroVelAtFalx) throw "--zero_vel_at_falx and --sliding_at_falx are mutually exlclusive";
+	    else
+	    {
+		PetscInt optionInt;
+		ierr = PetscOptionsGetInt(NULL, "-falx_zero_vel_dir", &optionInt, &optionFlag);CHKERRQ(ierr);
+		if(optionFlag) ops.falxZeroVelDir = (int)optionInt;
+		else throw "must provide -falx_zero_vel_dir when --sliding_at_falx is used.";
+	    }
+	}
 
 	// ---------- Set input image files, computational region and other options.
 	ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -253,13 +274,14 @@ int main(int argc,char **argv)
 
 	AdLem3D<dim>		AdLemModel;
 	try { // ---------- Set up the model parameters
-	    AdLemModel.setBoundaryConditions(ops.boundaryCondition, ops.relaxIcInCsf, ops.relaxIcCoeff);
+	    AdLemModel.setBoundaryConditions(ops.boundaryCondition, ops.relaxIcInCsf, ops.relaxIcCoeff, ops.zeroVelAtFalx,
+					     ops.slidingAtFalx, ops.falxZeroVelDir);
 	    if(AdLemModel.getBcType() == AdLem3D<dim>::DIRICHLET_AT_WALLS)
 		AdLemModel.setWallVelocities(wallVelocities);
 	    AdLemModel.setLameParameters(
 		ops.isMuConstant, ops.useTensorLambda, ops.lameParas[0], ops.lameParas[1], ops.lameParas[2],
 		ops.lameParas[3], ops.lambdaFileName, ops.muFileName);
-	    AdLemModel.setBrainMask(baselineBrainMask, maskLabels::NBR, maskLabels::CSF);
+	    AdLemModel.setBrainMask(baselineBrainMask, maskLabels::NBR, maskLabels::CSF, maskLabels::FALX_CEREBRI);
 	    // ---------- Set up the atrophy map
 	    AdLemModel.setAtrophy(baselineAtrophy);
 
@@ -380,7 +402,7 @@ int main(int argc,char **argv)
                     isMaskChanged = false;
                 } else {
                     isMaskChanged = true;
-                    AdLemModel.setBrainMask(brainMaskWarper->GetOutput(), maskLabels::NBR, maskLabels::CSF);
+                    AdLemModel.setBrainMask(brainMaskWarper->GetOutput(), maskLabels::NBR, maskLabels::CSF, maskLabels::FALX_CEREBRI);
                     AdLemModel.writeBrainMaskToFile(filesPref+stepString+"Mask.nii.gz");
                 }
                 // ---------- Warp baseline atrophy with an itk WarpFilter, linear interpolation; using inverted composed field.

@@ -42,6 +42,17 @@ def get_input_options():
         '-k', '--relax_ic_coeff', help='relaxation coeff. Relevant only when '
         'using --relax_ic_in_csf. If --relax_ic_in_csf given and this option is'
         ' not provided, uses reciprocal of lamda as coefficient.')
+    falx = parser.add_mutually_exclusive_group()
+    falx.add_argument(
+        '--zero_vel_at_falx', action='store_true', help='If given, sets Falx '
+        'Cerebri voxels to zero velocity.')
+    falx.add_argument(
+        '--sliding_at_falx', action='store_true', help='If given, sets Falx '
+        'Cerebri voxels to sliding boundary condition. i.e. set zero vel in '
+        'one direction. Set this direction using the option -falx_zero_vel_dir')
+    parser.add_argument(
+        '-f', '--falx_zero_vel_dir', help='Direction or vel component to be '
+        ' set to zero. Relevant only when using --sliding_at_falx.')
     parser.add_argument(
         '-m', '--mu_file', help='input mu image file: ')
     parser.add_argument(
@@ -120,6 +131,14 @@ def main():
         bool_args.append('--relax_ic_in_csf')
         if ops.relax_ic_coeff is not None:
             optional_args.append('-relax_ic_coeff ' + ops.relax_ic_coeff)
+    if ops.zero_vel_at_falx:
+        bool_args.append('--zero_vel_at_falx')
+    elif ops.sliding_at_falx:
+        bool_args.append('--sliding_at_falx')
+        if ops.falx_zero_vel_dir is None:
+            raise ValueError('Must provide -falx_zero_vel_dir when using '
+                             '--sliding_at_falx')
+        optional_args.append('-falx_zero_vel_dir ' + ops.falx_zero_vel_dir)
     if ops.mu_file is not None:
         optional_args.append('-muFile ' + ops.mu_file)
     if ops.use_dti:

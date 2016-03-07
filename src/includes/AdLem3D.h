@@ -66,7 +66,8 @@ double getYspacing() const;
 double getZspacing() const;
 
 // ---------- Boundary condition related functions
-void setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff=0.);
+void setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff=0.,
+			   bool zeroVelAtFalx=false, bool slidingAtFalx=false, int falxZeroVelDir=0);
 bcType getBcType() const;
 void setWallVelocities(std::vector<double>& wallVelocities);
 void getWallVelocities(std::vector<double>& wallVelocities); //copies mWallVelocities content.
@@ -86,14 +87,19 @@ double getLambdaCsf();
 
 
 // ---------- Default label values denotes that these labels are irrelevant for the selected boundary conditions.
-int setBrainMask(std::string maskImageFile, int skullLabel = -1, int relaxIcLabel = -1);
-int setBrainMask(typename IntegerImageType::Pointer brainMask, int skullLabel = -1, int relaxIcLabel = -1);
+int setBrainMask(std::string maskImageFile, int skullLabel = -1, int relaxIcLabel = -1, int falxCerebriLabel = -1);
+int setBrainMask(typename IntegerImageType::Pointer brainMask, int skullLabel = -1, int relaxIcLabel = -1, int falxCerebriLabel = -1);
 typename IntegerImageType::Pointer getBrainMaskImage();
 void writeBrainMaskToFile(std::string fileName);
 
 
 bool relaxIcInCsf(); //Return whether relax IC in CSF or not.
 float getRelaxIcPressureCoeff(); //The value of k in the eqn div(u) + kp = 0.
+
+bool zeroVelAtFalx(); //Return whether set Falx Cerebri to zero or not.
+bool slidingAtFalx(); //Return whether set sliding boundary condition at Falx or not.
+int getFalxSlidingZeroVelDir(); //Return the component (dir) in which velocity is to be set zero when using sliding condition.
+
 
 //string should be either of "mu", "lambda" or "atrophy".
 //(Mi,Mj) is the element position of a tensor. Currently lambda can be a tensor.
@@ -108,6 +114,7 @@ int getRelaxIcLabel() const;  //Return the label present in BrainMask where the 
 
 int getSkullLabel();
 
+int getFalxCerebriLabel();
 //All images intended to be used by the model must already be set before calling
 //setDomainRegionXX fxs.
 void setDomainRegionFullImage(); //sets largestPossibleRegion.
@@ -158,7 +165,12 @@ float	mRelaxIcPressureCoeff;	//Non-zero = > IC is relaxed at the regions where b
 int		mRelaxIcLabel;  //Label value in the brainMask where the IC is to be relaxed. (usually CSF regions)
 int		mSkullLabel;	//Label value in the brainMask where the velocity will be imposed to be zero(usually non-brain regions!)
 
-typename ScalarImageType::RegionType mDomainRegion; //Set this only when all the images
+//Boundary condtions on Falx cerebri
+bool	 mZeroVelAtFalx, mSlidingAtFalx; //If mZeroVelAtFalx then set v=0, elseif mSlidingAtFalx then set one component v_c = 0
+int	 mFalxZeroVelDir; //Direction to choose the component v_c to set it to zero when mSlidingAtFalx is true.
+int	 mFalxCerebriLabel;
+
+typename ScalarImageType::RegionType	mDomainRegion;	//Set this only when all the images
 // that are going to be used in the model are set! This will be used to
 //extract the desired region will be extracted the corresponding images.
 

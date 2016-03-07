@@ -28,6 +28,8 @@ AdLem3D<DIM>::AdLem3D():mWallVelocities(18)
     mIsLambdaImageSet	  = false;
 
     mIsBcSet		  = false;
+    mZeroVelAtFalx	  = false;
+    mSlidingAtFalx	  = false;
     mPetscSolverTarasUsed = false;
     mRelaxIcPressureCoeff = 0;  //This default changed only when setting brain mask.
 
@@ -58,7 +60,9 @@ AdLem3D<DIM>::~AdLem3D()
 #define __FUNCT__ "setBoundaryConditions"
 template <unsigned int DIM>
 void
-AdLem3D<DIM>::setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff) {
+AdLem3D<DIM>::setBoundaryConditions(const std::string& boundaryCondition, bool relaxIcInCsf, float relaxIcPressureCoeff,
+				    bool zeroVelAtFalx, bool slidingAtFalx, int falxZeroVelDir)
+{
     if((boundaryCondition.compare("dirichlet_at_walls") != 0) &&
        (boundaryCondition.compare("dirichlet_at_skull") != 0))
 	throw "Invalid boundary condition.";
@@ -73,6 +77,10 @@ AdLem3D<DIM>::setBoundaryConditions(const std::string& boundaryCondition, bool r
 	    throw "cannot set non-zero relaxIcPressureCoeff when relaxIcIncsf is false!";
     mRelaxIcInCsf = relaxIcInCsf;
     mRelaxIcPressureCoeff = relaxIcPressureCoeff;
+
+    mZeroVelAtFalx = zeroVelAtFalx;
+    mSlidingAtFalx = slidingAtFalx;
+    mFalxZeroVelDir = falxZeroVelDir;
 }
 
 #undef __FUNCT__
@@ -136,27 +144,28 @@ void AdLem3D<DIM>::setLambda(typename TensorImageType::Pointer inputLambda)
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
 template <unsigned int DIM>
-int AdLem3D<DIM>::setBrainMask(std::string maskImageFile, int skullLabel, int relaxIcLabel)
+int AdLem3D<DIM>::setBrainMask(std::string maskImageFile, int skullLabel, int relaxIcLabel, int falxCerebriLabel)
 {
     if(!mIsBcSet)
 	throw "Boundary conditions must be set before setting brain mask.";
     typename IntegerImageReaderType::Pointer   imageReader = IntegerImageReaderType::New();
     imageReader->SetFileName(maskImageFile);
     imageReader->Update();
-    setBrainMask(imageReader->GetOutput(),skullLabel, relaxIcLabel);
+    setBrainMask(imageReader->GetOutput(),skullLabel, relaxIcLabel, falxCerebriLabel);
     return 0;
 }
 
 #undef __FUNCT__
 #define __FUNCT__ "setBrainMask"
 template <unsigned int DIM>
-int AdLem3D<DIM>::setBrainMask(typename IntegerImageType::Pointer brainMask, int skullLabel, int relaxIcLabel)
+int AdLem3D<DIM>::setBrainMask(typename IntegerImageType::Pointer brainMask, int skullLabel, int relaxIcLabel, int falxCerebriLabel)
 {
     if(mIsBcSet)
 	throw "Boundary conditions must be set before setting brain mask.";
     mBrainMask			= brainMask;
     mRelaxIcLabel		= relaxIcLabel;
     mSkullLabel			= skullLabel;
+    mFalxCerebriLabel           = falxCerebriLabel;
     mIsBrainMaskSet		= true;
     return 0;
 }
@@ -297,11 +306,46 @@ float AdLem3D<DIM>::getRelaxIcPressureCoeff()
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "zeroVelAtFalx"
+template <unsigned int DIM>
+bool AdLem3D<DIM>::zeroVelAtFalx()
+{
+    return mZeroVelAtFalx;
+}
+
+#undef __FUNCT__
+#define __FUNCT__ "slidingAtFalx"
+template <unsigned int DIM>
+bool AdLem3D<DIM>::slidingAtFalx()
+{
+    return mSlidingAtFalx;
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "getFalxSlidingZeroVelDir"
+template <unsigned int DIM>
+int AdLem3D<DIM>::getFalxSlidingZeroVelDir()
+{
+    return mFalxZeroVelDir;
+}
+
+
+#undef __FUNCT__
 #define __FUNCT__ "getSkullLabel"
 template <unsigned int DIM>
 int AdLem3D<DIM>::getSkullLabel()
 {
     return mSkullLabel;
+}
+
+
+#undef __FUNCT__
+#define __FUNCT__ "getFalxCerebriLabel"
+template <unsigned int DIM>
+int AdLem3D<DIM>::getFalxCerebriLabel()
+{
+    return mFalxCerebriLabel;
 }
 
 #undef __FUNCT__

@@ -34,6 +34,14 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilFo
     } else
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Incompressibility constraint not relaxed anywhere.\n");
 
+    if (model->zeroVelAtFalx())
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Falx cerebri voxels set to zero velocity.\n");
+    if (model->slidingAtFalx())
+    {
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"Sliding boundary condition at Falx cerebri with zero velocity in the direction: %d \n"
+				,model->getFalxSlidingZeroVelDir());
+    }
+
     if(mIsMuConstant)
         PetscSynchronizedPrintf(PETSC_COMM_WORLD,"solver uses discretization for constant viscosity case!\n muBrain=%f, muCsf=%f, lambdaBrain=%f, lambdaCsf=%f\n", model->getMuBrain(), model->getMuCsf(), model->getLambdaBrain(), model->getLambdaCsf());
     else
@@ -1096,13 +1104,25 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                         v[1] = -kBond;      col[1].i = i;   col[1].j = j;   col[1].k=k-1;
                     }
                     ierr=MatSetValuesStencil(jac,1,&row,2,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                } else if ( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
+                } else if( (user->getProblemModel()->getBcType() == user->getProblemModel()->DIRICHLET_AT_SKULL) &&
                             (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getSkullLabel() ||
                              user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
-                            ) { //vx lying in the face that touches a skull (non-brain region) cell
+		    ) { //vx lying in the face that touches a skull (non-brain region) cell
                     v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
                     ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vx lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==0)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vx lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		}
                 else { //interior points, x-momentum equation
                     //vx-coefficients, seven terms.
                     for(int ii=0; ii<7; ++ii) col[ii].c = 0;
@@ -1154,7 +1174,19 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                             ) { //vy lying in the face that touches a skull (non-brain region) cell
                     v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
                     ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vy lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==1)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vy lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		}
                 else { //interior points, y-momentum equation
                     //vy-coefficients, seven terms.
                     for(int ii=0; ii<7; ++ii) col[ii].c = 1;
@@ -1209,7 +1241,19 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
                             ) { //vz lying in the face that touches a skull (non-brain region) cell
                     v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
                     ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vz lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==2)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vz lying in the face that touches a Falx Cerebri cell
+		    v[0] = kBond;           col[0].i = i;   col[0].j = j;   col[0].k = k;
+                    ierr=MatSetValuesStencil(jac,1,&row,1,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		}
                 else { //interior points, z-momentum equation
                     //vz-coefficients, seven terms.
                     for(int ii=0; ii<7; ++ii) col[ii].c = 2;
@@ -1333,6 +1377,14 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
 			    //I need to figure out a safer way to set the whole row to zero without disturbing the non-zero pattern first.
 			}
                     }
+		    else if( (user->getProblemModel()->zeroVelAtFalx() ||  user->getProblemModel()->slidingAtFalx()) &&
+			     (user->bMaskAt(i,j,k) == user->getProblemModel()->getFalxCerebriLabel())
+			)
+		    { //If falx cerebri, just release the IC. This is different than what I did for skull cells above setting
+			//p=0. Instead of setting p=0 in the Falx, I'm just releasing the strict IC, using coeff. 1
+			v[nm++] = 1.0;
+			ierr=MatSetValuesStencil(jac,1,&row,nm,col,v,INSERT_VALUES);CHKERRQ(ierr);
+		    }
 		    else
 		    {
 			v[nm++] = 0; //Must set 0 since when doing multiple solves, there can be non-zero rows in previous time-step that now corrsponds to relax_ic cells
@@ -1414,8 +1466,17 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                              user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //skull or non-brain region:
                     rhs[k][j][i].vx = 0;
-
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vx lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vx = 0;
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==0)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vx lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vx = 0;
+		}
                 else { //interior points, x-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vx = Hy*Hz*(
@@ -1468,7 +1529,17 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                              user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getSkullLabel())
                             ) { //Skull or non-brain region:
                     rhs[k][j][i].vy = 0;
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vy lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vy = 0;
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==1)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vy lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vy = 0;
+		}
                 else { //interior points, y-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vy = Hx*Hz*(
@@ -1522,7 +1593,17 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
                             )
                           ) { //skull or non-brain region:
                     rhs[k][j][i].vz = 0;
-                }
+                } else if( (user->getProblemModel()->zeroVelAtFalx()) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vz lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vz = 0;
+		} else if( (user->getProblemModel()->slidingAtFalx() && (user->getProblemModel()->getFalxSlidingZeroVelDir()==2)) &&
+			   (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getFalxCerebriLabel() ||
+			    user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getFalxCerebriLabel())
+		    ) { //vz lying in the face that touches a Falx Cerebri cell
+		    rhs[k][j][i].vz = 0;
+		}
                 else { //interior points, z-momentum equation
                     if (user->getProblemModel()->isLambdaTensor()) {
                         rhs[k][j][i].vz = Hx*Hy*(
