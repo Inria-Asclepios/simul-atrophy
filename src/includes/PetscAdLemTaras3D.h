@@ -24,7 +24,7 @@ public:
     typedef struct {
         PetscScalar vx, vy, vz, p;
     } Field;
-    PetscAdLemTaras3D(AdLem3D<3u> *model ,bool set12pointStencilForDiv, bool writeParaToFile);
+    PetscAdLemTaras3D(AdLem3D<3u> *model, bool set12pointStencilForDiv, bool writeParaToFile);
     virtual ~PetscAdLemTaras3D();
 
     MatNullSpace getNullSpace();

@@ -27,6 +27,7 @@ AdLem3D<DIM>::AdLem3D():mWallVelocities(18)
     mIsMuImageSet	  = false;
     mIsLambdaImageSet	  = false;
 
+    mNoLameInRhs	  = false;
     mIsBcSet		  = false;
     mZeroVelAtFalx	  = false;
     mSlidingAtFalx	  = false;
@@ -260,6 +261,11 @@ void AdLem3D<DIM>::setDomainRegion(unsigned int origin[], unsigned int size[])
 }
 
 #undef __FUNCT__
+#define __FUNCT__ "isLameInRhs"
+template <unsigned int DIM>
+bool AdLem3D<DIM>::noLameInRhs() const { return mNoLameInRhs; }
+
+#undef __FUNCT__
 #define __FUNCT__ "getBcType"
 template <unsigned int DIM>
 typename AdLem3D<DIM>::bcType AdLem3D<DIM>::getBcType() const { return mBc; }
@@ -291,7 +297,7 @@ void AdLem3D<DIM>::getWallVelocities(std::vector<double>& wallVelocities) {
 #undef __FUNCT__
 #define __FUNCT__ "relaxIcInCsf"
 template <unsigned int DIM>
-bool AdLem3D<DIM>::relaxIcInCsf()
+bool AdLem3D<DIM>::relaxIcInCsf() const
 {
     return mRelaxIcInCsf;
 }
@@ -300,7 +306,7 @@ bool AdLem3D<DIM>::relaxIcInCsf()
 #undef __FUNCT__
 #define __FUNCT__ "getRelaxIcPressureCoeff"
 template <unsigned int DIM>
-float AdLem3D<DIM>::getRelaxIcPressureCoeff()
+float AdLem3D<DIM>::getRelaxIcPressureCoeff() const
 {
     return mRelaxIcPressureCoeff;
 }
@@ -308,7 +314,7 @@ float AdLem3D<DIM>::getRelaxIcPressureCoeff()
 #undef __FUNCT__
 #define __FUNCT__ "zeroVelAtFalx"
 template <unsigned int DIM>
-bool AdLem3D<DIM>::zeroVelAtFalx()
+bool AdLem3D<DIM>::zeroVelAtFalx() const
 {
     return mZeroVelAtFalx;
 }
@@ -316,7 +322,7 @@ bool AdLem3D<DIM>::zeroVelAtFalx()
 #undef __FUNCT__
 #define __FUNCT__ "slidingAtFalx"
 template <unsigned int DIM>
-bool AdLem3D<DIM>::slidingAtFalx()
+bool AdLem3D<DIM>::slidingAtFalx() const
 {
     return mSlidingAtFalx;
 }
@@ -325,7 +331,7 @@ bool AdLem3D<DIM>::slidingAtFalx()
 #undef __FUNCT__
 #define __FUNCT__ "getFalxSlidingZeroVelDir"
 template <unsigned int DIM>
-int AdLem3D<DIM>::getFalxSlidingZeroVelDir()
+int AdLem3D<DIM>::getFalxSlidingZeroVelDir() const
 {
     return mFalxZeroVelDir;
 }
@@ -334,7 +340,7 @@ int AdLem3D<DIM>::getFalxSlidingZeroVelDir()
 #undef __FUNCT__
 #define __FUNCT__ "getSkullLabel"
 template <unsigned int DIM>
-int AdLem3D<DIM>::getSkullLabel()
+int AdLem3D<DIM>::getSkullLabel() const
 {
     return mSkullLabel;
 }
@@ -343,7 +349,7 @@ int AdLem3D<DIM>::getSkullLabel()
 #undef __FUNCT__
 #define __FUNCT__ "getFalxCerebriLabel"
 template <unsigned int DIM>
-int AdLem3D<DIM>::getFalxCerebriLabel()
+int AdLem3D<DIM>::getFalxCerebriLabel() const
 {
     return mFalxCerebriLabel;
 }
@@ -437,7 +443,7 @@ int AdLem3D<DIM>::getRelaxIcLabel() const
 #undef __FUNCT__
 #define __FUNCT__ "dataAt"
 template <unsigned int DIM>
-double AdLem3D<DIM>::dataAt(std::string dType, int x, int y, int z, unsigned int Mi, unsigned int Mj)
+double AdLem3D<DIM>::dataAt(std::string dType, int x, int y, int z, unsigned int Mi, unsigned int Mj) const
 {
     if (dType.compare("mu") == 0)
         return muAt(x,y,z);
@@ -454,7 +460,7 @@ double AdLem3D<DIM>::dataAt(std::string dType, int x, int y, int z, unsigned int
 #undef __FUNCT__
 #define __FUNCT__ "getMuBrain"
 template <unsigned int DIM>
-double AdLem3D<DIM>::getMuBrain()
+double AdLem3D<DIM>::getMuBrain() const
 {
     return mMuBrain;
 }
@@ -463,7 +469,7 @@ double AdLem3D<DIM>::getMuBrain()
 #undef __FUNCT__
 #define __FUNCT__ "getMuCsf"
 template <unsigned int DIM>
-double AdLem3D<DIM>::getMuCsf()
+double AdLem3D<DIM>::getMuCsf() const
 {
     return mMuCsf;
 }
@@ -471,7 +477,7 @@ double AdLem3D<DIM>::getMuCsf()
 #undef __FUNCT__
 #define __FUNCT__ "getLambdaBrain"
 template <unsigned int DIM>
-double AdLem3D<DIM>::getLambdaBrain()
+double AdLem3D<DIM>::getLambdaBrain() const
 {
     return mLambdaBrain;
 }
@@ -479,7 +485,7 @@ double AdLem3D<DIM>::getLambdaBrain()
 #undef __FUNCT__
 #define __FUNCT__ "getLambdaCsf"
 template <unsigned int DIM>
-double AdLem3D<DIM>::getLambdaCsf()
+double AdLem3D<DIM>::getLambdaCsf() const
 {
     return mLambdaCsf;
 }
@@ -535,8 +541,9 @@ double AdLem3D<DIM>::getZspacing() const
 #undef __FUNCT__
 #define __FUNCT__ "solveModel"
 template <unsigned int DIM>
-void AdLem3D<DIM>::solveModel(bool operatorChanged, bool tarasUse12pointStencilForDiv)
+void AdLem3D<DIM>::solveModel(bool noLameInRhs, bool tarasUse12pointStencilForDiv, bool operatorChanged)
 {
+    mNoLameInRhs = noLameInRhs;
     if(!mPetscSolverTarasUsed) {
         mPetscSolverTarasUsed = true;
 	mPetscSolverTaras = new PetscAdLemTaras3D(this,tarasUse12pointStencilForDiv,false);

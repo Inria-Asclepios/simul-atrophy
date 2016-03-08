@@ -80,10 +80,10 @@ void setLameParameters(bool isMuConstant, bool useTensorLambda,
 bool isMuConstant() const;
 bool isLambdaTensor() const;
 
-double getMuBrain();
-double getMuCsf();
-double getLambdaBrain();
-double getLambdaCsf();
+double getMuBrain() const;
+double getMuCsf() const;
+double getLambdaBrain() const;
+double getLambdaCsf() const;
 
 
 // ---------- Default label values denotes that these labels are irrelevant for the selected boundary conditions.
@@ -92,19 +92,19 @@ int setBrainMask(typename IntegerImageType::Pointer brainMask, int skullLabel = 
 typename IntegerImageType::Pointer getBrainMaskImage();
 void writeBrainMaskToFile(std::string fileName);
 
+bool noLameInRhs() const; //Return whether to put (mu+lambda) in RHS of the momentum equation or not.
+bool relaxIcInCsf() const; //Return whether relax IC in CSF or not.
+float getRelaxIcPressureCoeff() const; //The value of k in the eqn div(u) + kp = 0.
 
-bool relaxIcInCsf(); //Return whether relax IC in CSF or not.
-float getRelaxIcPressureCoeff(); //The value of k in the eqn div(u) + kp = 0.
-
-bool zeroVelAtFalx(); //Return whether set Falx Cerebri to zero or not.
-bool slidingAtFalx(); //Return whether set sliding boundary condition at Falx or not.
-int getFalxSlidingZeroVelDir(); //Return the component (dir) in which velocity is to be set zero when using sliding condition.
+bool zeroVelAtFalx() const; //Return whether set Falx Cerebri to zero or not.
+bool slidingAtFalx() const; //Return whether set sliding boundary condition at Falx or not.
+int getFalxSlidingZeroVelDir() const; //Return the component (dir) in which velocity is to be set zero when using sliding condition.
 
 
 //string should be either of "mu", "lambda" or "atrophy".
 //(Mi,Mj) is the element position of a tensor. Currently lambda can be a tensor.
 // Top left position is: (Mi,Mj)=(0,0).
-double dataAt(std::string dType, int x, int y, int z, unsigned int Mi, unsigned int Mj);
+double dataAt(std::string dType, int x, int y, int z, unsigned int Mi, unsigned int Mj) const;
 double brainMaskAt(int x, int y, int z) const; //returns int unlike dataAt()
 
 int getRelaxIcLabel() const;  //Return the label present in BrainMask where the IC is to be relaxed.
@@ -112,9 +112,9 @@ int getRelaxIcLabel() const;  //Return the label present in BrainMask where the 
 //Normally, relaxIcPressureCoeff should be non-zero.
 //If you do want to relax IC anywhere, set relaxIcPressureCoeff to zero.
 
-int getSkullLabel();
+int getSkullLabel() const;
 
-int getFalxCerebriLabel();
+int getFalxCerebriLabel() const;
 //All images intended to be used by the model must already be set before calling
 //setDomainRegionXX fxs.
 void setDomainRegionFullImage(); //sets largestPossibleRegion.
@@ -123,7 +123,7 @@ void setDomainRegionFullImage(); //sets largestPossibleRegion.
 void setDomainRegion(unsigned int origin[3], unsigned int size[3]);
 
 //solver related functions
-void solveModel(bool operatorChanged = false, bool tarasUse12pointStencilForDiv=false);
+void solveModel(bool noLameInRhs=false, bool tarasUse12pointStencilForDiv=false, bool operatorChanged = false);
 typename VectorImageType::Pointer getVelocityImage();
 typename ScalarImageType::Pointer getPressureImage();
 typename ScalarImageType::Pointer getDivergenceImage();
@@ -159,6 +159,10 @@ void writeAtrophyToFile(std::string fileName);
 protected:
 typename IntegerImageType::Pointer    mBrainMask;         //Input segmentation.
 bool                        mIsBrainMaskSet;
+
+//Choice to use Lame parameters in RHS or not.
+bool mNoLameInRhs;
+
 //strictly follow incompressibilty constraint(IC) only at non-CSF parts.
 bool	mRelaxIcInCsf;
 float	mRelaxIcPressureCoeff;	//Non-zero = > IC is relaxed at the regions where brainMask has the value mRelaxIcLabel.

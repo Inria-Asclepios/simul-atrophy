@@ -41,6 +41,7 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "option if you want the divergence of the velocity field obtained from the model has to exactly match the divergenc/atrophy "
     "you prescribe when computed with following stencil: (vx(i+1,j)-vx(i-1,j))/(2*hx) + (vy(i,j+1)-vy(i,j-1)/(2*hy)). \n"
     "If NOT provided, the output velocity field will have divergence compatible to the one computed internally in the staggered grid."
+    "--no_lame_in_rhs           : If given, momentum equation will be mu div(u) + grad(p) = grad(a). So lambda is irrelevant and mu only in LHS."
     "-boundary_condition	: Possible values: dirichlet_at_walls dirichlet_at_skull.\n\n"
     "--relax_ic_in_csf		: If given, relaxes IC, that is non-zero k. If not given, modifies"
     "\natrophy map distributing uniform volume change in CSF to compensate global volume change in"
@@ -74,7 +75,7 @@ struct UserOptions {
     bool		isDomainFullSize;
 
     std::string boundaryCondition;
-    bool	div12ptStencil;
+    bool	div12ptStencil, noLameInRhs;
     float	lameParas[4];	//muBrain, muCsf, lambdaBrain, lambdaCsf
     bool	relaxIcInCsf, zeroVelAtFalx, slidingAtFalx;
     float	relaxIcCoeff;	//compressibility coefficient k for CSF region.
@@ -127,6 +128,10 @@ int opsParser(UserOptions &ops) {
 	// --------- Set divergence Stencil option
 	ierr = PetscOptionsGetString(NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
 	ops.div12ptStencil = (bool)optionFlag;
+
+	// --------- Set momentum equatin RHS option
+	ierr = PetscOptionsGetString(NULL,"--no_lame_in_rhs",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+	ops.noLameInRhs = (bool)optionFlag;
 
 	// ---------- Set boundary condition option
 	ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
@@ -324,7 +329,7 @@ int main(int argc,char **argv)
 	    // ---------- do the modification after the first step. That means I expect the atrophy map to be valid
 	    // ---------- when input by the user. i.e. only GM/WM has atrophy and 0 on CSF and NBR regions.
             // ---------- Solve the system of equations
-            AdLemModel.solveModel(isMaskChanged, ops.div12ptStencil);
+            AdLemModel.solveModel(ops.noLameInRhs, ops.div12ptStencil, isMaskChanged);
             // ---------- Write the solutions and residuals
             AdLemModel.writeVelocityImage(filesPref+stepString+"vel.nii.gz");
 	    if(!ops.div12ptStencil) //Div computation from within Adlem3d supported only for 9 point div stencil.

@@ -34,6 +34,9 @@ def get_input_options():
     parser.add_argument(
         'time_steps', help='(int) num of time steps to solve the system.')
     parser.add_argument(
+        '--no_lame_in_rhs', action='store_true',
+        help='If given, (mu+lambda) not used in RHS of momentum equation.')
+    parser.add_argument(
         '--div12pt_stencil', action='store_true',
         help='If given, use 12pt stencil for divergence.')
     parser.add_argument(
@@ -125,6 +128,8 @@ def main():
             line.strip() for line in fil if not line.startswith('#')]
 
     optional_args, bool_args = [], []
+    if ops.no_lame_in_rhs:
+        bool_args.append('--no_lame_in_rhs')
     if ops.div12pt_stencil:
         bool_args.append('--div12pt_stencil')
     if ops.relax_ic_in_csf:

@@ -8,8 +8,8 @@
 #define __FUNCT__ "PetscAdLemTaras3D"
 PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilForDiv, bool writeParaToFile):
     PetscAdLem3D(model, set12pointStencilForDiv, std::string("Taras Method")),
-    mWriteParaToFile((PetscBool)writeParaToFile),
-    mNumOfSolveCalls(0)
+    mNumOfSolveCalls(0),
+    mWriteParaToFile((PetscBool)writeParaToFile)
 {
     PetscErrorCode ierr;
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"dmda of size: (%d,%d,%d)\n",
@@ -1056,6 +1056,11 @@ PetscErrorCode PetscAdLemTaras3D::computeMatrixTaras3dConstantMu(
     PetscReal       kCont = 1.0; //need to change it to scale the coefficients.
 
     PetscFunctionBeginUser;
+    if(user->getProblemModel()->noLameInRhs())
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n RHS will be taken as grad(a), i.e without Lame parameters.\n");
+    else
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n RHS will be taken as (mu + lambda)grad(a), i.e. with Lame parameters.\n");
+
     PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n computing the operator for linear solve with %d point stencil for divergence\n", (nnz-1));
     if (PetscAdLemTaras3D_SolverOps::RELAX_IC_WITH_ZERO_ROWS)
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Relax IC with zero rows corresponding to cells where IC is to be relaxed.\n", (nnz-1));
@@ -1478,12 +1483,14 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 		    rhs[k][j][i].vx = 0;
 		}
                 else { //interior points, x-momentum equation
-                    if (user->getProblemModel()->isLambdaTensor()) {
-                        rhs[k][j][i].vx = Hy*Hz*(
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,0)*gradAx) +
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,1)*gradAy) +
-                            ((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.) + user->lambdaC(i,j,k,0,2)*gradAz)
-                            );
+		    if (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getRelaxIcLabel() || user->bMaskAt(i,j+1,k+1) == user->getProblemModel()->getRelaxIcLabel())
+			rhs[k][j][i].vx = 0; //no force when gradAx computed using at least one value from CSF voxel.
+                    else if(user->getProblemModel()->noLameInRhs()) //make force independent of Lame parameters.
+			rhs[k][j][i].vx = Hy*Hz*gradAx;
+		    else if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vx = Hy*Hz*( gradAx*0.5*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)) +
+						  user->lambdaC(i,j,k,0,0)*gradAx + user->lambdaC(i,j,k,0,1)*gradAy + user->lambdaC(i,j,k,0,2)*gradAz
+			    );
                     } else {
                         // rhs[k][j][i].vx = Hy*Hz*(
                         //             user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1) +
@@ -1497,17 +1504,12 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
 			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
 			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
-			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
-			    rhs[k][j][i].vx = 0; //no force in CSF.
-			else {
-			    //rhs[k][j][i].vx = Hy*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAx;
-			    rhs[k][j][i].vx = Hy*Hz*((user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)/2.)
-						     +user->lambdaC(i,j,k,0,0)) * gradAx;
-			    //make force independent of mu and see what happens.
-			    //rhs[k][j][i].vx = Hy*Hz*(user->lambdaC(i,j,k,0,0)) * gradAx;
-			}
-                    }
-                }
+			//rhs[k][j][i].vx = Hy*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAx;
+			rhs[k][j][i].vx = Hy*Hz*gradAx*( 0.5*(user->muC(i+1,j+1,k+1) + user->muC(i,j+1,k+1)) +
+							 user->lambdaC(i,j,k,0,0)
+			    );
+		    }
+		}
 
                 //---*********************** y-momentum equation *******************---//
                 if(i==mx-1 || k==mz-1) {   //east and north ghost walls.
@@ -1541,11 +1543,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 		    rhs[k][j][i].vy = 0;
 		}
                 else { //interior points, y-momentum equation
-                    if (user->getProblemModel()->isLambdaTensor()) {
-                        rhs[k][j][i].vy = Hx*Hz*(
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,0)*gradAx) +
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,1)*gradAy) +
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.) + user->lambdaC(i,j,k,1,2)*gradAz)
+		    if (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getRelaxIcLabel() || user->bMaskAt(i+1,j,k+1) == user->getProblemModel()->getRelaxIcLabel())
+			rhs[k][j][i].vy = 0; //no force when gradAy computed using at least one value from CSF voxel.
+                    else if(user->getProblemModel()->noLameInRhs()) //make force independent of Lame parameters.
+			rhs[k][j][i].vy = Hx*Hz*gradAy;
+                    else if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vy = Hx*Hz*( gradAy*0.5*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)) +
+						  user->lambdaC(i,j,k,1,0)*gradAx + user->lambdaC(i,j,k,1,1)*gradAy + user->lambdaC(i,j,k,1,2)*gradAz
 			    );
                     }else {
                     //     rhs[k][j][i].vy = Hx*Hz*(
@@ -1560,15 +1564,10 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
 			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
 			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
-			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
-			    rhs[k][j][i].vy = 0; //no force in CSF.
-			else {
-			    //rhs[k][j][i].vy = Hx*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAy;
-			    rhs[k][j][i].vy = Hx*Hz*((user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)/2.)
-						     +user->lambdaC(i,j,k,0,0)) * gradAy;
-			    //make force independent of mu and see what happens.--> Changes slightly the magnitude of displacement.
-			    //rhs[k][j][i].vy = Hx*Hz*(user->lambdaC(i,j,k,0,0)) * gradAy;
-			}
+			//rhs[k][j][i].vy = Hx*Hz*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAy;
+			rhs[k][j][i].vy = Hx*Hz*gradAy*( 0.5*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j,k+1)) +
+							 user->lambdaC(i,j,k,0,0)
+			    );
 		    }
                 }
 
@@ -1605,11 +1604,13 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 		    rhs[k][j][i].vz = 0;
 		}
                 else { //interior points, z-momentum equation
-                    if (user->getProblemModel()->isLambdaTensor()) {
-                        rhs[k][j][i].vz = Hx*Hy*(
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,0)*gradAx) +
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,1)*gradAy) +
-			    ((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.) + user->lambdaC(i,j,k,2,2)*gradAz)
+		    if (user->bMaskAt(i+1,j+1,k+1) == user->getProblemModel()->getRelaxIcLabel() || user->bMaskAt(i+1,j+1,k) == user->getProblemModel()->getRelaxIcLabel())
+			rhs[k][j][i].vz = 0; //no force when gradAz computed using at least one value from CSF voxel.
+                    else if(user->getProblemModel()->noLameInRhs()) //make force independent of Lame parameters.
+			rhs[k][j][i].vz = Hx*Hy*gradAz;
+                    else if (user->getProblemModel()->isLambdaTensor()) {
+                        rhs[k][j][i].vz = Hx*Hy*( gradAz*0.5*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)) +
+						  user->lambdaC(i,j,k,2,0)*gradAx + user->lambdaC(i,j,k,2,1)*gradAy + user->lambdaC(i,j,k,2,2)*gradAz
 			    );
                     } else {
                     //     rhs[k][j][i].vz = Hx*Hy*(
@@ -1624,15 +1625,10 @@ PetscErrorCode PetscAdLemTaras3D::computeRHSTaras3dConstantMu(KSP ksp, Vec b, vo
 			// changing mu (=mu_csf=mu_tissue) changes the deformation field obtained.
 			// This is perhaps because using f_csf as above and with lambda_csf = lambda_tissue will
 			// create equal balancing force in csf voxels next to the tissue since with non-zero grad(a).
-			if (user->bMaskAt(i,j,k) == user->getProblemModel()->getRelaxIcLabel())
-			    rhs[k][j][i].vz = 0; //no force in CSF.
-			else {
-			    //rhs[k][j][i].vz = Hx*Hy*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAz;
-			    rhs[k][j][i].vz = Hx*Hy*((user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k)/2.)
-						     + user->lambdaC(i,j,k,0,0)) * gradAz;
-			    //make force independent of mu and see what happens. --> Changes slightly the magnitude of displacement.
-			    //rhs[k][j][i].vz = Hx*Hy*(user->lambdaC(i,j,k,0,0)) * gradAz;
-			}
+			//rhs[k][j][i].vz = Hx*Hy*(user->muC(i,j,k) + user->lambdaC(i,j,k,0,0)) * gradAz;
+			rhs[k][j][i].vz = Hx*Hy*gradAz*( 0.5*(user->muC(i+1,j+1,k+1) + user->muC(i+1,j+1,k))
+							 + user->lambdaC(i,j,k,0,0)
+			    );
 		    }
                 }
 
