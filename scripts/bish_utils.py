@@ -26,6 +26,7 @@ def update_or_execute_cmd(cmd, cmd_n, execute):
         return cmd
     else:
         return cmd + cmd_n
+
 def get_lines_as_list(fname, delim):
     '''
     Return a list that contains all the lines present in the file fname
@@ -46,6 +47,19 @@ def copy_dir_tree(src, dest):
     except OSError as ex:
         print('Directory not copied. Error: %s' % ex)
 
+
+def read_dict_from_file(fname):
+    '''
+    Read a python dictionary stored in a file. Useful for having config files
+    options database that is directly taken as dict into the code.
+    Idea taken from:
+http://stackoverflow.com/questions/11026959/python-writing-dict-to-txt-file-and-reading-dict-from-txt-file
+    '''
+    import ast
+    with open(fname, 'r') as in_fl:
+        fl_as_string = in_fl.read()
+        dict_from_fl = ast.literal_eval(fl_as_string)
+    return dict_from_fl
 
 def rem_num_of_lines(in_filename, start_string):
     """

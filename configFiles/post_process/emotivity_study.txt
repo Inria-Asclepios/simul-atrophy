@@ -1,30 +1,30 @@
-# data_base
-emotivity
+# data_base : Emotivity
+{
+'patients'			: ['Patient_000098205180', 'Patient_000068674859'], #Either from command line or in a list here.
+'sim_prefixes'			: ['div12pt_atrophyMapR2_0_'], #Either from command line or in a list here.
+'sim_cropped_img_suffices'	: ['WarpedImageBsplineT1.nii.gz'], #As a list
+'sim_full_img_suffices'		: ['WarpedImageBsplineFullSizeT1.nii.gz'], #As a list
+#'sim_resampled_img_suffices'	: ['WarpedImageBsplineFullSizeT1Resampled.nii.gz'], #As a list
+'sim_resampled_img_suffices'	: ['WarpedImageBsplineFullSizeT1ResampledMinus.nii.gz'], #As a list
+'sim_vel_suffices'		: ['T1vel.nii.gz'], #As a list
+'resampling_disp_suffices'	: ['ResamplingDispFieldT1.nii.gz'], #As a list
 
-# data_base_dir     sim_base_dir
-/proj/asclepios/cluster/asclepios2/mhadjham/Emotivity/Emotivity_All_N4     /proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients
+'sim_base_dir'			: '/proj/asclepios/cluster/asclepios2/bkhanal/works/AdLemModel/results/patients',
+'sim_crop_mask'			: 'cropMaskD2_FS.nii.gz',
 
-# crop_img     tpts
-cropMaskD2_FS.nii.gz     1,2
+'data_base_dir'			: '/proj/asclepios/cluster/asclepios2/mhadjham/Emotivity/Emotivity_All_N4',
+'in_img_dir'			: 'Rigid_reg_intra',
+'reg_dir'			: 'Non_Rigid_reg_intra_robex',
 
-# real_img_dir     seg_dir     reg_dir     table_dir
-Rigid_reg_intra     Segmentation_subject/mri     Non_Rigid_reg_intra_robex Atrophy_tables
+'in_img_prefix'			: 'Final_S0MNI_spline_',
+'in_resample_img_prefix'	: 'Final_S1MNI_spline_recall_S0_',
+'in_img_pid_skip'		: 8, #num_of chars from start of patient id not used in real_img file names.
+'in_img_suffix'			: '.nii.gz',
 
+'svf_prefix'			: 'output_stationary_velocity_field_',
+'svf_suffix'			: '_2.0_0.15_3.0.mha',
+'div_prefix'			: 'Minus_Div_SVF_longi_native_',
+#'disp_field_prefix'		: 'output_displacement_field_',
+'disp_field_prefix'	 	: 'Minus_output_displacement_field_',
 
-# bl_prefix     fl_prefix     svf_prefix     svf_suffix     div_prefix
-Final_S0MNI_spline_     Final_S1MNI_spline_recall_S0_     output_stationary_velocity_field_     _2.0_0.15_3.0.mha     Minus_Div_SVF_longi_native_
-
-# disp_field_prefix     minus_disp_field_prefix
-output_displacement_field_     Minus_output_displacement_field_
-
-# seg_file     seg_file_of
-aseg_in_rawavg.nii.gz     baseline
-
-
-# patients
-Patient_000098205180,Patient_000042288666,Patient_000068674859
-
-Use following paths for running the script from cluster or from nef.
-/epi/asclepios2/mhadjham/Emotivity/Emotivity_All_N4     /epi/asclepios2/bkhanal/works/AdLemModel/results/patients
-#End
-
+}
