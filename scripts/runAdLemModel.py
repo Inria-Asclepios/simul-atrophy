@@ -57,9 +57,14 @@ def get_input_options():
         '-f', '--falx_zero_vel_dir', help='Direction or vel component to be '
         ' set to zero. Relevant only when using --sliding_at_falx.')
     parser.add_argument(
+        '--invert_field_to_warp', action='store_true', help='If given, inverts '
+        'the obtained disp. field when warping the baseline image. This means '
+        'the output field from the model is considered to be taking a point in '
+        'baseline to follow-up.')
+    parser.add_argument(
         '-m', '--mu_file', help='input mu image file: ')
     parser.add_argument(
-        '--use_dti', dest='use_dti', action='store_true', help='If the option '
+        '--use_dti', action='store_true', help='If the option '
         'is provided, input DTI must be given with the option -d')
     parser.add_argument(
         '-d', '--in_dti', help='tensor image file in patientID directory.')
@@ -144,6 +149,8 @@ def main():
             raise ValueError('Must provide -falx_zero_vel_dir when using '
                              '--sliding_at_falx')
         optional_args.append('-falx_zero_vel_dir ' + ops.falx_zero_vel_dir)
+    if ops.invert_field_to_warp:
+        bool_args.append('--invert_field_to_warp')
     if ops.mu_file is not None:
         optional_args.append('-muFile ' + ops.mu_file)
     if ops.use_dti:

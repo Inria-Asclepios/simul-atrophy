@@ -10,11 +10,11 @@
 #include <itkImageFileWriter.h>
 
 #include <itkWarpImageFilter.h>
-//#include "InverseDisplacementImageFilter.h"
+#include "InverseDisplacementImageFilter.h"
 #include <itkNearestNeighborInterpolateImageFunction.h>
 #include <itkLinearInterpolateImageFunction.h>
 #include <itkBSplineInterpolateImageFunction.h>
-#include "itkLabelImageGenericInterpolateImageFunction.h"
+//#include "itkLabelImageGenericInterpolateImageFunction.h"
 
 #include <itkComposeDisplacementFieldsImageFilter.h>
 
@@ -57,6 +57,8 @@ static char help[] = "Solves AdLem model. Equations solved: "
     "of the image region selected as computational domain.\n"
     "    x y z sx sy sz e.g. '0 0 0 30 40 50' Selects the region with origin at (0, 0, 0) and size (30, 40, 50) \n"
     "    If not provided uses full image regions.\n\n"
+    "--invert_field_to_warp	: If given, inverts the obtained displacement field to warp the baseline image. This means the output field from the model is considered to be taking a point in baseline to follow-up. "
+    "Otherwise the field  is assumed to be taking a point in follow-up to baseline and hence when warping the baseline image does not invert the field to perform warping..\n\n"
     "--useTensorLambda		: true or false. If true must provide a DTI image for lame parameter lambda.\n\n"
     "-lambdaFile		: filename of the DTI lambda-value image. Used when -useTensorlambda is true.\n\n"
     "-numOfTimeSteps		: number of time-steps to run the model.\n\n"
@@ -80,7 +82,7 @@ struct UserOptions {
     bool	relaxIcInCsf, zeroVelAtFalx, slidingAtFalx;
     float	relaxIcCoeff;	//compressibility coefficient k for CSF region.
     int		falxZeroVelDir; //Component of the velocity to be set to zero in the Falx sliding boundary condition.
-    bool        useTensorLambda, isMuConstant;
+    bool        useTensorLambda, isMuConstant, invertFieldToWarp;
     int         numOfTimeSteps;
 
     std::string resultsPath;    // Directory where all the results will be stored.
@@ -94,130 +96,133 @@ struct UserOptions {
 int opsParser(UserOptions &ops) {
 /*
   Parse the options provided by the user and set relevant UserOptions variables.
- */
-        PetscErrorCode	ierr;
-        PetscBool	optionFlag = PETSC_FALSE;
-        char		optionString[PETSC_MAX_PATH_LEN];
-	ierr = PetscOptionsGetString(NULL,"-muFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) {	//Use image option only when mu is not even piecewise constant.
-	    ops.muFileName	   = optionString;
-	    ops.isMuConstant	   = false;
+*/
+    PetscErrorCode	ierr;
+    PetscBool	optionFlag = PETSC_FALSE;
+    char		optionString[PETSC_MAX_PATH_LEN];
+    ierr = PetscOptionsGetString(NULL,"-muFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(optionFlag) {	//Use image option only when mu is not even piecewise constant.
+	ops.muFileName	   = optionString;
+	ops.isMuConstant   = false;
+    }
+    else{//Provide parameters from options when mu is piecewise consant.
+	ops.muFileName = "";
+	ops.isMuConstant = true;
+    }
+
+    ierr = PetscOptionsGetString(NULL,"-parameters",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(!optionFlag){ //If parameters not given.
+	if(ops.muFileName.empty()) throw "Must provide -parameters when -muFile not given\n";
+	//Set all paras to 1 but this isn't supposed to be used by the program.
+	//rather values should be used from muImageFileName.
+	for(int i=0; i<4; ++i){
+	    ops.lameParas[i] = 1.;
 	}
-	else{//Provide parameters from options when mu is piecewise consant.
-	    ops.muFileName = "";
-	    ops.isMuConstant = true;
+    }
+    else {//Set values that will be used instead of the image.
+	std::stringstream parStream(optionString);
+	char dummy; //for comma
+	for(int i=0; i<4; ++i){
+	    parStream >> ops.lameParas[i] >> dummy;
 	}
+    }
 
-	ierr = PetscOptionsGetString(NULL,"-parameters",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(!optionFlag){ //If parameters not given.
-	    if(ops.muFileName.empty()) throw "Must provide -parameters when -muFile not given\n";
-	    //Set all paras to 1 but this isn't supposed to be used by the program.
-	    //rather values should be used from muImageFileName.
-	    for(int i=0; i<4; ++i){
-		ops.lameParas[i] = 1.;
-	    }
-	}
-	else {//Set values that will be used instead of the image.
-	    std::stringstream parStream(optionString);
-	    char dummy; //for comma
-	    for(int i=0; i<4; ++i){
-		parStream >> ops.lameParas[i] >> dummy;
-	    }
-	}
+    // --------- Set divergence Stencil option
+    ierr = PetscOptionsGetString(NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.div12ptStencil = (bool)optionFlag;
 
-	// --------- Set divergence Stencil option
-	ierr = PetscOptionsGetString(NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.div12ptStencil = (bool)optionFlag;
+    // --------- Set momentum equatin RHS option
+    ierr = PetscOptionsGetString(NULL,"--no_lame_in_rhs",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.noLameInRhs = (bool)optionFlag;
 
-	// --------- Set momentum equatin RHS option
-	ierr = PetscOptionsGetString(NULL,"--no_lame_in_rhs",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.noLameInRhs = (bool)optionFlag;
+    // ---------- Set boundary condition option
+    ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(!optionFlag) throw "Must provide a valid boundary condition. e.g. dirichlet_at_skull";
+    ops.boundaryCondition = optionString;
 
-	// ---------- Set boundary condition option
-	ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(!optionFlag) throw "Must provide a valid boundary condition. e.g. dirichlet_at_skull";
-        ops.boundaryCondition = optionString;
+    ierr = PetscOptionsGetString(NULL,"--relax_ic_in_csf",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.relaxIcInCsf = (bool)optionFlag;
 
-	ierr = PetscOptionsGetString(NULL,"--relax_ic_in_csf",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.relaxIcInCsf = (bool)optionFlag;
+    PetscReal optionReal;
+    ierr = PetscOptionsGetReal(NULL, "-relax_ic_coeff", &optionReal, &optionFlag);CHKERRQ(ierr);
+    if(optionFlag) ops.relaxIcCoeff = (float)optionReal;
+    else ops.relaxIcCoeff = 0.;
 
-	PetscReal optionReal;
-	ierr = PetscOptionsGetReal(NULL, "-relax_ic_coeff", &optionReal, &optionFlag);CHKERRQ(ierr);
-	if(optionFlag) ops.relaxIcCoeff = (float)optionReal;
-	else ops.relaxIcCoeff = 0.;
+    ierr = PetscOptionsGetString(NULL,"--zero_vel_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.zeroVelAtFalx = (bool)optionFlag;
 
-	ierr = PetscOptionsGetString(NULL,"--zero_vel_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.zeroVelAtFalx = (bool)optionFlag;
+    ierr = PetscOptionsGetString(NULL,"--sliding_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.slidingAtFalx = (bool)optionFlag;
 
-	ierr = PetscOptionsGetString(NULL,"--sliding_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.slidingAtFalx = (bool)optionFlag;
-
-	if(ops.slidingAtFalx)
-	{
-	    if(ops.zeroVelAtFalx) throw "--zero_vel_at_falx and --sliding_at_falx are mutually exlclusive";
-	    else
-	    {
-		PetscInt optionInt;
-		ierr = PetscOptionsGetInt(NULL, "-falx_zero_vel_dir", &optionInt, &optionFlag);CHKERRQ(ierr);
-		if(optionFlag) ops.falxZeroVelDir = (int)optionInt;
-		else throw "must provide -falx_zero_vel_dir when --sliding_at_falx is used.";
-	    }
-	}
-
-	// ---------- Set input image files, computational region and other options.
-	ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) ops.atrophyFileName = optionString;
-
-        ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) ops.maskFileName = optionString;
-
-        ierr = PetscOptionsGetString(NULL,"-imageFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) ops.baselineImageFileName = optionString;
-
-	ierr = PetscOptionsGetString(NULL,"-domainRegion",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(optionFlag) {
-	    ops.isDomainFullSize = false;
-	    std::stringstream regionStream(optionString);
-	    for(int i=0; i<3; ++i) regionStream >> ops.domainOrigin[i];
-	    for(int i=0; i<3; ++i) regionStream >> ops.domainSize[i];
-	}else ops.isDomainFullSize = true;
-
-        ierr = PetscOptionsGetString(NULL,"--useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.useTensorLambda = (bool)optionFlag;
-
-        ierr = PetscOptionsGetInt(NULL,"-numOfTimeSteps",&ops.numOfTimeSteps,&optionFlag);CHKERRQ(ierr);
-        if(!optionFlag) {
-            ops.numOfTimeSteps = 1;
-            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Using default number of steps: 1 since -numOfTimeSteps option was not used.\n");
-        } else {
-            PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Model will be run for %d time steps\n", ops.numOfTimeSteps);
-        }
-
-	ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	if (ops.useTensorLambda) {
-	    if(!optionFlag) throw "Must provide valid tensor image filename when using --useTensorLambda.\n";
-	    ops.lambdaFileName = optionString;
-	}
+    if(ops.slidingAtFalx)
+    {
+	if(ops.zeroVelAtFalx) throw "--zero_vel_at_falx and --sliding_at_falx are mutually exlclusive";
 	else
-	    if(optionFlag) throw "-lambdaFile option can be used only when --useTensorLambda is provided.\n";
+	{
+	    PetscInt optionInt;
+	    ierr = PetscOptionsGetInt(NULL, "-falx_zero_vel_dir", &optionInt, &optionFlag);CHKERRQ(ierr);
+	    if(optionFlag) ops.falxZeroVelDir = (int)optionInt;
+	    else throw "must provide -falx_zero_vel_dir when --sliding_at_falx is used.";
+	}
+    }
 
-	// ---------- Set output path and prefixes.
-	ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(!optionFlag) throw "Must provide a valid path with -resPath option: e.g. -resPath ~/results";
-        ops.resultsPath = optionString;
+    // ---------- Set input image files, computational region and other options.
+    ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(optionFlag) ops.atrophyFileName = optionString;
 
-        ierr = PetscOptionsGetString(NULL,"-resultsFilenamesPrefix",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-        if(!optionFlag) throw "Must provide a prefix for output filenames: e.g. -resultsFilenamesPrefix step1";
-	ops.resultsFilenamesPrefix = optionString;
+    ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(optionFlag) ops.maskFileName = optionString;
 
-	// ---------- Set the choice of the output files to be written.
-        ierr = PetscOptionsGetString(NULL,"--writePressure",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.writePressure = (bool)optionFlag;
-        ierr = PetscOptionsGetString(NULL,"--writeForce",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.writeForce = (bool)optionFlag;
-        ierr = PetscOptionsGetString(NULL,"--writeResidual",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
-	ops.writeResidual = (bool)optionFlag;
-	return 0;
+    ierr = PetscOptionsGetString(NULL,"-imageFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(optionFlag) ops.baselineImageFileName = optionString;
+
+    ierr = PetscOptionsGetString(NULL,"-domainRegion",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(optionFlag) {
+	ops.isDomainFullSize = false;
+	std::stringstream regionStream(optionString);
+	for(int i=0; i<3; ++i) regionStream >> ops.domainOrigin[i];
+	for(int i=0; i<3; ++i) regionStream >> ops.domainSize[i];
+    }else ops.isDomainFullSize = true;
+
+    ierr = PetscOptionsGetString(NULL,"--invert_field_to_warp",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.invertFieldToWarp = (bool)optionFlag;
+
+    ierr = PetscOptionsGetString(NULL,"--useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.useTensorLambda = (bool)optionFlag;
+
+    ierr = PetscOptionsGetInt(NULL,"-numOfTimeSteps",&ops.numOfTimeSteps,&optionFlag);CHKERRQ(ierr);
+    if(!optionFlag) {
+	ops.numOfTimeSteps = 1;
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Using default number of steps: 1 since -numOfTimeSteps option was not used.\n");
+    } else {
+	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Model will be run for %d time steps\n", ops.numOfTimeSteps);
+    }
+
+    ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if (ops.useTensorLambda) {
+	if(!optionFlag) throw "Must provide valid tensor image filename when using --useTensorLambda.\n";
+	ops.lambdaFileName = optionString;
+    }
+    else
+	if(optionFlag) throw "-lambdaFile option can be used only when --useTensorLambda is provided.\n";
+
+    // ---------- Set output path and prefixes.
+    ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(!optionFlag) throw "Must provide a valid path with -resPath option: e.g. -resPath ~/results";
+    ops.resultsPath = optionString;
+
+    ierr = PetscOptionsGetString(NULL,"-resultsFilenamesPrefix",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    if(!optionFlag) throw "Must provide a prefix for output filenames: e.g. -resultsFilenamesPrefix step1";
+    ops.resultsFilenamesPrefix = optionString;
+
+    // ---------- Set the choice of the output files to be written.
+    ierr = PetscOptionsGetString(NULL,"--writePressure",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.writePressure = (bool)optionFlag;
+    ierr = PetscOptionsGetString(NULL,"--writeForce",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.writeForce = (bool)optionFlag;
+    ierr = PetscOptionsGetString(NULL,"--writeResidual",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ops.writeResidual = (bool)optionFlag;
+    return 0;
 
 }
 
@@ -226,17 +231,25 @@ int opsParser(UserOptions &ops) {
 int main(int argc,char **argv)
 {
 
-    const unsigned int dim = 3;
+    const unsigned int DIM = 3;
     std::vector<double> wallVelocities(18);
     //TODO: Set from the user when dirichlet_at_walls boundary condition is used.
-        /*0,1,2,		//south wall
-       3,4,5,			//west wall
-       6,7,8,			//north wall
-       9,10,11,			//east wall
-       12,13,14,		//front wall
-       15,16,17			//back wall*/
+    /*0,1,2,		//south wall
+      3,4,5,			//west wall
+      6,7,8,			//north wall
+      9,10,11,			//east wall
+      12,13,14,		//front wall
+      15,16,17			//back wall*/
     //    unsigned int wallPos		 = 6;
     //        wallVelocities.at(wallPos) = 1;
+
+    //Define types:
+    typedef AdLem3D<DIM>::ScalarImageType	ScalarImageType;
+    typedef AdLem3D<DIM>::IntegerImageType	IntegerImageType;
+    typedef AdLem3D<DIM>::VectorImageType	VectorImageType;
+    typedef AdLem3D<DIM>::ScalarImageReaderType ScalarImageReaderType;
+    typedef AdLem3D<DIM>::ScalarImageWriterType ScalarImageWriterType;
+    typedef AdLem3D<DIM>::VectorImageWriterType VectorImageWriterType;
 
     PetscInitialize(&argc,&argv,(char*)0,help);
     {
@@ -250,25 +263,25 @@ int main(int argc,char **argv)
 	    return EXIT_FAILURE;
 	}
         // ---------- Read input baseline image
-        AdLem3D<dim>::ScalarImageType::Pointer baselineImage = AdLem3D<dim>::ScalarImageType::New();
+        ScalarImageType::Pointer baselineImage = ScalarImageType::New();
         {
-            AdLem3D<dim>::ScalarImageReaderType::Pointer   imageReader = AdLem3D<dim>::ScalarImageReaderType::New();
+            ScalarImageReaderType::Pointer   imageReader = ScalarImageReaderType::New();
             imageReader->SetFileName(ops.baselineImageFileName);
             imageReader->Update();
             baselineImage = imageReader->GetOutput();
         }
         // ---------- Read input baseline brainMask image
-        AdLem3D<dim>::IntegerImageType::Pointer baselineBrainMask = AdLem3D<dim>::IntegerImageType::New();
+        IntegerImageType::Pointer baselineBrainMask = IntegerImageType::New();
         {
-            AdLem3D<dim>::IntegerImageReaderType::Pointer   imageReader = AdLem3D<dim>::IntegerImageReaderType::New();
+            AdLem3D<DIM>::IntegerImageReaderType::Pointer   imageReader = AdLem3D<DIM>::IntegerImageReaderType::New();
             imageReader->SetFileName(ops.maskFileName);
             imageReader->Update();
             baselineBrainMask = imageReader->GetOutput();
         }
         // ---------- Read input atrophy map
-        AdLem3D<dim>::ScalarImageType::Pointer baselineAtrophy = AdLem3D<dim>::ScalarImageType::New();
+        ScalarImageType::Pointer baselineAtrophy = ScalarImageType::New();
         {
-            AdLem3D<dim>::ScalarImageReaderType::Pointer   imageReader = AdLem3D<dim>::ScalarImageReaderType::New();
+            ScalarImageReaderType::Pointer   imageReader = ScalarImageReaderType::New();
             imageReader->SetFileName(ops.atrophyFileName);
             imageReader->Update();
             baselineAtrophy = imageReader->GetOutput();
@@ -277,11 +290,11 @@ int main(int argc,char **argv)
 	// ---------- Set up output prefix with proper path
 	std::string filesPref(ops.resultsPath+ops.resultsFilenamesPrefix);
 
-	AdLem3D<dim>		AdLemModel;
+	AdLem3D<DIM>		AdLemModel;
 	try { // ---------- Set up the model parameters
 	    AdLemModel.setBoundaryConditions(ops.boundaryCondition, ops.relaxIcInCsf, ops.relaxIcCoeff, ops.zeroVelAtFalx,
 					     ops.slidingAtFalx, ops.falxZeroVelDir);
-	    if(AdLemModel.getBcType() == AdLem3D<dim>::DIRICHLET_AT_WALLS)
+	    if(AdLemModel.getBcType() == AdLem3D<DIM>::DIRICHLET_AT_WALLS)
 		AdLemModel.setWallVelocities(wallVelocities);
 	    AdLemModel.setLameParameters(
 		ops.isMuConstant, ops.useTensorLambda, ops.lameParas[0], ops.lameParas[1], ops.lameParas[2],
@@ -306,17 +319,16 @@ int main(int argc,char **argv)
 	    return EXIT_FAILURE;
 	}
 
-
         // ---------- Define itk types required for the warping of the mask and atrophy map:
-        //typedef InverseDisplacementImageFilter<AdLem3D<dim>::VectorImageType> FPInverseType;
-        typedef itk::WarpImageFilter<AdLem3D<dim>::ScalarImageType,AdLem3D<dim>::ScalarImageType,AdLem3D<dim>::VectorImageType> WarpFilterType;
-	typedef itk::WarpImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::VectorImageType> IntegerWarpFilterType;
-        typedef itk::NearestNeighborInterpolateImageFunction<AdLem3D<dim>::IntegerImageType> InterpolatorFilterNnType;
-	typedef itk::LabelImageGenericInterpolateImageFunction<AdLem3D<dim>::ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
-        typedef itk::AbsoluteValueDifferenceImageFilter<AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::IntegerImageType,AdLem3D<dim>::ScalarImageType> AbsDiffImageFilterType;
-        typedef itk::StatisticsImageFilter<AdLem3D<dim>::ScalarImageType> StatisticsImageFilterType;
-        typedef itk::ComposeDisplacementFieldsImageFilter<AdLem3D<dim>::VectorImageType, AdLem3D<dim>::VectorImageType> VectorComposerType;
-        AdLem3D<dim>::VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
+        typedef InverseDisplacementImageFilter<VectorImageType> FPInverseType;
+        typedef itk::WarpImageFilter<ScalarImageType,ScalarImageType,VectorImageType> WarpFilterType;
+	typedef itk::WarpImageFilter<IntegerImageType,IntegerImageType,VectorImageType> IntegerWarpFilterType;
+        typedef itk::NearestNeighborInterpolateImageFunction<IntegerImageType> InterpolatorFilterNnType;
+	//typedef itk::LabelImageGenericInterpolateImageFunction<ScalarImageType, itk::LinearInterpolateImageFunction> InterpolatorGllType; //General Label interpolator with linear interpolation.
+        typedef itk::AbsoluteValueDifferenceImageFilter<IntegerImageType,IntegerImageType,ScalarImageType> AbsDiffImageFilterType;
+        typedef itk::StatisticsImageFilter<ScalarImageType> StatisticsImageFilterType;
+        typedef itk::ComposeDisplacementFieldsImageFilter<VectorImageType, VectorImageType> VectorComposerType;
+        VectorImageType::Pointer composedDisplacementField; //declared outside loop because we need this for two different iteration steps.
 
 
 	bool isMaskChanged(true);	//tracker flag to see if the brain mask is changed or not after the previous warp and NN interpolation.
@@ -337,61 +349,56 @@ int main(int argc,char **argv)
             if (ops.writeForce) AdLemModel.writeForceImage(filesPref+stepString+"force.nii.gz");
             if (ops.writePressure) AdLemModel.writePressureImage(filesPref+stepString+"press.nii.gz");
             if (ops.writeResidual) AdLemModel.writeResidual(filesPref+stepString);
-
-            // ---------- Compose velocity fields before inversion and the subsequent warping
-            if(t == 1) { //Warp baseline image and write because won't be written later if ops.numOfTimeSteps=1.
-                composedDisplacementField = AdLemModel.getVelocityImage();
-		typedef itk::BSplineInterpolateImageFunction<AdLem3D<dim>::ScalarImageType> InterpolatorFilterType;
-		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
-		interpolatorFilter->SetSplineOrder(3);
-                WarpFilterType::Pointer warper3 = WarpFilterType::New();
-                warper3->SetDisplacementField(composedDisplacementField);
-		warper3->SetInterpolator(interpolatorFilter);
-                warper3->SetInput(baselineImage);
-                warper3->SetOutputSpacing(baselineImage->GetSpacing());
-                warper3->SetOutputOrigin(baselineImage->GetOrigin());
-                warper3->SetOutputDirection(baselineImage->GetDirection());
-                warper3->Update();
-                AdLem3D<dim>::ScalarImageWriterType::Pointer imageWriter1 = AdLem3D<dim>::ScalarImageWriterType::New();
-                imageWriter1->SetFileName(filesPref + "WarpedImageBspline" + stepString+ ".nii.gz");
-                imageWriter1->SetInput(warper3->GetOutput());
-                imageWriter1->Update();
-            }
-            else { // Compose the velocity field.
+	    VectorImageType::Pointer currentDisplacementField = AdLemModel.getVelocityImage();
+	    if(ops.invertFieldToWarp)
+	    {// Invert the current displacement field to create warping field
+		FPInverseType::Pointer inverter = FPInverseType::New();
+		inverter->SetInput(AdLemModel.getVelocityImage());
+		inverter->SetErrorTolerance(1e-1);
+		inverter->SetMaximumNumberOfIterations(50);
+		inverter->Update();
+		PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Displacement field inversion: tolerance not reached in %d voxels \n\n",
+					inverter->GetNumberOfErrorToleranceFailures());
+		currentDisplacementField = inverter->GetOutput();
+	    }
+            if(t == 1) composedDisplacementField = currentDisplacementField;
+            else
+	    { // Compose the velocity field.
                 VectorComposerType::Pointer vectorComposer = VectorComposerType::New();
-                vectorComposer->SetDisplacementField(AdLemModel.getVelocityImage());
+                vectorComposer->SetDisplacementField(currentDisplacementField);
                 vectorComposer->SetWarpingField(composedDisplacementField);
                 vectorComposer->Update();
                 composedDisplacementField = vectorComposer->GetOutput();
             }
+	    // ---------- Warp the baseline image with the composed field with BSpline interpolation
+	    typedef itk::BSplineInterpolateImageFunction<ScalarImageType> InterpolatorFilterType;
+	    InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
+	    interpolatorFilter->SetSplineOrder(3);
+	    WarpFilterType::Pointer baselineWarper = WarpFilterType::New();
+	    baselineWarper->SetDisplacementField(composedDisplacementField);
+	    baselineWarper->SetInterpolator(interpolatorFilter);
+	    baselineWarper->SetInput(baselineImage);
+	    baselineWarper->SetOutputSpacing(baselineImage->GetSpacing());
+	    baselineWarper->SetOutputOrigin(baselineImage->GetOrigin());
+	    baselineWarper->SetOutputDirection(baselineImage->GetDirection());
+	    baselineWarper->Update();
+	    ScalarImageWriterType::Pointer imageWriter = ScalarImageWriterType::New();
+	    imageWriter->SetFileName(filesPref + "WarpedImageBspline" + stepString+ ".nii.gz"); //step at the end facilitate external tools to combine images later into 4D.
+	    imageWriter->SetInput(baselineWarper->GetOutput());
+	    imageWriter->Update();
 
-            if(ops.numOfTimeSteps > 1) {
-
-                //------------*** Invert the current displacement field to create warping field *** -------------//
-//                FPInverseType::Pointer inverter1 = FPInverseType::New();
-//                inverter1->SetInput(composedDisplacementField);
-//                inverter1->SetErrorTolerance(1e-1);
-//                inverter1->SetMaximumNumberOfIterations(50);
-//                inverter1->Update();
-//                std::cout<<"tolerance not reached for "<<inverter1->GetNumberOfErrorToleranceFailures()<<" pixels"<<std::endl;
-//                AdLem3D<dim>::VectorImageType::Pointer warperField = inverter1->GetOutput();
-                //----------------*** Let's not invert the field, rather assume the atrophy is provided to be negative
-                //---------------- so that we can use the field obtained from the model itself as being already inverted.//
-                AdLem3D<dim>::VectorImageType::Pointer warperField = composedDisplacementField;
-
+            if(ops.numOfTimeSteps > 1)
+	    { // Prepare brain mask and atrophy map for next step by warping them with current composed displacement field.
                 // ---------- Warp baseline brain mask with an itk warpFilter, nearest neighbor.
-                // ---------- Using the inverted composed field.
                 IntegerWarpFilterType::Pointer brainMaskWarper = IntegerWarpFilterType::New();
-                brainMaskWarper->SetDisplacementField(warperField);
+                brainMaskWarper->SetDisplacementField(composedDisplacementField);
                 brainMaskWarper->SetInput(baselineBrainMask);
                 brainMaskWarper->SetOutputSpacing(baselineBrainMask->GetSpacing());
                 brainMaskWarper->SetOutputOrigin(baselineBrainMask->GetOrigin());
                 brainMaskWarper->SetOutputDirection(baselineBrainMask->GetDirection());
 
                 InterpolatorFilterNnType::Pointer nnInterpolatorFilter = InterpolatorFilterNnType::New();
-		InterpolatorGllType::Pointer gllInterpolator = InterpolatorGllType::New();
                 brainMaskWarper->SetInterpolator(nnInterpolatorFilter);
-		//brainMaskWarper->SetInterpolator(gllInterpolator);
                 brainMaskWarper->Update();
 
                 // ---------- Compare warped mask with the previous mask
@@ -410,9 +417,10 @@ int main(int argc,char **argv)
                     AdLemModel.setBrainMask(brainMaskWarper->GetOutput(), maskLabels::NBR, maskLabels::CSF, maskLabels::FALX_CEREBRI);
                     AdLemModel.writeBrainMaskToFile(filesPref+stepString+"Mask.nii.gz");
                 }
-                // ---------- Warp baseline atrophy with an itk WarpFilter, linear interpolation; using inverted composed field.
+
+                // ---------- Warp baseline atrophy with an itk WarpFilter, linear interpolation; using composed field.
                 WarpFilterType::Pointer atrophyWarper = WarpFilterType::New();
-                atrophyWarper->SetDisplacementField(warperField);
+                atrophyWarper->SetDisplacementField(composedDisplacementField);
                 atrophyWarper->SetInput(baselineAtrophy);
                 atrophyWarper->SetOutputSpacing(baselineAtrophy->GetSpacing());
                 atrophyWarper->SetOutputOrigin(baselineAtrophy->GetOrigin());
@@ -428,29 +436,11 @@ int main(int argc,char **argv)
 		AdLemModel.modifyAtrophy(maskLabels::NBR,0);  //set zero atrophy at non-brain region., don't change values elsewhere.
 		AdLemModel.writeAtrophyToFile(filesPref+stepString+"AtrophyModified.nii.gz");
 
-                // ---------- Warp the baseline image with the inverted composed field with BSpline interpolation
-                typedef itk::BSplineInterpolateImageFunction<AdLem3D<dim>::ScalarImageType> InterpolatorFilterType;
-		InterpolatorFilterType::Pointer interpolatorFilter = InterpolatorFilterType::New();
-		interpolatorFilter->SetSplineOrder(3);
-		WarpFilterType::Pointer baselineWarper = WarpFilterType::New();
-                baselineWarper->SetDisplacementField(warperField);
-		baselineWarper->SetInterpolator(interpolatorFilter);
-                baselineWarper->SetInput(baselineImage);
-                baselineWarper->SetOutputSpacing(baselineImage->GetSpacing());
-                baselineWarper->SetOutputOrigin(baselineImage->GetOrigin());
-                baselineWarper->SetOutputDirection(baselineImage->GetDirection());
-                baselineWarper->Update();
-                AdLem3D<dim>::ScalarImageWriterType::Pointer imageWriter = AdLem3D<dim>::ScalarImageWriterType::New();
-                //Write with the stepString lying at the end of the filename so that other tool can combine all the images
-                //into 4D by using the number 1, 2, 3 ... at the end.
-                imageWriter->SetFileName(filesPref + "WarpedImageBspline" + stepString+ ".nii.gz");
-                imageWriter->SetInput(baselineWarper->GetOutput());
-                imageWriter->Update();
             }
         }
 	if(ops.numOfTimeSteps > 1) //Write composed field only if num_of_time_steps > 1
 	{
-	    AdLem3D<dim>::VectorImageWriterType::Pointer   displacementWriter = AdLem3D<dim>::VectorImageWriterType::New();
+	    VectorImageWriterType::Pointer   displacementWriter = VectorImageWriterType::New();
 	    displacementWriter->SetFileName(filesPref+"ComposedField.nii.gz");
 	    displacementWriter->SetInput(composedDisplacementField);
 	    displacementWriter->Update();
