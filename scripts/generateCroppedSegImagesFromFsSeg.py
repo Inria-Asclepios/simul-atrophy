@@ -46,7 +46,7 @@ def get_input_options():
         'considered as CSF regions which depends on the labels present in the '
         'file you provided with -fs_csf_labels. ')
     parser.add_argument(
-        'in_new_cluster', action='store_true', help='Env variables for new nef')
+        '--in_new_cluster', action='store_true', help='Env variables for new nef')
     ops = parser.parse_args()
     if not op.exists(ops.res_dir):
         os.makedirs(ops.res_dir)

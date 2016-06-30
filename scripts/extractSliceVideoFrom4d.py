@@ -27,6 +27,9 @@ def get_input_options():
     parser.add_argument(
         '-rotate', help='If given overrides the default rotation used for '
         'proper orientation of the slice.')
+    parser.add_argument(
+        '-crop', help='convert -crop ops: If given crops 2D slices before '
+        'combining. wxh+x+y')
 
     ops = parser.parse_args()
     return ops
@@ -65,6 +68,9 @@ def main():
         else:
             cmd = 'convert -rotate %s %s %s' % (ops.rotate, tmp2DImage, tmp2DImage)
         bu.print_and_execute(cmd, False)
+        if ops.crop:
+            cmd = 'convert %s -crop %s +repage %s' % (tmp2DImage, ops.crop, tmp2DImage)
+            bu.print_and_execute(cmd, False)
         # Write time-point info
         if ops.time_unit is not None:
             if ops.time_step is not None:

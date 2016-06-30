@@ -16,6 +16,23 @@ import os
 import os.path as op
 import time as tm
 
+def get_min_max(imgs, are_fnames=True):
+    '''
+    Return the minimum and maximum intensities from among the given images.
+    imgs must be a list!
+    are_fnames: boolean; if True imgs is a list of img_filenames.
+    So first loads those files, otherwise considers them as numpy array images.
+    '''
+    mins, maxs = np.zeros(len(imgs)), np.zeros(len(imgs))
+    i = 0
+    for img in imgs:
+        if are_fnames:
+            img = (ni.load(img)).get_data()
+        mins[i], maxs[i] = np.amin(img), np.amax(img)
+        i += 1
+    return np.amin(mins), np.amax(maxs)
+
+
 def diff_image(in_img1, in_img2, out_img=None):
     '''
     If third argument is not given or None (default), considers

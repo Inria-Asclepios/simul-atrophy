@@ -1,0 +1,33 @@
+# data_base : Oasis
+{
+'patients'			: ['Subject_0048'], #Either from command line or in a list here.
+'sim_prefixes'			: ['div12pt_atrophyMapR2_0_'], #Either from command line or in a list here.
+'sim_cropped_img_suffices'	: ['WarpedImageBsplineT1.nii.gz'], #As a list
+'sim_full_img_suffices'		: ['WarpedImageBsplineFullSizeT1.nii.gz'], #As a list
+#'sim_resampled_img_suffices'	: ['WarpedImageBsplineFullSizeT1Resampled.nii.gz'], #As a list
+'sim_resampled_img_suffices'	: ['WarpedImageBsplineFullSizeT1ResampledMinus.nii.gz'], #As a list
+'sim_vel_suffices'		: ['T1vel.nii.gz'], #As a list
+'resampling_disp_suffices'	: ['ResamplingDispFieldT1.nii.gz'], #As a list
+
+'sim_base_dir'			: '/epi/asclepios2/bkhanal/works/AdLemModel/results/patients',
+'sim_crop_mask'			: 'cropMaskD2_FS.nii.gz',
+
+'data_base_dir'			: '/epi/asclepios2/mhadjham/OASIS_full',
+'in_img_dir'			: 'Rigid_reg_intra',
+'reg_dir'			: 'Non_Rigid_reg_intra_robex_Mask',
+
+'in_img_prefix'			: 'Final_S0MNI_spline_',
+'in_resample_img_prefix'	: 'Final_S4MNI_spline_recall_S0_',
+'in_img_to_resample_img_prefix'	: 'Mask_Registered_output_S0MNI_to_S4MNI_', #This image is in reg_dir!!
+'in_img_pid_skip'		: 8, #num_of chars from start of patient id not used in real_img file names.
+'in_img_suffix'			: '.nii.gz',
+
+'svf_prefix'			: 'Mask_output_stationary_velocity_field_4_', #1, 2, 3 or 4 to choose tpt.
+'svf_suffix'			: '_2.0_0.15_3.0.mha',
+'div_prefix'			: 'Minus_Div_SVF_longi_native_',
+#'disp_field_prefix'		: 'output_displacement_field_',
+'disp_field_prefix'	 	: 'Minus_Mask_output_displacement_field_4_',
+
+}
+
+

@@ -7,7 +7,7 @@ Copying a directory tree.
 #
 
 import subprocess
-import shutil
+import shutil as su
 
 def print_and_execute(command, print_cmd=True):
     """prints the command by default and executes it in the shell"""
@@ -27,6 +27,33 @@ def update_or_execute_cmd(cmd, cmd_n, execute):
     else:
         return cmd + cmd_n
 
+
+
+def copy_file(src, dst, via_ssh=False):
+    '''
+    Copy src file into dst directory or as dst file.
+    if via_ssh = True, use scp src dst
+    else use shutil.copy(src, dst)
+    '''
+    if via_ssh:
+        cmd = 'scp %s %s' % (src, dst)
+        print_and_execute(cmd)
+    else:
+        su.copy(src, dst)
+    return
+
+
+
+def add_prefix_to_fname(prefix, fname):
+    '''
+    Add prefix to the input filename and return the new filename.
+    You can give filename with full path, I will extract only the
+    filename, add prefix and then return with full path.
+    '''
+    import os
+    return os.path.join(os.path.dirname(fname), prefix+os.path.basename(fname))
+
+
 def get_lines_as_list(fname, delim):
     '''
     Return a list that contains all the lines present in the file fname
@@ -39,9 +66,9 @@ def copy_dir_tree(src, dest):
     """ Copy entire directory tree rooted at the src directory.
     Uses shutil interface."""
     try:
-        shutil.copytree(src, dest)
+        su.copytree(src, dest)
     # Directories are the same
-    except shutil.Error as ex:
+    except su.Error as ex:
         print('Directory not copied. Error: %s' % ex)
     # Any error saying that the directory doesn't exist
     except OSError as ex:

@@ -1,4 +1,4 @@
-0#!/usr/bin/python
+#!/usr/bin/python
 """ Post process after simulating the images.
 """
 # Author: Bishesh Khanal <bishesh.khanal@inria.fr>
@@ -93,7 +93,7 @@ def set_binaries_and_paths():
     #img_math = op.join(ants_dir, 'ImageMath')
     #binarize = op.join(adlem_dir, 'build/src/BinarizeThreshold')
     paste_img = op.join(
-        adlem_dir, 'build/src/pasteImageToBiggerImage')
+        adlem_dir, 'buildNewNef/src/pasteImageToBiggerImage')
     compose_transform = op.join(ants_dir, 'ComposeMultiTransform')
     apply_transform = op.join(ants_dir, 'antsApplyTransforms')
     return
