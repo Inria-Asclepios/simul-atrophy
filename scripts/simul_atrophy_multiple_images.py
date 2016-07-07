@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+""" Script to run simul@atrophy for multiple images
+"""
+# Author: Bishesh Khanal <bishesh.khanal@inria.fr>
+# Asclepios INRIA Sophia Antipolis
+#
+
 import os
 import os.path as op
 import argparse as ag

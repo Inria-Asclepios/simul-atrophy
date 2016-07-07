@@ -11,10 +11,10 @@ link_directories(${PETSC_LIBRARIES})
 #     PetscAdLemMain.cxx
 #     )
 
-add_executable(AdLemMain
+add_executable(simul_atrophy
   PetscAdLemMain.cxx
   )
-target_link_libraries(AdLemMain ${PETSC_LIBRARIES} ${ITK_LIBRARIES})
+target_link_libraries(simul_atrophy ${PETSC_LIBRARIES} ${ITK_LIBRARIES})
 
 
 add_executable(UpdateMaskAndAtrophy

@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+""" Script to:
+    Extract 3D images from a 4D image and then extract one selected slice
+    from each of these 3D images and combine them as a gif.
+"""
+# Author: Bishesh Khanal <bishesh.khanal@inria.fr>
+# Asclepios INRIA Sophia Antipolis
+
 import subprocess
 import sys
 import argparse as ag

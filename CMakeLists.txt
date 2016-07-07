@@ -1,47 +1,14 @@
 cmake_minimum_required(VERSION 2.8)
-project(ADDeformationModeling)
+project(simul@atrophy)
 
-# For cluster use argument: -DIS_CLUSTER:bool=true
-set(IS_CLUSTER false CACHE BOOL "cmake run in the cluster: true or false")
-
-# For new cluster also use argument: -DIS_NEW_CLUSTER:bool=true
-set(IS_NEW_CLUSTER false CACHE BOOL "cmake run in new cluster: true or false")
-
+# add cmake modules path to the default one:
 MESSAGE("The directory is: ${CMAKE_SOURCE_DIR}")
-#add cmake modules path to the default one:
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
-#Find the external library for Petsc
-find_package(PETSc COMPONENTS CXX REQUIRED)
-#find_package(PETSc COMPONENTS)
-set(CMAKE_CXX_COMPILER ${PETSC_COMPILER})
+# Use cxx11 or not; If yes run cmake as: cmake -DUSE_CXX11:bool=true .. 
+set(USE_CXX11 false CACHE BOOL "use cxx11: true or false")
 
-#Home directory
-if(IS_CLUSTER)
-  if(IS_NEW_CLUSTER)
-    set(ITK_DIR /data/asclepios/user/bkhanal/softwares/ITK-build)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    # This part taken from: http://stackoverflow.com/questions/10851247/how-to-activate-c-11-in-cmake
-    include(CheckCXXCompilerFlag)
-    CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-    CHECK_CXX_COMPILER_FLAG("-std=c++0x" COMPILER_SUPPORTS_CXX0X)
-    if(COMPILER_SUPPORTS_CXX11)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-    elseif(COMPILER_SUPPORTS_CXX0X)
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-    else()
-      message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
-    endif()
-    message("setting up for new cluster")
-
-  else(IS_NEW_CLUSTER)
-    set(ITK_DIR /epi/asclepios2/bkhanal/ITK-build)
-    message("setting up for legacy cluster")
-  endif(IS_NEW_CLUSTER)
-
-else(IS_CLUSTER)
-  set(ITK_DIR /home/bkhanal/Documents/softwares/ITK-build)
-  set(CMAKE_EXPORT_COMPILE_COMMANDS on) #Will generate compile_commands.json file used by irony-mode in emacs code completion.
+if(USE_CXX11)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
   # This part taken from: http://stackoverflow.com/questions/10851247/how-to-activate-c-11-in-cmake
   include(CheckCXXCompilerFlag)
@@ -54,9 +21,19 @@ else(IS_CLUSTER)
   else()
     message(STATUS "The compiler ${CMAKE_CXX_COMPILER} has no C++11 support. Please use a different C++ compiler.")
   endif()
-  message("setting up for delorme")
-endif(IS_CLUSTER)
+endif(USE_CXX11)
 
+
+# Find the external library for PETSc
+# PETSc must have been configured with --with-clanguage=cxx option!
+find_package(PETSc COMPONENTS CXX REQUIRED)
+set(CMAKE_CXX_COMPILER ${PETSC_COMPILER})
+
+# Generate compile_commands.json file used by irony-mode in emacs code completion.
+set(CMAKE_EXPORT_COMPILE_COMMANDS on)
+
+
+# Find ITK
 FIND_PACKAGE(ITK)
 IF(ITK_FOUND)
   INCLUDE(${ITK_USE_FILE})
@@ -65,7 +42,7 @@ ELSE(ITK_FOUND)
     "ITK not found. Please set ITK_DIR.")
 ENDIF(ITK_FOUND)
 
-#boost
+# Find boost
 find_package(Boost COMPONENTS program_options REQUIRED)
 
 add_subdirectory(src)

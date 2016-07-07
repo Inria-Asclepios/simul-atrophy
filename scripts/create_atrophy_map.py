@@ -3,7 +3,7 @@
 or input images.
 """
 # Author: Bishesh Khanal <bishesh.khanal@inria.fr>
-#
+# Asclepios INRIA Sophia Antipolis
 #
 
 import argparse as ag
