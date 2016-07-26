@@ -16,7 +16,7 @@ Please cite the following papers if you use this software:
 
 [1] Khanal, B., Lorenzi, M., Ayache, N., & Pennec, X. (2016). A biophysical model of brain deformation to simulate and analyze longitudinal MRIs of patients with Alzheimer’s disease . NeuroImage , 134, 35–52. http://doi.org/10.1016/j.neuroimage.2016.03.061
 
-[2] Khanal, B., Ayache, N., & Pennec, X. (2016). Simulating Realistic Synthetic Longitudinal Brain MRIs with known Volume Changes. (under Review).
+[2] Khanal, B., Ayache, N., & Pennec, X. (2016). Simulating Realistic Synthetic Longitudinal Brain MRIs with known Volume Changes. 2016. <hal-01348959>.
 
 ## Requirements
 1. Cmake > 2.8
