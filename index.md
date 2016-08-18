@@ -11,8 +11,7 @@ The whole pipeline and the simulation of variation of intensity are detailed in 
 The core components of the software are implemented in C++.
 It also contains a number of helper scripts (written in python) to preprocess input images and generate desired map of atrophy (or volume changes).
 
-The source code will soon be available at https://github.com/Inria-Asclepios/simul-atrophy. 
-Please cite the following papers if you use this software:
+The following papers must be cited if you use this software:
 
 [1] Khanal, B., Lorenzi, M., Ayache, N., & Pennec, X. (2016). A biophysical model of brain deformation to simulate and analyze longitudinal MRIs of patients with Alzheimer’s disease . NeuroImage , 134, 35–52. http://doi.org/10.1016/j.neuroimage.2016.03.061
 
@@ -63,12 +62,13 @@ build$ make
 This should install the software to your machine.
 
 ## Quickstart
+The readme file details how to use the software.
+
 The main simulator executable is `build/src/simul_atrophy`.
-Run with `-h` option to see in detail how to use it.
+Running it with `-h` option alsow shows in detail the options available.
 
 Otherwise, there is also a python script at 'simul-atrophy/scripts/simul_atrophy.py' which you can use.
 Once again, use `-h` option to see the details.
-
 
 ## Example:
 Coming soon here.
