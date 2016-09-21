@@ -123,9 +123,9 @@ def main():
         raise ValueError('environment variable ADLEM_DIR not set.')
     ops = get_input_options()
     if ops.in_new_cluster:
-        target = op.join(work_dir, 'buildNewNef/src/AdLemMain')
+        target = op.join(work_dir, 'buildNewNef/src/simul_atrophy')
     else:
-        target = op.join(work_dir, 'build/src/AdLemMain')
+        target = op.join(work_dir, 'build/src/simul_atrophy')
     res_dir = op.join(work_dir, 'results/patients', ops.patient)
     in_img = op.join(res_dir, ops.in_img)
     atrophy = op.join(res_dir, ops.atrophy)
