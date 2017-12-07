@@ -83,7 +83,7 @@ struct UserOptions {
     float	relaxIcCoeff;	//compressibility coefficient k for CSF region.
     int		falxZeroVelDir; //Component of the velocity to be set to zero in the Falx sliding boundary condition.
     bool        useTensorLambda, isMuConstant, invertFieldToWarp;
-    int         numOfTimeSteps;
+    PetscInt    numOfTimeSteps;
 
     std::string resultsPath;    // Directory where all the results will be stored.
     std::string resultsFilenamesPrefix;	// Prefix for all the filenames of the results to be stored in the resultsPath.
