@@ -100,7 +100,7 @@ int opsParser(UserOptions &ops) {
     PetscErrorCode	ierr;
     PetscBool	optionFlag = PETSC_FALSE;
     char		optionString[PETSC_MAX_PATH_LEN];
-    ierr = PetscOptionsGetString(NULL,"-muFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-muFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(optionFlag) {	//Use image option only when mu is not even piecewise constant.
 	ops.muFileName	   = optionString;
 	ops.isMuConstant   = false;
@@ -110,7 +110,7 @@ int opsParser(UserOptions &ops) {
 	ops.isMuConstant = true;
     }
 
-    ierr = PetscOptionsGetString(NULL,"-parameters",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-parameters",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(!optionFlag){ //If parameters not given.
 	if(ops.muFileName.empty()) throw "Must provide -parameters when -muFile not given\n";
 	//Set all paras to 1 but this isn't supposed to be used by the program.
@@ -128,30 +128,30 @@ int opsParser(UserOptions &ops) {
     }
 
     // --------- Set divergence Stencil option
-    ierr = PetscOptionsGetString(NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--div12pt_stencil",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.div12ptStencil = (bool)optionFlag;
 
     // --------- Set momentum equatin RHS option
-    ierr = PetscOptionsGetString(NULL,"--no_lame_in_rhs",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--no_lame_in_rhs",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.noLameInRhs = (bool)optionFlag;
 
     // ---------- Set boundary condition option
-    ierr = PetscOptionsGetString(NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-boundary_condition",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(!optionFlag) throw "Must provide a valid boundary condition. e.g. dirichlet_at_skull";
     ops.boundaryCondition = optionString;
 
-    ierr = PetscOptionsGetString(NULL,"--relax_ic_in_csf",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--relax_ic_in_csf",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.relaxIcInCsf = (bool)optionFlag;
 
     PetscReal optionReal;
-    ierr = PetscOptionsGetReal(NULL, "-relax_ic_coeff", &optionReal, &optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetReal(NULL, NULL, "-relax_ic_coeff", &optionReal, &optionFlag);CHKERRQ(ierr);
     if(optionFlag) ops.relaxIcCoeff = (float)optionReal;
     else ops.relaxIcCoeff = 0.;
 
-    ierr = PetscOptionsGetString(NULL,"--zero_vel_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--zero_vel_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.zeroVelAtFalx = (bool)optionFlag;
 
-    ierr = PetscOptionsGetString(NULL,"--sliding_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--sliding_at_falx",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.slidingAtFalx = (bool)optionFlag;
 
     if(ops.slidingAtFalx)
@@ -160,23 +160,23 @@ int opsParser(UserOptions &ops) {
 	else
 	{
 	    PetscInt optionInt;
-	    ierr = PetscOptionsGetInt(NULL, "-falx_zero_vel_dir", &optionInt, &optionFlag);CHKERRQ(ierr);
+	    ierr = PetscOptionsGetInt(NULL, NULL, "-falx_zero_vel_dir", &optionInt, &optionFlag);CHKERRQ(ierr);
 	    if(optionFlag) ops.falxZeroVelDir = (int)optionInt;
 	    else throw "must provide -falx_zero_vel_dir when --sliding_at_falx is used.";
 	}
     }
 
     // ---------- Set input image files, computational region and other options.
-    ierr = PetscOptionsGetString(NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-atrophyFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(optionFlag) ops.atrophyFileName = optionString;
 
-    ierr = PetscOptionsGetString(NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-maskFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(optionFlag) ops.maskFileName = optionString;
 
-    ierr = PetscOptionsGetString(NULL,"-imageFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-imageFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(optionFlag) ops.baselineImageFileName = optionString;
 
-    ierr = PetscOptionsGetString(NULL,"-domainRegion",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-domainRegion",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(optionFlag) {
 	ops.isDomainFullSize = false;
 	std::stringstream regionStream(optionString);
@@ -184,13 +184,13 @@ int opsParser(UserOptions &ops) {
 	for(int i=0; i<3; ++i) regionStream >> ops.domainSize[i];
     }else ops.isDomainFullSize = true;
 
-    ierr = PetscOptionsGetString(NULL,"--invert_field_to_warp",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--invert_field_to_warp",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.invertFieldToWarp = (bool)optionFlag;
 
-    ierr = PetscOptionsGetString(NULL,"--useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--useTensorLambda",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.useTensorLambda = (bool)optionFlag;
 
-    ierr = PetscOptionsGetInt(NULL,"-numOfTimeSteps",&ops.numOfTimeSteps,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetInt(NULL, NULL,"-numOfTimeSteps",&ops.numOfTimeSteps,&optionFlag);CHKERRQ(ierr);
     if(!optionFlag) {
 	ops.numOfTimeSteps = 1;
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Using default number of steps: 1 since -numOfTimeSteps option was not used.\n");
@@ -198,7 +198,7 @@ int opsParser(UserOptions &ops) {
 	PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n Model will be run for %d time steps\n", ops.numOfTimeSteps);
     }
 
-    ierr = PetscOptionsGetString(NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-lambdaFile",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if (ops.useTensorLambda) {
 	if(!optionFlag) throw "Must provide valid tensor image filename when using --useTensorLambda.\n";
 	ops.lambdaFileName = optionString;
@@ -207,20 +207,20 @@ int opsParser(UserOptions &ops) {
 	if(optionFlag) throw "-lambdaFile option can be used only when --useTensorLambda is provided.\n";
 
     // ---------- Set output path and prefixes.
-    ierr = PetscOptionsGetString(NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-resPath",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(!optionFlag) throw "Must provide a valid path with -resPath option: e.g. -resPath ~/results";
     ops.resultsPath = optionString;
 
-    ierr = PetscOptionsGetString(NULL,"-resultsFilenamesPrefix",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"-resultsFilenamesPrefix",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     if(!optionFlag) throw "Must provide a prefix for output filenames: e.g. -resultsFilenamesPrefix step1";
     ops.resultsFilenamesPrefix = optionString;
 
     // ---------- Set the choice of the output files to be written.
-    ierr = PetscOptionsGetString(NULL,"--writePressure",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--writePressure",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.writePressure = (bool)optionFlag;
-    ierr = PetscOptionsGetString(NULL,"--writeForce",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--writeForce",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.writeForce = (bool)optionFlag;
-    ierr = PetscOptionsGetString(NULL,"--writeResidual",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
+    ierr = PetscOptionsGetString(NULL, NULL,"--writeResidual",optionString,PETSC_MAX_PATH_LEN,&optionFlag);CHKERRQ(ierr);
     ops.writeResidual = (bool)optionFlag;
     return 0;
 

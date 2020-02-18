@@ -280,11 +280,11 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
         //Setting up of null spaces and near null spaces for fieldsplits depend upon the kinds of options user have used.
         PetscBool optionFlag = PETSC_FALSE;
         char optionString[PETSC_MAX_PATH_LEN];
-        ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_type",optionString,10,&optionFlag);CHKERRQ(ierr);
+        ierr = PetscOptionsGetString(NULL, NULL, "-pc_fieldsplit_type",optionString,10,&optionFlag);CHKERRQ(ierr);
         if(optionFlag) {
             if(strcmp(optionString,"schur")==0){
                 PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using schur complement \n");
-                ierr = PetscOptionsGetString(NULL,"-pc_fieldsplit_0_fields",optionString,10,&optionFlag);CHKERRQ(ierr);
+                ierr = PetscOptionsGetString(NULL, NULL,"-pc_fieldsplit_0_fields",optionString,10,&optionFlag);CHKERRQ(ierr);
                 if(optionFlag) {
                     if(strcmp(optionString,"0,1,2")==0) {
                         PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using user defined split \n");
@@ -299,7 +299,7 @@ PetscErrorCode PetscAdLemTaras3D::solveModel(bool operatorChanged)
                         }
 
                         //If gamg used, set up near-nullspace for fieldsplit_0
-                        ierr = PetscOptionsGetString(NULL,"-fieldsplit_0_pc_type",optionString,10,&optionFlag);
+                        ierr = PetscOptionsGetString(NULL, NULL,"-fieldsplit_0_pc_type",optionString,10,&optionFlag);
                         if(strcmp(optionString,"gamg")==0) {
                             PetscSynchronizedPrintf(PETSC_COMM_WORLD,"\n using gamg for A00 \n");
                             //Set up nearNullspace for A00 block.
@@ -355,8 +355,9 @@ PetscErrorCode PetscAdLemTaras3D::writeToMatFile(
     PetscFunctionBeginUser;
     PetscViewer viewer1;
     ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,fileName.c_str(),FILE_MODE_WRITE,&viewer1);CHKERRQ(ierr);
-    ierr = PetscViewerSetFormat(viewer1,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
-
+    //ierr = PetscViewerSetFormat(viewer1,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+    ierr = PetscViewerPushFormat(viewer1,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+    
     ierr = PetscObjectSetName((PetscObject)mX,"x");CHKERRQ(ierr);
     ierr = PetscObjectSetName((PetscObject)mB,"b");CHKERRQ(ierr);
 
@@ -390,7 +391,8 @@ PetscErrorCode PetscAdLemTaras3D::writeToMatFile(
     if(writeA) {
         PetscViewer viewer2;
         ierr = PetscViewerBinaryOpen(PETSC_COMM_WORLD,matFileName.c_str(),FILE_MODE_WRITE,&viewer2);CHKERRQ(ierr);
-        ierr = PetscViewerSetFormat(viewer2,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+        //ierr = PetscViewerSetFormat(viewer2,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
+        ierr = PetscViewerPushFormat(viewer2,PETSC_VIEWER_BINARY_MATLAB);CHKERRQ(ierr);
         ierr = PetscObjectSetName((PetscObject)mA,"A");CHKERRQ(ierr);
         ierr = MatView(mA,viewer2);CHKERRQ(ierr);
         //        ierr = PetscObjectSetName((PetscObject)mPcForSc,"PcForSc");CHKERRQ(ierr);
