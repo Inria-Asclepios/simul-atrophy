@@ -63,14 +63,15 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilFo
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,1,stencil_width,0,0,0,&mDaP);CHKERRXX(ierr);
 
+    ierr = DMSetUp(mDaP);
     //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
     //    ierr = DMDASetUniformCoordinates(mDaP,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDaP,0,"p");CHKERRXX(ierr);
-
     ierr = DMDACreate3d(PETSC_COMM_WORLD,DM_BOUNDARY_NONE, DM_BOUNDARY_NONE,DM_BOUNDARY_NONE,
                         DMDA_STENCIL_BOX,model->getXnum()+1,model->getYnum()+1,model->getZnum()+1,
                         PETSC_DECIDE,PETSC_DECIDE,PETSC_DECIDE,4,stencil_width,0,0,0,&mDa);CHKERRXX(ierr);
 
+    ierr = DMSetUp(mDa);
     //    ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum(),0,model->getYnum(),0,model->getZnum());CHKERRXX(ierr);
     ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum()+1,0,model->getYnum()+1,0,model->getZnum()+1);CHKERRXX(ierr);
     ierr = DMDASetUniformCoordinates(mDa,0,model->getXnum()+2,0,model->getYnum()+2,0,model->getZnum()+2);CHKERRXX(ierr);
@@ -78,6 +79,7 @@ PetscAdLemTaras3D::PetscAdLemTaras3D(AdLem3D<3> *model, bool set12pointStencilFo
     ierr = DMDASetFieldName(mDa,1,"vy");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,2,"vz");CHKERRXX(ierr);
     ierr = DMDASetFieldName(mDa,3,"p");CHKERRXX(ierr);
+
 
 
     //Linear Solver context:
