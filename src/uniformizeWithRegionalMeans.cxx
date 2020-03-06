@@ -107,7 +107,7 @@ int main(int argc,char **argv)
     labelStats->Update();
 
     std::cout << "Number of labels in the input label image: " << labelStats->GetNumberOfLabels() << std::endl;
-    typedef LabelStatsFilterType::ValidLabelValuesContainerType ValidLabelValuesType;
+    // typedef LabelStatsFilterType::ValidLabelValuesContainerType ValidLabelValuesType;
     typedef LabelStatsFilterType::LabelPixelType                LabelPixelType;
     typedef ImageType::PixelType				OutPixelType;
     // for(ValidLabelValuesType::const_iterator vIt=labelStats->GetValidLabelValues().begin();

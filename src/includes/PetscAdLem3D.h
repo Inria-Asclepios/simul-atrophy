@@ -33,12 +33,12 @@ public:
 
 protected:
     AdLem3D<DIM>*            mProblemModel;
-    std::string         mContextDesc;
 
     PetscBool	mIsDiv12pointStencil;
     PetscBool   mIsMuConstant;
     PetscBool   mSolAllocated;
     PetscBool   mRhsAllocated;
+    std::string         mContextDesc;
 
     //Global system i.e for Ax=b, with x containing all the velocity components and pressure nodes.
     Mat         mA;
