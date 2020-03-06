@@ -3,8 +3,9 @@
 
 ### Requirements
 1. Cmake > 2.8
-2. [PETSc](https://www.mcs.anl.gov/petsc/index.html) version 3.6.3.1
+2. [PETSc](https://www.mcs.anl.gov/petsc/index.html) version 3.12.4
 **Use `--with-clanguage=cxx` option** when configuring PETSc.
+**Consider  --with-64-bit-indices=yes if using larger images.
 3. [ITK](https://itk.org/) version 4.9
 
 ## Installation

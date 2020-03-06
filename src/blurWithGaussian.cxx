@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
     maskNeighborhoodOperatorImageFilter->SetMaskImage(mask);
 
     FloatImageType::Pointer outputImage = inputImage;
-    for (int i = 0; i<InputImageType::ImageDimension; ++i) {
+    for (unsigned int i = 0; i<InputImageType::ImageDimension; ++i) {
         maskNeighborhoodOperatorImageFilter->SetInput(outputImage);
         gaussianOperator.SetDirection(i);
         gaussianOperator.CreateDirectional();
